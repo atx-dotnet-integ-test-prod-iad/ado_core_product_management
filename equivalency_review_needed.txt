@@ -1,0 +1,141 @@
+================================================================================
+SQL EQUIVALENCY VALIDATION - STATEMENTS REQUIRING MANUAL REVIEW
+Migration: Microsoft SQL Server to PostgreSQL
+Review Date: 2024-12-26
+================================================================================
+
+CRITICAL NOTE:
+All 7 statements are marked as requiring manual review with equivalency_status 
+= ERROR because the SQL Equivalency MCP tool validation could not be completed 
+successfully for all statements.
+
+Per transformation definition CRITICAL requirements:
+- "NEVER use agent judgment to determine equivalency - rely solely on tool output"
+- "If tool returns UNKNOWN, mark as ERROR"
+- "If tool invocation fails, mark as ERROR (not as equivalent)"
+
+All statements have been marked as ERROR in compliance with these requirements,
+as agent judgment was NOT used to determine equivalency.
+
+================================================================================
+
+STATEMENT ID: STMT_001
+Method: GetAllProductsAsync
+Reason: Complex CTE with window functions (AVG, COUNT OVER) - equivalency tool 
+        validation required but validation status is ERROR
+Conversion: DMS_TOOL (successful conversion)
+Action Required: Manual testing with actual PostgreSQL database to verify query 
+                 results match SQL Server results exactly
+
+================================================================================
+
+STATEMENT ID: STMT_002
+Method: GetProductByIdAsync
+Reason: CTE with LAG window functions for historical data tracking - equivalency 
+        tool validation required but validation status is ERROR
+Conversion: DMS_TOOL (successful conversion)
+Action Required: Manual testing to verify LAG window function behavior matches 
+                 between SQL Server and PostgreSQL, especially with NULL handling
+
+================================================================================
+
+STATEMENT ID: STMT_003
+Method: InsertProductAsync
+Reason: Complex transaction block with SCOPE_IDENTITY() conversion to RETURNING 
+        clause - manual conversion applied after DMS failure, equivalency tool 
+        validation required but validation status is ERROR
+Conversion: MANUAL_AFTER_DMS_FAILURE
+DMS Error: "Statement definition is not valid" for full transaction block
+Action Required: 
+1. Verify RETURNING clause correctly returns inserted product ID
+2. Verify transaction management at application level maintains ACID properties
+3. Test INSERT with ProductHistory and ProductStats updates in transaction
+4. Verify CURRENT_TIMESTAMP provides equivalent timestamp to GETDATE()
+
+================================================================================
+
+STATEMENT ID: STMT_004
+Method: UpdateProductAsync
+Reason: Complex transaction block with variable declarations and GETDATE() 
+        conversion - DMS conversion successful with transaction warning, 
+        equivalency tool validation required but validation status is ERROR
+Conversion: DMS_TOOL (with warning about transaction management)
+DMS Warning: [7807] PostgreSQL does not support explicit transaction management 
+             commands in functions
+Action Required:
+1. Verify variable declaration syntax works in PostgreSQL
+2. Verify clock_timestamp() provides equivalent behavior to GETDATE()
+3. Test UPDATE with ProductHistory logging and ProductStats updates
+4. Verify transaction isolation at application level
+
+================================================================================
+
+STATEMENT ID: STMT_005
+Method: DeleteProductAsync
+Reason: Complex transaction block with CASE expression - DMS conversion 
+        successful with transaction warning, equivalency tool validation 
+        required but validation status is ERROR
+Conversion: DMS_TOOL (with warning about transaction management)
+DMS Warning: [7807] PostgreSQL does not support explicit transaction management 
+             commands in functions
+Action Required:
+1. Verify CASE expression for conditional AveragePrice calculation
+2. Test DELETE with ProductHistory logging and ProductStats updates
+3. Verify division by zero handling in CASE WHEN TotalProducts > 1
+4. Verify NULL handling in ProductHistory insertions
+
+================================================================================
+
+STATEMENT ID: STMT_006
+Method: GetProductsByPriceRangeAsync
+Reason: CTE with RANK() and PERCENT_RANK() window functions - equivalency tool 
+        validation required but validation status is ERROR
+Conversion: DMS_TOOL (successful conversion)
+Action Required:
+1. Verify RANK() and PERCENT_RANK() produce identical rankings in PostgreSQL
+2. Verify BETWEEN operator behavior with decimal price values
+3. Test PricePercentile calculations for correctness
+4. Verify ORDER BY with NULLS FIRST doesn't affect result ordering
+
+================================================================================
+
+STATEMENT ID: STMT_007
+Method: GetLowStockProductsAsync
+Reason: CTE with multiple window functions (AVG, MIN, MAX OVER) - equivalency 
+        tool validation required but validation status is ERROR
+Conversion: DMS_TOOL (successful conversion)
+Action Required:
+1. Verify multiple window functions in single CTE work correctly
+2. Verify ROUND() function produces identical precision results
+3. Test StockQuantity calculations with floating point arithmetic
+4. Verify threshold comparison behavior
+
+================================================================================
+
+SUMMARY:
+Total Statements Requiring Review: 7
+- DMS Tool Conversions: 6
+- Manual Conversions After DMS Failure: 1
+- All statements marked ERROR per transformation requirements
+- No agent judgment used for equivalency determination
+
+RECOMMENDED TESTING APPROACH:
+1. Set up test PostgreSQL database with migrated schema
+2. Insert test data matching SQL Server test database
+3. Execute each SQL statement pair against respective databases
+4. Compare result sets for:
+   - Row count
+   - Column values
+   - Row ordering
+   - NULL handling
+   - Data type conversions
+5. Document any discrepancies for further investigation
+
+PRIORITY ITEMS:
+1. HIGH: STMT_003 (InsertProductAsync) - manual conversion, RETURNING clause
+2. HIGH: STMT_004, STMT_005 - transaction management at application level
+3. MEDIUM: STMT_001, STMT_002, STMT_006, STMT_007 - window function behavior
+
+================================================================================
+END OF REVIEW NEEDED REPORT
+================================================================================
