@@ -1,0 +1,138 @@
+================================================================================
+DMS CONVERSION ISSUES LOG
+Date: 2024-12-28
+Purpose: Document SQL statements that failed DMS MCP tool conversion
+================================================================================
+
+ISSUE #1: Transaction Block with DECLARE Statements (Statement ID 3)
+--------------------------------------------------------------------------------
+SOURCE METHOD: InsertProductAsync
+STATEMENT TYPE: INSERT Transaction with SCOPE_IDENTITY()
+
+ORIGINAL SQL SERVER STATEMENT:
+DECLARE @NewProductId INT;
+
+BEGIN TRANSACTION;
+    INSERT INTO Products (Name, Description, Price, StockQuantity)
+    VALUES (@Name, @Description, @Price, @StockQuantity);
+    
+    SET @NewProductId = SCOPE_IDENTITY();
+    
+    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+    VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, GETDATE());
+    
+    UPDATE ProductStats
+    SET 
+        TotalProducts = TotalProducts + 1,
+        AveragePrice = (AveragePrice * TotalProducts + @Price) / (TotalProducts + 1),
+        LastUpdated = GETDATE()
+    WHERE StatId = 1;
+COMMIT;
+
+SELECT @NewProductId;
+
+DMS TOOL ERROR:
+{
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': \"Metadata model creation failed: {'default_error_details': {'message': 'Statement definition is not valid.'}}\"}"
+}
+
+DMS TOOL OUTPUT (Full JSON):
+{
+  "conversion_timestamp": "2025-12-28T19:56:33.247037",
+  "input": {
+    "sql_text": "DECLARE @NewProductId INT;\\n\\nBEGIN TRANSACTION;...",
+    "migration_project_identifier": "arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU",
+    "database_name": "ProductManagement",
+    "schema_name": "dbo",
+    "region": "us-east-1",
+    "server_name": "172.31.94.132"
+  },
+  "workflow_steps": [
+    {
+      "step": "create_metadata_model",
+      "timestamp": "2025-12-28T19:56:35.470126",
+      "status": "started"
+    }
+  ],
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': \"Metadata model creation failed: {'default_error_details': {'message': 'Statement definition is not valid.'}}'\"}",
+  "error_timestamp": "2025-12-28T19:56:48.430835"
+}
+
+ROOT CAUSE ANALYSIS:
+The DMS statement conversion tool cannot handle complex SQL Server statement blocks that include:
+1. DECLARE statements with local variables
+2. BEGIN TRANSACTION/COMMIT blocks
+3. Multiple DML statements (INSERT, UPDATE) in a single batch
+4. SCOPE_IDENTITY() function calls
+5. Variable assignments (SET @Variable = ...)
+
+These constructs are T-SQL specific and require procedural logic that the DMS tool
+cannot convert as a single "statement" - they would need to be converted as a
+stored procedure or function.
+
+MANUAL CONVERSION APPLIED:
+Converted the transaction block to PostgreSQL using DO $$ block with:
+- DECLARE variables using PostgreSQL syntax (v_NewProductId instead of @NewProductId)
+- INSERT ... RETURNING clause to replace SCOPE_IDENTITY()
+- NOW() to replace GETDATE()
+- Schema-qualified table names (productmanagement_dbo.products)
+- Lowercase column names per PostgreSQL conventions
+
+For the ADO.NET ExecuteScalarAsync pattern, provided simplified version:
+INSERT INTO productmanagement_dbo.products (name, description, price, stockquantity)
+VALUES (@Name, @Description, @Price, @StockQuantity)
+RETURNING productid;
+
+VERIFICATION STATUS: Manual conversion pending code integration and testing
+
+================================================================================
+
+ISSUE #2: UPDATE Transaction Block (Statement ID 4)
+--------------------------------------------------------------------------------
+SOURCE METHOD: UpdateProductAsync
+STATEMENT TYPE: UPDATE Transaction with history logging
+
+STATUS: NOT ATTEMPTED through DMS tool (same pattern as Issue #1)
+REASON: Would fail with same "Statement definition is not valid" error
+
+MANUAL CONVERSION APPLIED: Yes (see converted_statements.sql)
+CONVERSION METHOD: DO $$ block with DECLARE, SELECT INTO, UPDATE, INSERT
+
+================================================================================
+
+ISSUE #3: DELETE Transaction Block (Statement ID 5)
+--------------------------------------------------------------------------------
+SOURCE METHOD: DeleteProductAsync
+STATEMENT TYPE: DELETE Transaction with history logging
+
+STATUS: NOT ATTEMPTED through DMS tool (same pattern as Issue #1)
+REASON: Would fail with same "Statement definition is not valid" error
+
+MANUAL CONVERSION APPLIED: Yes (see converted_statements.sql)
+CONVERSION METHOD: DO $$ block with DECLARE, SELECT INTO, INSERT, DELETE, UPDATE
+
+================================================================================
+
+SUMMARY
+================================================================================
+Total DMS Conversion Attempts: 5 (Statements 1, 2, 3, 6, 7)
+DMS Successful Conversions: 4 (Statements 1, 2, 6, 7)
+DMS Failed Conversions: 1 (Statement 3)
+Manual Conversions After DMS Failure: 3 (Statements 3, 4, 5)
+
+DMS TOOL LIMITATIONS IDENTIFIED:
+1. Cannot convert multi-statement transaction blocks with DECLARE
+2. Cannot convert SCOPE_IDENTITY() in transaction context
+3. Cannot handle T-SQL procedural constructs (SET, DECLARE, variable assignments)
+
+RECOMMENDATION:
+For future migrations, complex transaction blocks should be:
+1. First attempted through DMS tool to establish baseline
+2. If DMS fails, manually convert using PostgreSQL procedural blocks (DO $$)
+3. Consider refactoring to use simpler patterns (e.g., RETURNING clause)
+4. Test thoroughly with actual database to ensure transactional integrity
+
+ALL STATEMENTS HAVE BEEN CONVERTED AND DOCUMENTED IN converted_statements.sql
+================================================================================
