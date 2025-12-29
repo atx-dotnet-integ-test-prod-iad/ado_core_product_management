@@ -1,0 +1,181 @@
+{
+  "mapping": [
+    {
+      "statement_id": 1,
+      "method": "GetAllProductsAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "line_start": 39,
+      "line_end": 66,
+      "variable_name": "sql",
+      "variable_type": "const string",
+      "description": "CTE with window functions for product statistics and price categorization",
+      "parameters": [],
+      "sql_features": [
+        "WITH clause (CTE)",
+        "AVG() OVER()",
+        "COUNT() OVER()",
+        "CASE expressions",
+        "INNER JOIN",
+        "ROUND()"
+      ]
+    },
+    {
+      "statement_id": 2,
+      "method": "GetProductByIdAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "line_start": 78,
+      "line_end": 104,
+      "variable_name": "sql",
+      "variable_type": "const string",
+      "description": "CTE with LAG window function for historical price/stock comparison",
+      "parameters": [
+        "@ProductId"
+      ],
+      "sql_features": [
+        "WITH clause (CTE)",
+        "LAG() OVER()",
+        "LEFT JOIN",
+        "CASE expressions",
+        "ROUND()",
+        "Parameterized query"
+      ]
+    },
+    {
+      "statement_id": 3,
+      "method": "InsertProductAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "line_start": 117,
+      "line_end": 141,
+      "variable_name": "sql",
+      "variable_type": "const string",
+      "description": "Transaction-wrapped insert with history logging and statistics update",
+      "parameters": [
+        "@Name",
+        "@Description",
+        "@Price",
+        "@StockQuantity"
+      ],
+      "sql_features": [
+        "DECLARE",
+        "BEGIN TRANSACTION",
+        "INSERT",
+        "SCOPE_IDENTITY()",
+        "GETDATE()",
+        "UPDATE",
+        "COMMIT",
+        "SELECT scalar"
+      ]
+    },
+    {
+      "statement_id": 4,
+      "method": "UpdateProductAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "line_start": 153,
+      "line_end": 186,
+      "variable_name": "sql",
+      "variable_type": "const string",
+      "description": "Transaction-wrapped update with change tracking and statistics update",
+      "parameters": [
+        "@ProductId",
+        "@Name",
+        "@Description",
+        "@Price",
+        "@StockQuantity"
+      ],
+      "sql_features": [
+        "BEGIN TRANSACTION",
+        "DECLARE",
+        "SELECT into variables",
+        "UPDATE",
+        "INSERT",
+        "GETDATE()",
+        "COMMIT"
+      ]
+    },
+    {
+      "statement_id": 5,
+      "method": "DeleteProductAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "line_start": 194,
+      "line_end": 224,
+      "variable_name": "sql",
+      "variable_type": "const string",
+      "description": "Transaction-wrapped delete with history logging and statistics cleanup",
+      "parameters": [
+        "@ProductId"
+      ],
+      "sql_features": [
+        "BEGIN TRANSACTION",
+        "DECLARE",
+        "SELECT into variables",
+        "INSERT",
+        "DELETE",
+        "UPDATE",
+        "GETDATE()",
+        "CASE expressions",
+        "COMMIT"
+      ]
+    },
+    {
+      "statement_id": 6,
+      "method": "GetProductsByPriceRangeAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "line_start": 232,
+      "line_end": 256,
+      "variable_name": "sql",
+      "variable_type": "const string",
+      "description": "CTE with ranking and percentile functions for price range analysis",
+      "parameters": [
+        "@MinPrice",
+        "@MaxPrice"
+      ],
+      "sql_features": [
+        "WITH clause (CTE)",
+        "RANK() OVER()",
+        "PERCENT_RANK() OVER()",
+        "BETWEEN",
+        "CASE expressions"
+      ]
+    },
+    {
+      "statement_id": 7,
+      "method": "GetLowStockProductsAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "line_start": 270,
+      "line_end": 294,
+      "variable_name": "sql",
+      "variable_type": "const string",
+      "description": "CTE with aggregate window functions for stock level analysis",
+      "parameters": [
+        "@Threshold"
+      ],
+      "sql_features": [
+        "WITH clause (CTE)",
+        "AVG() OVER()",
+        "MIN() OVER()",
+        "MAX() OVER()",
+        "CASE expressions",
+        "ROUND()"
+      ]
+    }
+  ],
+  "summary": {
+    "total_statements": 7,
+    "total_methods": 7,
+    "source_files": [
+      "DataAccess/ProductRepository.cs"
+    ],
+    "sql_server_features_used": [
+      "Common Table Expressions (WITH clause)",
+      "Window Functions (AVG, COUNT, LAG, RANK, PERCENT_RANK, MIN, MAX with OVER())",
+      "SCOPE_IDENTITY()",
+      "GETDATE()",
+      "BEGIN TRANSACTION/COMMIT",
+      "DECLARE statements",
+      "Parameterized queries (@parameter syntax)",
+      "CASE expressions",
+      "ROUND() function",
+      "BETWEEN operator"
+    ]
+  }
+}
