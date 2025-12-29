@@ -1,0 +1,129 @@
+===================================================================
+SQL STATEMENT CONVERSION LOG
+Date: 2025-12-29
+Source: T-SQL (Microsoft SQL Server)
+Target: PostgreSQL 13
+Tool: AWS DMS MCP Statement Conversion Tool
+===================================================================
+
+SUMMARY:
+--------
+Total Statements: 7
+DMS Tool Success: 6
+DMS Tool Failed: 1
+Manual Conversion Required: 1
+Schema Object Renaming: YES (dbo -> productmanagement_dbo)
+
+CONVERSION DETAILS:
+-------------------
+
+Statement 1: GetAllProductsAsync
+- Method: DMS_TOOL
+- Status: SUCCESS
+- Features Converted: CTE, AVG/COUNT window functions, CASE expressions
+- Schema Changes: Products -> productmanagement_dbo.products
+- Warnings: None
+- Notes: Successful conversion including NULLS FIRST in ORDER BY
+
+Statement 2: GetProductByIdAsync
+- Method: DMS_TOOL
+- Status: SUCCESS
+- Features Converted: CTE, LAG window function, LEFT JOIN
+- Schema Changes: Products -> productmanagement_dbo.products
+- Warnings: None
+- Notes: LAG window function preserved with proper ordering
+
+Statement 3: InsertProductAsync
+- Method: MANUAL_AFTER_DMS_FAILURE
+- Status: DMS FAILED, MANUALLY CONVERTED
+- DMS Error: "Metadata model creation failed: Statement definition is not valid"
+- Original Features: DECLARE, BEGIN TRANSACTION, SCOPE_IDENTITY(), GETDATE(), COMMIT
+- Manual Conversion:
+  * Removed DECLARE/BEGIN TRANSACTION/COMMIT (handled at ADO.NET level)
+  * Replaced SCOPE_IDENTITY() with RETURNING clause
+  * Replaced GETDATE() with NOW()
+  * Split into 3 separate statements for ADO.NET execution
+- Schema Changes: All tables prefixed with productmanagement_dbo
+- Rationale: DMS cannot handle T-SQL batch transactions with variables in inline SQL
+
+Statement 4: UpdateProductAsync
+- Method: DMS_TOOL
+- Status: SUCCESS WITH WARNINGS
+- Features Converted: DECLARE, variables, BEGIN/END block, GETDATE()
+- DMS Warning: "[7807 - Severity CRITICAL - PostgreSQL does not support explicit transaction management commands such as BEGIN TRAN, SAVE TRAN in functions. Convert your source code manually.]"
+- Schema Changes: All tables prefixed with productmanagement_dbo
+- Function Mappings: GETDATE() -> clock_timestamp()
+- Notes: Transaction management will be handled at ADO.NET level, not in SQL
+
+Statement 5: DeleteProductAsync
+- Method: DMS_TOOL
+- Status: SUCCESS WITH WARNINGS
+- Features Converted: DECLARE, variables, BEGIN/END block, GETDATE(), CASE
+- DMS Warning: "[7807] PostgreSQL does not support explicit transaction management"
+- Schema Changes: All tables prefixed with productmanagement_dbo
+- Function Mappings: GETDATE() -> clock_timestamp()
+- Notes: Transaction management will be handled at ADO.NET level
+
+Statement 6: GetProductsByPriceRangeAsync
+- Method: DMS_TOOL
+- Status: SUCCESS
+- Features Converted: CTE, RANK(), PERCENT_RANK() window functions, BETWEEN
+- Schema Changes: Products -> productmanagement_dbo.products
+- Warnings: None
+- Notes: Window functions preserved perfectly, NULLS FIRST added to ORDER BY
+
+Statement 7: GetLowStockProductsAsync
+- Method: DMS_TOOL
+- Status: SUCCESS
+- Features Converted: CTE, AVG/MIN/MAX window functions, CASE, arithmetic
+- Schema Changes: Products -> productmanagement_dbo.products
+- Warnings: None
+- Notes: Multiple window functions in single CTE converted successfully
+
+SCHEMA OBJECT NAME CHANGES:
+----------------------------
+CRITICAL: DMS Tool renamed schema objects during conversion.
+MUST use new names in code re-integration.
+
+Original          -> PostgreSQL
+Products          -> productmanagement_dbo.products
+ProductHistory    -> productmanagement_dbo.producthistory
+ProductStats      -> productmanagement_dbo.productstats
+
+T-SQL FUNCTION CONVERSIONS:
+----------------------------
+GETDATE()         -> clock_timestamp() or NOW()
+SCOPE_IDENTITY()  -> RETURNING clause
+@Parameter        -> @Parameter (preserved)
+BEGIN TRANSACTION -> Handled at ADO.NET NpgsqlTransaction level
+COMMIT            -> Handled at ADO.NET NpgsqlTransaction level
+
+KEY FINDINGS:
+-------------
+1. DMS tool successfully converted 6 out of 7 statements
+2. Complex window functions (LAG, RANK, PERCENT_RANK, AVG, MIN, MAX) all converted correctly
+3. CTEs preserved and converted properly
+4. Transaction blocks with DECLARE statements caused DMS failure for Statement 3
+5. DMS added "NULLS FIRST" to ORDER BY clauses (PostgreSQL best practice)
+6. Schema renaming: dbo -> productmanagement_dbo (MUST be reflected in C# code)
+
+RECOMMENDATIONS FOR CODE RE-INTEGRATION:
+----------------------------------------
+1. Statement 3 (InsertProductAsync) requires special handling:
+   - Execute INSERT with RETURNING to get new ID
+   - Execute INSERT into ProductHistory with captured ID
+   - Execute UPDATE ProductStats
+   - Wrap all 3 in NpgsqlTransaction at ADO.NET level
+
+2. Statements 4 & 5 (Update/Delete): Remove DECLARE/BEGIN/END wrapper
+   - DMS converted to DO blocks, but better to strip and handle transactions in ADO.NET
+   - Extract individual SQL statements for ADO.NET execution
+   - Wrap in NpgsqlTransaction
+
+3. Update all table references to use productmanagement_dbo schema prefix
+
+4. Replace parameter placeholder syntax if needed (@ to $ based on Npgsql requirements)
+
+===================================================================
+END OF CONVERSION LOG
+===================================================================
