@@ -1,0 +1,258 @@
+{
+  "extraction_date": "2024-12-31",
+  "source_file": "sourceCode/DataAccess/ProductRepository.cs",
+  "total_statements_extracted": 7,
+  "statements": [
+    {
+      "statement_id": 1,
+      "statement_name": "GetAllProductsAsync",
+      "source_method": "GetAllProductsAsync",
+      "source_file": "sourceCode/DataAccess/ProductRepository.cs",
+      "line_start": 41,
+      "line_end": 68,
+      "statement_type": "CTE with Window Functions",
+      "complexity": "Medium",
+      "features": [
+        "Common Table Expression (CTE)",
+        "AVG() OVER() window function",
+        "COUNT() OVER() window function",
+        "CASE expression",
+        "INNER JOIN",
+        "ORDER BY with CASE"
+      ],
+      "parameters": [],
+      "tables_referenced": [
+        "Products"
+      ],
+      "returns": "Multiple rows"
+    },
+    {
+      "statement_id": 2,
+      "statement_name": "GetProductByIdAsync",
+      "source_method": "GetProductByIdAsync",
+      "source_file": "sourceCode/DataAccess/ProductRepository.cs",
+      "line_start": 82,
+      "line_end": 113,
+      "statement_type": "CTE with LAG Window Function",
+      "complexity": "Medium",
+      "features": [
+        "Common Table Expression (CTE)",
+        "LAG() OVER() window function",
+        "Parameterized query",
+        "LEFT JOIN",
+        "CASE expression"
+      ],
+      "parameters": [
+        {
+          "name": "@ProductId",
+          "type": "int",
+          "description": "Product identifier"
+        }
+      ],
+      "tables_referenced": [
+        "Products"
+      ],
+      "returns": "Single row"
+    },
+    {
+      "statement_id": 3,
+      "statement_name": "InsertProductAsync",
+      "source_method": "InsertProductAsync",
+      "source_file": "sourceCode/DataAccess/ProductRepository.cs",
+      "line_start": 127,
+      "line_end": 152,
+      "statement_type": "Multi-statement Transaction Block",
+      "complexity": "High",
+      "features": [
+        "DECLARE variable",
+        "BEGIN TRANSACTION",
+        "INSERT statement",
+        "SCOPE_IDENTITY()",
+        "GETDATE()",
+        "UPDATE statement",
+        "COMMIT",
+        "Multi-table modification"
+      ],
+      "parameters": [
+        {
+          "name": "@Name",
+          "type": "string",
+          "description": "Product name"
+        },
+        {
+          "name": "@Description",
+          "type": "string",
+          "description": "Product description"
+        },
+        {
+          "name": "@Price",
+          "type": "decimal",
+          "description": "Product price"
+        },
+        {
+          "name": "@StockQuantity",
+          "type": "int",
+          "description": "Stock quantity"
+        }
+      ],
+      "tables_referenced": [
+        "Products",
+        "ProductHistory",
+        "ProductStats"
+      ],
+      "returns": "Scalar - New product ID"
+    },
+    {
+      "statement_id": 4,
+      "statement_name": "UpdateProductAsync",
+      "source_method": "UpdateProductAsync",
+      "source_file": "sourceCode/DataAccess/ProductRepository.cs",
+      "line_start": 167,
+      "line_end": 198,
+      "statement_type": "Multi-statement Transaction with Variables",
+      "complexity": "High",
+      "features": [
+        "BEGIN TRANSACTION",
+        "DECLARE variables",
+        "SELECT into variables",
+        "UPDATE statement",
+        "INSERT statement",
+        "GETDATE()",
+        "COMMIT",
+        "Multi-table modification"
+      ],
+      "parameters": [
+        {
+          "name": "@ProductId",
+          "type": "int",
+          "description": "Product identifier"
+        },
+        {
+          "name": "@Name",
+          "type": "string",
+          "description": "Product name"
+        },
+        {
+          "name": "@Description",
+          "type": "string",
+          "description": "Product description"
+        },
+        {
+          "name": "@Price",
+          "type": "decimal",
+          "description": "Product price"
+        },
+        {
+          "name": "@StockQuantity",
+          "type": "int",
+          "description": "Stock quantity"
+        }
+      ],
+      "tables_referenced": [
+        "Products",
+        "ProductHistory",
+        "ProductStats"
+      ],
+      "returns": "None"
+    },
+    {
+      "statement_id": 5,
+      "statement_name": "DeleteProductAsync",
+      "source_method": "DeleteProductAsync",
+      "source_file": "sourceCode/DataAccess/ProductRepository.cs",
+      "line_start": 213,
+      "line_end": 246,
+      "statement_type": "Multi-statement Transaction with Delete",
+      "complexity": "High",
+      "features": [
+        "BEGIN TRANSACTION",
+        "DECLARE variables",
+        "SELECT into variables",
+        "INSERT statement",
+        "DELETE statement",
+        "UPDATE statement",
+        "GETDATE()",
+        "CASE expression in UPDATE",
+        "COMMIT",
+        "Multi-table modification"
+      ],
+      "parameters": [
+        {
+          "name": "@ProductId",
+          "type": "int",
+          "description": "Product identifier"
+        }
+      ],
+      "tables_referenced": [
+        "Products",
+        "ProductHistory",
+        "ProductStats"
+      ],
+      "returns": "None"
+    },
+    {
+      "statement_id": 6,
+      "statement_name": "GetProductsByPriceRangeAsync",
+      "source_method": "GetProductsByPriceRangeAsync",
+      "source_file": "sourceCode/DataAccess/ProductRepository.cs",
+      "line_start": 254,
+      "line_end": 281,
+      "statement_type": "CTE with Ranking Window Functions",
+      "complexity": "Medium",
+      "features": [
+        "Common Table Expression (CTE)",
+        "RANK() OVER() window function",
+        "PERCENT_RANK() OVER() window function",
+        "BETWEEN clause",
+        "CASE expression",
+        "Wildcard select (p.*)"
+      ],
+      "parameters": [
+        {
+          "name": "@MinPrice",
+          "type": "decimal",
+          "description": "Minimum price"
+        },
+        {
+          "name": "@MaxPrice",
+          "type": "decimal",
+          "description": "Maximum price"
+        }
+      ],
+      "tables_referenced": [
+        "Products"
+      ],
+      "returns": "Multiple rows"
+    },
+    {
+      "statement_id": 7,
+      "statement_name": "GetLowStockProductsAsync",
+      "source_method": "GetLowStockProductsAsync",
+      "source_file": "sourceCode/DataAccess/ProductRepository.cs",
+      "line_start": 295,
+      "line_end": 327,
+      "statement_type": "CTE with Multiple Window Functions",
+      "complexity": "Medium",
+      "features": [
+        "Common Table Expression (CTE)",
+        "AVG() OVER() window function",
+        "MIN() OVER() window function",
+        "MAX() OVER() window function",
+        "CASE expression",
+        "Wildcard select (p.*)",
+        "ROUND function"
+      ],
+      "parameters": [
+        {
+          "name": "@Threshold",
+          "type": "int",
+          "description": "Stock quantity threshold"
+        }
+      ],
+      "tables_referenced": [
+        "Products"
+      ],
+      "returns": "Multiple rows"
+    }
+  ]
+}

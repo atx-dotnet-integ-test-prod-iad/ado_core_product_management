@@ -1,0 +1,119 @@
+============================================================================
+DMS CONVERSION FAILURES LOG
+Date: 2024-12-31
+Total Failures: 1
+============================================================================
+
+[FAILURE #1]
+Statement ID: 3
+Statement Name: InsertProductAsync
+Source File: sourceCode/DataAccess/ProductRepository.cs
+Lines: 127-152
+Conversion Timestamp: 2025-12-31T12:07:10.347534
+
+ORIGINAL SQL SERVER STATEMENT:
+------------------------------------------------------------------------------
+DECLARE @NewProductId INT;
+
+BEGIN TRANSACTION;
+    -- Insert the new product
+    INSERT INTO Products (Name, Description, Price, StockQuantity)
+    VALUES (@Name, @Description, @Price, @StockQuantity);
+    
+    SET @NewProductId = SCOPE_IDENTITY();
+    
+    -- Log the insertion
+    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+    VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, GETDATE());
+    
+    -- Update product statistics
+    UPDATE ProductStats
+    SET 
+        TotalProducts = TotalProducts + 1,
+        AveragePrice = (AveragePrice * TotalProducts + @Price) / (TotalProducts + 1),
+        LastUpdated = GETDATE()
+    WHERE StatId = 1;
+COMMIT;
+
+SELECT @NewProductId;
+------------------------------------------------------------------------------
+
+DMS ERROR OUTPUT:
+------------------------------------------------------------------------------
+{
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': \"Metadata model creation failed: {'default_error_details': {'message': 'Statement definition is not valid.'}}\"}"
+  "error_timestamp": "2025-12-31T12:07:25.482448"
+}
+------------------------------------------------------------------------------
+
+ROOT CAUSE ANALYSIS:
+------------------------------------------------------------------------------
+The DMS tool failed to convert this complex multi-statement transaction block
+that includes:
+1. Variable declaration (DECLARE)
+2. Explicit transaction management (BEGIN TRANSACTION/COMMIT)
+3. SCOPE_IDENTITY() function call
+4. Multiple INSERT and UPDATE statements
+5. Variable assignment (SET)
+6. SELECT statement returning variable value
+
+DMS considers this an invalid statement definition, likely because it combines
+procedural logic with DML operations in a way that doesn't map cleanly to a
+single SQL statement conversion.
+------------------------------------------------------------------------------
+
+MANUAL CONVERSION APPLIED:
+------------------------------------------------------------------------------
+DO $$
+DECLARE
+    v_NewProductId INTEGER;
+BEGIN
+    -- Insert the new product
+    INSERT INTO productmanagement_dbo.products (name, description, price, stockquantity)
+    VALUES (@Name, @Description, @Price, @StockQuantity)
+    RETURNING productid INTO v_NewProductId;
+    
+    -- Log the insertion
+    INSERT INTO productmanagement_dbo.producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate)
+    VALUES (v_NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, CURRENT_TIMESTAMP);
+    
+    -- Update product statistics
+    UPDATE productmanagement_dbo.productstats
+    SET 
+        totalproducts = totalproducts + 1,
+        averageprice = (averageprice * totalproducts + @Price) / (totalproducts + 1),
+        lastupdated = CURRENT_TIMESTAMP
+    WHERE statid = 1;
+    
+    -- Return the new product ID
+    PERFORM v_NewProductId;
+END $$;
+------------------------------------------------------------------------------
+
+CONVERSION NOTES:
+------------------------------------------------------------------------------
+1. SCOPE_IDENTITY() replaced with RETURNING clause in INSERT statement
+2. Transaction management (BEGIN TRANSACTION/COMMIT) will be handled by C# 
+   code using NpgsqlTransaction
+3. GETDATE() converted to CURRENT_TIMESTAMP
+4. Schema objects updated to use DMS-transformed names:
+   - Products → productmanagement_dbo.products
+   - ProductHistory → productmanagement_dbo.producthistory
+   - ProductStats → productmanagement_dbo.productstats
+5. Variable naming follows PostgreSQL conventions (v_ prefix)
+6. All column and table names converted to lowercase per PostgreSQL standards
+7. DO $$ block used to encapsulate procedural logic
+------------------------------------------------------------------------------
+
+RECOMMENDED FOLLOW-UP:
+------------------------------------------------------------------------------
+1. Test the manual conversion thoroughly with sample data
+2. Verify transaction semantics are preserved when managed by C# code
+3. Ensure RETURNING clause correctly returns the new product ID
+4. Validate that the ProductStats update calculation is correct
+------------------------------------------------------------------------------
+
+============================================================================
+END OF CONVERSION FAILURES LOG
+============================================================================

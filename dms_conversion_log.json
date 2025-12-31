@@ -1,0 +1,97 @@
+{
+  "conversion_date": "2024-12-31",
+  "dms_migration_project_arn": "arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU",
+  "source_database": "ProductManagement",
+  "source_schema": "dbo",
+  "target_database": "postgres",
+  "total_statements_processed": 7,
+  "successful_conversions": 6,
+  "failed_conversions": 1,
+  "conversions": [
+    {
+      "statement_id": 1,
+      "statement_name": "GetAllProductsAsync",
+      "conversion_status": "success",
+      "dms_metadata_model": "sql-conversion-1767182702",
+      "conversion_timestamp": "2025-12-31T12:04:59.833979",
+      "schema_changes": {
+        "Products": "productmanagement_dbo.products"
+      },
+      "notes": "Window functions and CTEs converted successfully"
+    },
+    {
+      "statement_id": 2,
+      "statement_name": "GetProductByIdAsync",
+      "conversion_status": "success",
+      "dms_metadata_model": "sql-conversion-1767182767",
+      "conversion_timestamp": "2025-12-31T12:06:05.077262",
+      "schema_changes": {
+        "Products": "productmanagement_dbo.products"
+      },
+      "notes": "LAG window function and CTEs converted successfully, LEFT JOIN converted to LEFT OUTER JOIN"
+    },
+    {
+      "statement_id": 3,
+      "statement_name": "InsertProductAsync",
+      "conversion_status": "error",
+      "dms_error": "Metadata model creation failed: {'error': \"Metadata model creation failed: {'default_error_details': {'message': 'Statement definition is not valid.'}}\"}",
+      "conversion_timestamp": "2025-12-31T12:07:10.347534",
+      "manual_conversion_required": true,
+      "notes": "DMS tool failed to convert complex transaction block with SCOPE_IDENTITY(). Manual conversion applied using DO $$ block with RETURNING clause for PostgreSQL."
+    },
+    {
+      "statement_id": 4,
+      "statement_name": "UpdateProductAsync",
+      "conversion_status": "success_with_warnings",
+      "dms_metadata_model": "sql-conversion-1767182861",
+      "conversion_timestamp": "2025-12-31T12:07:39.612090",
+      "dms_warnings": [
+        "[7807 - Severity CRITICAL - PostgreSQL does not support explicit transaction management commands such as BEGIN TRAN, SAVE TRAN in functions. Convert your source code manually.]"
+      ],
+      "schema_changes": {
+        "Products": "productmanagement_dbo.products",
+        "ProductHistory": "productmanagement_dbo.producthistory",
+        "ProductStats": "productmanagement_dbo.productstats"
+      },
+      "notes": "GETDATE() converted to clock_timestamp(), variable declarations converted to PostgreSQL syntax. Transaction management will be handled by C# code."
+    },
+    {
+      "statement_id": 5,
+      "statement_name": "DeleteProductAsync",
+      "conversion_status": "success_with_warnings",
+      "dms_metadata_model": "sql-conversion-1767182926",
+      "conversion_timestamp": "2025-12-31T12:08:44.295492",
+      "dms_warnings": [
+        "[7807 - Severity CRITICAL - PostgreSQL does not support explicit transaction management commands such as BEGIN TRAN, SAVE TRAN in functions. Convert your source code manually.]"
+      ],
+      "schema_changes": {
+        "Products": "productmanagement_dbo.products",
+        "ProductHistory": "productmanagement_dbo.producthistory",
+        "ProductStats": "productmanagement_dbo.productstats"
+      },
+      "notes": "GETDATE() converted to clock_timestamp(), CASE expression in UPDATE converted successfully. Transaction management will be handled by C# code."
+    },
+    {
+      "statement_id": 6,
+      "statement_name": "GetProductsByPriceRangeAsync",
+      "conversion_status": "success",
+      "dms_metadata_model": "sql-conversion-1767182991",
+      "conversion_timestamp": "2025-12-31T12:09:49.384912",
+      "schema_changes": {
+        "Products": "productmanagement_dbo.products"
+      },
+      "notes": "RANK() and PERCENT_RANK() window functions converted successfully, BETWEEN clause preserved"
+    },
+    {
+      "statement_id": 7,
+      "statement_name": "GetLowStockProductsAsync",
+      "conversion_status": "success",
+      "dms_metadata_model": "sql-conversion-1767183056",
+      "conversion_timestamp": "2025-12-31T12:10:54.033644",
+      "schema_changes": {
+        "Products": "productmanagement_dbo.products"
+      },
+      "notes": "Multiple window functions (AVG, MIN, MAX OVER) converted successfully, wildcard select preserved"
+    }
+  ]
+}
