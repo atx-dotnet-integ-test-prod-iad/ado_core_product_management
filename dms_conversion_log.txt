@@ -1,0 +1,387 @@
+================================================================================
+DMS MCP TOOL CONVERSION LOG
+================================================================================
+Microsoft SQL Server to PostgreSQL Migration for AdoCore
+All SQL statements conversion tracking with exact DMS tool outputs
+================================================================================
+
+================================================================================
+STATEMENT 1: GetAllProductsAsync
+================================================================================
+Timestamp: 2025-12-31T07:54:33.897193
+Conversion Method: DMS MCP Tool
+Migration Project ARN: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Database Name: ProductManagement
+Schema Name: dbo (source) → productmanagement_dbo (target)
+
+DMS Workflow Steps:
+1. create_metadata_model - completed (2025-12-31T07:54:36.265275)
+   Request ID: 52d4ade3-be7f-426f-b761-98b94467a2bc
+   Metadata Model: sql-conversion-1767167676
+   Poll Attempts: 2
+
+2. convert_metadata_model - completed (2025-12-31T07:54:49.206196)
+   Request ID: 994b1c28-9583-424b-af83-6ad557c5e40a
+   Poll Attempts: 4
+
+3. extract_converted_sql - completed (2025-12-31T07:55:23.533925)
+
+Status: SUCCESS
+Converted SQL Count: 1
+
+Converted SQL:
+WITH productstats
+AS (SELECT
+    productid, AVG(price) OVER () AS avgprice, COUNT(*) OVER () AS totalproducts
+    FROM productmanagement_dbo.products)
+SELECT
+    p.productid, p.name, p.description, p.price, p.stockquantity, p.createddate, p.modifieddate,
+    CASE
+        WHEN p.price > ps.avgprice THEN 'Above Average'
+        WHEN p.price < ps.avgprice THEN 'Below Average'
+        ELSE 'Average'
+    END AS pricecategory, ROUND((p.price / ps.avgprice) * 100, 2) AS pricepercentageofaverage
+    FROM productmanagement_dbo.products AS p
+    INNER JOIN productstats AS ps
+        ON p.productid = ps.productid
+    ORDER BY
+    CASE
+        WHEN p.price > ps.avgprice THEN 1
+        ELSE 2
+    END NULLS FIRST, p.name NULLS FIRST;
+
+================================================================================
+STATEMENT 2: GetProductByIdAsync
+================================================================================
+Timestamp: 2025-12-31T07:55:38.693703
+Conversion Method: DMS MCP Tool
+Migration Project ARN: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Database Name: ProductManagement
+Schema Name: dbo (source) → productmanagement_dbo (target)
+
+DMS Workflow Steps:
+1. create_metadata_model - completed (2025-12-31T07:55:40.883633)
+   Request ID: 2583e144-16a7-4ef1-8ed3-780c80ef9467
+   Metadata Model: sql-conversion-1767167740
+   Poll Attempts: 2
+
+2. convert_metadata_model - completed (2025-12-31T07:55:53.605799)
+   Request ID: d47cd2fc-70eb-4bfe-a13e-3c74245a3b65
+   Poll Attempts: 4
+
+3. extract_converted_sql - completed (2025-12-31T07:56:27.679016)
+
+Status: SUCCESS
+Converted SQL Count: 1
+
+Converted SQL:
+WITH producthistory
+AS (SELECT
+    productid, lag(price) OVER (ORDER BY modifieddate) AS previousprice, lag(stockquantity) OVER (ORDER BY modifieddate) AS previousstock
+    FROM productmanagement_dbo.products
+    WHERE productid = @ProductId)
+SELECT
+    p.productid, p.name, p.description, p.price, p.stockquantity, p.createddate, p.modifieddate, ph.previousprice, ph.previousstock,
+    CASE
+        WHEN ph.previousprice IS NOT NULL THEN ROUND(((p.price - ph.previousprice) / ph.previousprice) * 100, 2)
+        ELSE NULL
+    END AS pricechangepercentage
+    FROM productmanagement_dbo.products AS p
+    LEFT OUTER JOIN producthistory AS ph
+        ON p.productid = ph.productid
+    WHERE p.productid = @ProductId;
+
+================================================================================
+STATEMENT 3: InsertProductAsync
+================================================================================
+Timestamp: 2025-12-31T07:56:42.790098
+Conversion Method: DMS MCP Tool (FAILED) → MANUAL CONVERSION
+Migration Project ARN: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Database Name: ProductManagement
+Schema Name: dbo
+
+DMS Workflow Steps:
+1. create_metadata_model - started (2025-12-31T07:56:44.940403)
+
+Status: ERROR
+Error Timestamp: 2025-12-31T07:56:57.815631
+Error Message: Metadata model creation failed: {'error': "Metadata model creation failed: {'default_error_details': {'message': 'Statement definition is not valid.'}}"}
+
+Original SQL Statement:
+DECLARE @NewProductId INT;
+
+BEGIN TRANSACTION;
+    INSERT INTO Products (Name, Description, Price, StockQuantity)
+    VALUES (@Name, @Description, @Price, @StockQuantity);
+    
+    SET @NewProductId = SCOPE_IDENTITY();
+    
+    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+    VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, GETDATE());
+    
+    UPDATE ProductStats
+    SET 
+        TotalProducts = TotalProducts + 1,
+        AveragePrice = (AveragePrice * TotalProducts + @Price) / (TotalProducts + 1),
+        LastUpdated = GETDATE()
+    WHERE StatId = 1;
+COMMIT;
+
+SELECT @NewProductId;
+
+Manual Conversion Applied:
+DO $$
+DECLARE
+    v_newproductid INT;
+BEGIN
+    INSERT INTO productmanagement_dbo.products (name, description, price, stockquantity)
+    VALUES (@Name, @Description, @Price, @StockQuantity)
+    RETURNING productid INTO v_newproductid;
+    
+    INSERT INTO productmanagement_dbo.producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate)
+    VALUES (v_newproductid, 'INSERT', NULL, @Price, NULL, @StockQuantity, CURRENT_TIMESTAMP);
+    
+    UPDATE productmanagement_dbo.productstats
+    SET 
+        totalproducts = totalproducts + 1,
+        averageprice = (averageprice * totalproducts + @Price) / (totalproducts + 1),
+        lastupdated = CURRENT_TIMESTAMP
+    WHERE statid = 1;
+END $$;
+
+Manual Conversion Rationale:
+- DMS tool rejected multi-statement transaction with DECLARE/BEGIN TRANSACTION/COMMIT
+- Converted to PostgreSQL DO block with proper variable declarations
+- Replaced SCOPE_IDENTITY() with RETURNING clause
+- Replaced GETDATE() with CURRENT_TIMESTAMP
+- Applied schema name transformation (Products → productmanagement_dbo.products)
+- Converted all identifiers to lowercase consistent with DMS pattern
+
+================================================================================
+STATEMENT 4: UpdateProductAsync
+================================================================================
+Timestamp: 2025-12-31T07:57:13.721497
+Conversion Method: DMS MCP Tool
+Migration Project ARN: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Database Name: ProductManagement
+Schema Name: dbo (source) → productmanagement_dbo (target)
+
+DMS Workflow Steps:
+1. create_metadata_model - completed (2025-12-31T07:57:15.803291)
+   Request ID: d51db5ca-0d1b-4f01-9e64-c313e27801a5
+   Metadata Model: sql-conversion-1767167835
+   Poll Attempts: 2
+
+2. convert_metadata_model - completed (2025-12-31T07:57:28.563266)
+   Request ID: 213779e9-2349-4d13-af34-a82a06312c1e
+   Poll Attempts: 4
+
+3. extract_converted_sql - completed (2025-12-31T07:58:02.680118)
+
+Status: SUCCESS (with warnings)
+
+Warnings:
+[7807 - Severity CRITICAL - PostgreSQL does not support explicit transaction management commands such as BEGIN TRAN, SAVE TRAN in functions. Convert your source code manually.]
+
+Converted SQL Count: 1
+
+Converted SQL:
+DECLARE
+    var_OldPrice NUMERIC(18, 2);
+    var_OldStock INTEGER;
+BEGIN
+    /*
+    [7807 - Severity CRITICAL - PostgreSQL does not support explicit transaction management commands such as BEGIN TRAN, SAVE TRAN in functions. Convert your source code manually.]
+    BEGIN TRANSACTION;
+    */
+    SELECT
+        price AS var_OldPrice, stockquantity AS var_OldStock
+        FROM productmanagement_dbo.products
+        WHERE productid = @ProductId;
+    UPDATE productmanagement_dbo.products
+    SET name = @Name, description = @Description, price = @Price, stockquantity = @StockQuantity, modifieddate = clock_timestamp()
+        WHERE productid = @ProductId;
+    INSERT INTO productmanagement_dbo.producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate)
+    VALUES (@ProductId, 'UPDATE', @OldPrice, @Price, @OldStock, @StockQuantity, clock_timestamp());
+    UPDATE productmanagement_dbo.productstats
+    SET averageprice = (averageprice * totalproducts - @OldPrice + @Price) / totalproducts, lastupdated = clock_timestamp()
+        WHERE statid = 1;
+    COMMIT;
+END;
+
+Note: Transaction management warning indicates ADO.NET code will need to handle transactions at application level.
+
+================================================================================
+STATEMENT 5: DeleteProductAsync
+================================================================================
+Timestamp: 2025-12-31T07:58:18.084661
+Conversion Method: DMS MCP Tool
+Migration Project ARN: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Database Name: ProductManagement
+Schema Name: dbo (source) → productmanagement_dbo (target)
+
+DMS Workflow Steps:
+1. create_metadata_model - completed (2025-12-31T07:58:20.185269)
+   Request ID: 73ff51ee-e151-401a-a7e1-2140f2690361
+   Metadata Model: sql-conversion-1767167900
+   Poll Attempts: 2
+
+2. convert_metadata_model - completed (2025-12-31T07:58:32.961358)
+   Request ID: ddf256a0-4866-464f-bc02-ece6d93a6deb
+   Poll Attempts: 4
+
+3. extract_converted_sql - completed (2025-12-31T07:59:07.072998)
+
+Status: SUCCESS (with warnings)
+
+Warnings:
+[7807 - Severity CRITICAL - PostgreSQL does not support explicit transaction management commands such as BEGIN TRAN, SAVE TRAN in functions. Convert your source code manually.]
+
+Converted SQL Count: 1
+
+Converted SQL:
+DECLARE
+    var_OldPrice NUMERIC(18, 2);
+    var_OldStock INTEGER;
+BEGIN
+    /*
+    [7807 - Severity CRITICAL - PostgreSQL does not support explicit transaction management commands such as BEGIN TRAN, SAVE TRAN in functions. Convert your source code manually.]
+    BEGIN TRANSACTION;
+    */
+    SELECT
+        price AS var_OldPrice, stockquantity AS var_OldStock
+        FROM productmanagement_dbo.products
+        WHERE productid = @ProductId;
+    INSERT INTO productmanagement_dbo.producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate)
+    VALUES (@ProductId, 'DELETE', @OldPrice, NULL, @OldStock, NULL, clock_timestamp());
+    DELETE FROM productmanagement_dbo.products
+        WHERE productid = @ProductId;
+    UPDATE productmanagement_dbo.productstats
+    SET totalproducts = totalproducts - 1, averageprice =
+    CASE
+        WHEN totalproducts > 1 THEN (averageprice * totalproducts - @OldPrice) / (totalproducts - 1)
+        ELSE 0
+    END, lastupdated = clock_timestamp()
+        WHERE statid = 1;
+    COMMIT;
+END;
+
+Note: Transaction management warning indicates ADO.NET code will need to handle transactions at application level.
+
+================================================================================
+STATEMENT 6: GetProductsByPriceRangeAsync
+================================================================================
+Timestamp: 2025-12-31T07:59:25.605535
+Conversion Method: DMS MCP Tool
+Migration Project ARN: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Database Name: ProductManagement
+Schema Name: dbo (source) → productmanagement_dbo (target)
+
+DMS Workflow Steps:
+1. create_metadata_model - completed (2025-12-31T07:59:27.664078)
+   Request ID: aca3f534-8ed2-4d7c-a4ff-4e0f249c27bd
+   Metadata Model: sql-conversion-1767167967
+   Poll Attempts: 2
+
+2. convert_metadata_model - completed (2025-12-31T07:59:40.406005)
+   Request ID: d8a75341-e637-48bc-9e05-e3bfc5187861
+   Poll Attempts: 4
+
+3. extract_converted_sql - completed (2025-12-31T08:00:14.558210)
+
+Status: SUCCESS
+Converted SQL Count: 1
+
+Converted SQL:
+WITH rankedproducts
+AS (SELECT
+    p.*, RANK() OVER (ORDER BY p.price) AS pricerank, percent_rank() OVER (ORDER BY p.price) AS pricepercentile
+    FROM productmanagement_dbo.products AS p
+    WHERE p.price BETWEEN @MinPrice AND @MaxPrice)
+SELECT
+    rp.*,
+    CASE
+        WHEN rp.pricepercentile <= 0.25 THEN 'Budget'
+        WHEN rp.pricepercentile <= 0.75 THEN 'Mid-Range'
+        ELSE 'Premium'
+    END AS pricesegment
+    FROM rankedproducts AS rp
+    ORDER BY rp.pricerank NULLS FIRST;
+
+================================================================================
+STATEMENT 7: GetLowStockProductsAsync
+================================================================================
+Timestamp: 2025-12-31T08:00:35.172378
+Conversion Method: DMS MCP Tool
+Migration Project ARN: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Database Name: ProductManagement
+Schema Name: dbo (source) → productmanagement_dbo (target)
+
+DMS Workflow Steps:
+1. create_metadata_model - completed (2025-12-31T08:00:37.406243)
+   Request ID: 421572a1-65df-4e3c-b21c-b67bb77e7b7a
+   Metadata Model: sql-conversion-1767168037
+   Poll Attempts: 2
+
+2. convert_metadata_model - completed (2025-12-31T08:00:50.234954)
+   Request ID: 255085b5-7961-4902-a1bf-7771c8b2d614
+   Poll Attempts: 4
+
+3. extract_converted_sql - completed (2025-12-31T08:01:24.398142)
+
+Status: SUCCESS
+Converted SQL Count: 1
+
+Converted SQL:
+WITH stockanalysis
+AS (SELECT
+    p.*, AVG(stockquantity) OVER () AS avgstock, MIN(stockquantity) OVER () AS minstock, MAX(stockquantity) OVER () AS maxstock
+    FROM productmanagement_dbo.products AS p)
+SELECT
+    sa.*,
+    CASE
+        WHEN stockquantity <= @Threshold THEN 'Critical'
+        WHEN stockquantity <= avgstock * 0.5 THEN 'Low'
+        ELSE 'Adequate'
+    END AS stockstatus, ROUND((stockquantity / avgstock) * 100, 2) AS stockpercentageofaverage
+    FROM stockanalysis AS sa
+    WHERE stockquantity <= @Threshold
+    ORDER BY stockquantity NULLS FIRST;
+
+================================================================================
+DMS CONVERSION SUMMARY
+================================================================================
+Total Statements Processed: 7
+Successfully Converted by DMS: 6
+Failed Conversions (Manual Required): 1
+Statements with Warnings: 2
+
+Success Rate: 85.7% (6/7 statements)
+
+Breakdown:
+- Statement 1 (GetAllProductsAsync): SUCCESS
+- Statement 2 (GetProductByIdAsync): SUCCESS
+- Statement 3 (InsertProductAsync): FAILED - Manual conversion applied
+- Statement 4 (UpdateProductAsync): SUCCESS (with transaction warning)
+- Statement 5 (DeleteProductAsync): SUCCESS (with transaction warning)
+- Statement 6 (GetProductsByPriceRangeAsync): SUCCESS
+- Statement 7 (GetLowStockProductsAsync): SUCCESS
+
+Common Transformations Applied by DMS:
+1. Schema names: dbo → productmanagement_dbo
+2. Table names: Uppercase → lowercase
+3. Column names: MixedCase → lowercase
+4. Functions: GETDATE() → clock_timestamp()
+5. Data types: DECIMAL(18,2) → NUMERIC(18, 2), INT → INTEGER
+6. Variables: @Variable → var_Variable
+7. ORDER BY: Added NULLS FIRST clauses
+8. Joins: LEFT JOIN → LEFT OUTER JOIN
+
+Critical Issues Requiring ADO.NET Code Changes:
+1. Transaction management (Statements 3, 4, 5) - Need to handle at application level
+2. SCOPE_IDENTITY replacement (Statement 3) - Use RETURNING clause pattern
+3. All parameters need to respect case-sensitivity in table/column names
+
+================================================================================
+END OF DMS CONVERSION LOG
+================================================================================

@@ -1,0 +1,170 @@
+{
+  "conversion_summary": {
+    "total_statements_processed": 7,
+    "successfully_converted_by_dms": 6,
+    "failed_conversions_requiring_manual_intervention": 1,
+    "statements_with_warnings": 2,
+    "success_rate_percentage": 85.7
+  },
+  "statement_conversions": [
+    {
+      "statement_number": 1,
+      "method_name": "GetAllProductsAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "source_lines": "42-68",
+      "conversion_method": "DMS_TOOL",
+      "conversion_status": "SUCCESS",
+      "conversion_timestamp": "2025-12-31T07:54:33.897193",
+      "dms_metadata_model": "sql-conversion-1767167676",
+      "warnings": [],
+      "schema_transformations": {
+        "Products": "productmanagement_dbo.products"
+      }
+    },
+    {
+      "statement_number": 2,
+      "method_name": "GetProductByIdAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "source_lines": "75-109",
+      "conversion_method": "DMS_TOOL",
+      "conversion_status": "SUCCESS",
+      "conversion_timestamp": "2025-12-31T07:55:38.693703",
+      "dms_metadata_model": "sql-conversion-1767167740",
+      "warnings": [],
+      "schema_transformations": {
+        "Products": "productmanagement_dbo.products"
+      }
+    },
+    {
+      "statement_number": 3,
+      "method_name": "InsertProductAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "source_lines": "115-146",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "conversion_status": "FAILED_DMS_MANUAL_APPLIED",
+      "conversion_timestamp": "2025-12-31T07:56:42.790098",
+      "dms_error": "Metadata model creation failed: {'error': \"Metadata model creation failed: {'default_error_details': {'message': 'Statement definition is not valid.'}}\"}",
+      "manual_conversion_rationale": "DMS tool rejected multi-statement transaction block with DECLARE/BEGIN TRANSACTION/COMMIT. Manually converted to PostgreSQL DO block with RETURNING clause for SCOPE_IDENTITY() replacement.",
+      "warnings": [],
+      "schema_transformations": {
+        "Products": "productmanagement_dbo.products",
+        "ProductHistory": "productmanagement_dbo.producthistory",
+        "ProductStats": "productmanagement_dbo.productstats"
+      }
+    },
+    {
+      "statement_number": 4,
+      "method_name": "UpdateProductAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "source_lines": "151-187",
+      "conversion_method": "DMS_TOOL",
+      "conversion_status": "SUCCESS",
+      "conversion_timestamp": "2025-12-31T07:57:13.721497",
+      "dms_metadata_model": "sql-conversion-1767167835",
+      "warnings": [
+        "[7807 - Severity CRITICAL - PostgreSQL does not support explicit transaction management commands such as BEGIN TRAN, SAVE TRAN in functions. Convert your source code manually.]"
+      ],
+      "schema_transformations": {
+        "Products": "productmanagement_dbo.products",
+        "ProductHistory": "productmanagement_dbo.producthistory",
+        "ProductStats": "productmanagement_dbo.productstats"
+      }
+    },
+    {
+      "statement_number": 5,
+      "method_name": "DeleteProductAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "source_lines": "192-222",
+      "conversion_method": "DMS_TOOL",
+      "conversion_status": "SUCCESS",
+      "conversion_timestamp": "2025-12-31T07:58:18.084661",
+      "dms_metadata_model": "sql-conversion-1767167900",
+      "warnings": [
+        "[7807 - Severity CRITICAL - PostgreSQL does not support explicit transaction management commands such as BEGIN TRAN, SAVE TRAN in functions. Convert your source code manually.]"
+      ],
+      "schema_transformations": {
+        "Products": "productmanagement_dbo.products",
+        "ProductHistory": "productmanagement_dbo.producthistory",
+        "ProductStats": "productmanagement_dbo.productstats"
+      }
+    },
+    {
+      "statement_number": 6,
+      "method_name": "GetProductsByPriceRangeAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "source_lines": "228-255",
+      "conversion_method": "DMS_TOOL",
+      "conversion_status": "SUCCESS",
+      "conversion_timestamp": "2025-12-31T07:59:25.605535",
+      "dms_metadata_model": "sql-conversion-1767167967",
+      "warnings": [],
+      "schema_transformations": {
+        "Products": "productmanagement_dbo.products"
+      }
+    },
+    {
+      "statement_number": 7,
+      "method_name": "GetLowStockProductsAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "source_lines": "260-291",
+      "conversion_method": "DMS_TOOL",
+      "conversion_status": "SUCCESS",
+      "conversion_timestamp": "2025-12-31T08:00:35.172378",
+      "dms_metadata_model": "sql-conversion-1767168037",
+      "warnings": [],
+      "schema_transformations": {
+        "Products": "productmanagement_dbo.products"
+      }
+    }
+  ],
+  "common_transformations": {
+    "schema_names": {
+      "pattern": "dbo → productmanagement_dbo",
+      "applies_to_all_statements": true
+    },
+    "identifier_casing": {
+      "table_names": "lowercase",
+      "column_names": "lowercase",
+      "applies_to_all_statements": true
+    },
+    "function_replacements": {
+      "GETDATE()": "clock_timestamp() or CURRENT_TIMESTAMP",
+      "SCOPE_IDENTITY()": "RETURNING clause"
+    },
+    "data_type_mappings": {
+      "DECIMAL(18,2)": "NUMERIC(18, 2)",
+      "INT": "INTEGER"
+    },
+    "variable_declarations": {
+      "@Variable": "var_Variable"
+    },
+    "syntax_changes": {
+      "LEFT JOIN": "LEFT OUTER JOIN",
+      "ORDER BY": "Added NULLS FIRST clauses"
+    }
+  },
+  "critical_issues": {
+    "transaction_management": {
+      "affected_statements": [3, 4, 5],
+      "issue": "PostgreSQL does not support explicit transaction management in functions",
+      "resolution": "Handle transactions at ADO.NET application level using NpgsqlTransaction"
+    },
+    "identity_retrieval": {
+      "affected_statements": [3],
+      "issue": "SCOPE_IDENTITY() not available in PostgreSQL",
+      "resolution": "Use RETURNING clause in INSERT statements"
+    },
+    "case_sensitivity": {
+      "affected_statements": "all",
+      "issue": "PostgreSQL uses case-sensitive identifiers",
+      "resolution": "All table and column names converted to lowercase by DMS"
+    }
+  },
+  "migration_project_details": {
+    "migration_project_arn": "arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU",
+    "source_database": "ProductManagement",
+    "source_engine": "Microsoft SQL Server 2019",
+    "target_engine": "PostgreSQL 13",
+    "region": "us-east-1"
+  }
+}

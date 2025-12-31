@@ -1,0 +1,346 @@
+# SQL Re-integration Log
+## Microsoft SQL Server to PostgreSQL Migration - ProductRepository.cs
+
+### Overview
+This document details all SQL statement replacements and code modifications performed to migrate ProductRepository.cs from SQL Server to PostgreSQL compatibility.
+
+## Critical Changes Required
+
+### 1. Package and Using Statement Changes
+**Original:**
+```csharp
+using Microsoft.Data.SqlClient;
+```
+
+**PostgreSQL:**
+```csharp
+using Npgsql;
+```
+
+### 2. Class Type Replacements
+**All occurrences of SqlConnection → NpgsqlConnection**
+**All occurrences of SqlCommand → NpgsqlCommand**
+**All occurrences of SqlDataReader → NpgsqlDataReader**
+
+Line 14: `private SqlConnection _connection;` → `private NpgsqlConnection _connection;`
+Line 25: `private async Task<SqlConnection> GetConnectionAsync()` → `private async Task<NpgsqlConnection> GetConnectionAsync()`
+Line 28: `_connection = new SqlConnection(_connectionString);` → `_connection = new NpgsqlConnection(_connectionString);`
+All SqlCommand instances → NpgsqlCommand
+Line 344 (MapProductFromReader): `SqlDataReader reader` → `NpgsqlDataReader reader`
+
+### 3. SQL Statement Replacements
+
+#### Statement 1: GetAllProductsAsync (Lines 42-68)
+**Schema Changes:** Products → productmanagement_dbo.products
+**Identifier Changes:** All column/table names to lowercase
+**Added:** NULLS FIRST in ORDER BY clauses
+
+**New SQL:**
+```sql
+WITH productstats
+AS (SELECT
+    productid, AVG(price) OVER () AS avgprice, COUNT(*) OVER () AS totalproducts
+    FROM productmanagement_dbo.products)
+SELECT
+    p.productid, p.name, p.description, p.price, p.stockquantity, p.createddate, p.modifieddate,
+    CASE
+        WHEN p.price > ps.avgprice THEN 'Above Average'
+        WHEN p.price < ps.avgprice THEN 'Below Average'
+        ELSE 'Average'
+    END AS pricecategory, ROUND((p.price / ps.avgprice) * 100, 2) AS pricepercentageofaverage
+    FROM productmanagement_dbo.products AS p
+    INNER JOIN productstats AS ps
+        ON p.productid = ps.productid
+    ORDER BY
+    CASE
+        WHEN p.price > ps.avgprice THEN 1
+        ELSE 2
+    END NULLS FIRST, p.name NULLS FIRST;
+```
+
+#### Statement 2: GetProductByIdAsync (Lines 75-109)
+**Schema Changes:** Products → productmanagement_dbo.products
+**Identifier Changes:** All column/table names to lowercase
+
+**New SQL:**
+```sql
+WITH producthistory
+AS (SELECT
+    productid, lag(price) OVER (ORDER BY modifieddate) AS previousprice, lag(stockquantity) OVER (ORDER BY modifieddate) AS previousstock
+    FROM productmanagement_dbo.products
+    WHERE productid = @ProductId)
+SELECT
+    p.productid, p.name, p.description, p.price, p.stockquantity, p.createddate, p.modifieddate, ph.previousprice, ph.previousstock,
+    CASE
+        WHEN ph.previousprice IS NOT NULL THEN ROUND(((p.price - ph.previousprice) / ph.previousprice) * 100, 2)
+        ELSE NULL
+    END AS pricechangepercentage
+    FROM productmanagement_dbo.products AS p
+    LEFT OUTER JOIN producthistory AS ph
+        ON p.productid = ph.productid
+    WHERE p.productid = @ProductId;
+```
+
+#### Statement 3: InsertProductAsync (Lines 115-146)
+**CRITICAL:** Complete rewrite required for SCOPE_IDENTITY() replacement with RETURNING clause
+**Method Changes:** Transaction handling moved to application level
+
+**Option 1 - Simple INSERT with RETURNING (Recommended):**
+```csharp
+public async Task<int> InsertProductAsync(Product product)
+{
+    var connection = await GetConnectionAsync();
+    using var transaction = await connection.BeginTransactionAsync();
+    
+    try
+    {
+        // Insert product and get ID using RETURNING
+        const string insertSql = @"
+            INSERT INTO productmanagement_dbo.products (name, description, price, stockquantity)
+            VALUES (@Name, @Description, @Price, @StockQuantity)
+            RETURNING productid;";
+        
+        int newProductId;
+        using (var command = new NpgsqlCommand(insertSql, connection, transaction))
+        {
+            command.Parameters.AddWithValue("@Name", product.Name);
+            command.Parameters.AddWithValue("@Description", (object)product.Description ?? DBNull.Value);
+            command.Parameters.AddWithValue("@Price", product.Price);
+            command.Parameters.AddWithValue("@StockQuantity", product.StockQuantity);
+            
+            newProductId = Convert.ToInt32(await command.ExecuteScalarAsync());
+        }
+        
+        // Log the insertion
+        const string historySql = @"
+            INSERT INTO productmanagement_dbo.producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate)
+            VALUES (@ProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, CURRENT_TIMESTAMP);";
+        
+        using (var command = new NpgsqlCommand(historySql, connection, transaction))
+        {
+            command.Parameters.AddWithValue("@ProductId", newProductId);
+            command.Parameters.AddWithValue("@Price", product.Price);
+            command.Parameters.AddWithValue("@StockQuantity", product.StockQuantity);
+            await command.ExecuteNonQueryAsync();
+        }
+        
+        // Update product statistics
+        const string statsSql = @"
+            UPDATE productmanagement_dbo.productstats
+            SET 
+                totalproducts = totalproducts + 1,
+                averageprice = (averageprice * totalproducts + @Price) / (totalproducts + 1),
+                lastupdated = CURRENT_TIMESTAMP
+            WHERE statid = 1;";
+        
+        using (var command = new NpgsqlCommand(statsSql, connection, transaction))
+        {
+            command.Parameters.AddWithValue("@Price", product.Price);
+            await command.ExecuteNonQueryAsync();
+        }
+        
+        await transaction.CommitAsync();
+        return newProductId;
+    }
+    catch
+    {
+        await transaction.RollbackAsync();
+        throw;
+    }
+}
+```
+
+#### Statement 4: UpdateProductAsync (Lines 151-187)
+**Changes:** Transaction handling at application level, GETDATE() → CURRENT_TIMESTAMP
+
+**New Implementation:**
+```csharp
+public async Task UpdateProductAsync(Product product)
+{
+    var connection = await GetConnectionAsync();
+    using var transaction = await connection.BeginTransactionAsync();
+    
+    try
+    {
+        // Get old values
+        decimal oldPrice = 0;
+        int oldStock = 0;
+        
+        const string selectSql = @"
+            SELECT price, stockquantity
+            FROM productmanagement_dbo.products
+            WHERE productid = @ProductId;";
+        
+        using (var command = new NpgsqlCommand(selectSql, connection, transaction))
+        {
+            command.Parameters.AddWithValue("@ProductId", product.ProductId);
+            using var reader = await command.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                oldPrice = Convert.ToDecimal(reader["price"]);
+                oldStock = Convert.ToInt32(reader["stockquantity"]);
+            }
+        }
+        
+        // Update product
+        const string updateSql = @"
+            UPDATE productmanagement_dbo.products
+            SET name = @Name, description = @Description, price = @Price, 
+                stockquantity = @StockQuantity, modifieddate = CURRENT_TIMESTAMP
+            WHERE productid = @ProductId;";
+        
+        using (var command = new NpgsqlCommand(updateSql, connection, transaction))
+        {
+            command.Parameters.AddWithValue("@ProductId", product.ProductId);
+            command.Parameters.AddWithValue("@Name", product.Name);
+            command.Parameters.AddWithValue("@Description", (object)product.Description ?? DBNull.Value);
+            command.Parameters.AddWithValue("@Price", product.Price);
+            command.Parameters.AddWithValue("@StockQuantity", product.StockQuantity);
+            await command.ExecuteNonQueryAsync();
+        }
+        
+        // Log changes
+        const string historySql = @"
+            INSERT INTO productmanagement_dbo.producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate)
+            VALUES (@ProductId, 'UPDATE', @OldPrice, @Price, @OldStock, @StockQuantity, CURRENT_TIMESTAMP);";
+        
+        using (var command = new NpgsqlCommand(historySql, connection, transaction))
+        {
+            command.Parameters.AddWithValue("@ProductId", product.ProductId);
+            command.Parameters.AddWithValue("@OldPrice", oldPrice);
+            command.Parameters.AddWithValue("@Price", product.Price);
+            command.Parameters.AddWithValue("@OldStock", oldStock);
+            command.Parameters.AddWithValue("@StockQuantity", product.StockQuantity);
+            await command.ExecuteNonQueryAsync();
+        }
+        
+        // Update statistics
+        const string statsSql = @"
+            UPDATE productmanagement_dbo.productstats
+            SET averageprice = (averageprice * totalproducts - @OldPrice + @Price) / totalproducts, 
+                lastupdated = CURRENT_TIMESTAMP
+            WHERE statid = 1;";
+        
+        using (var command = new NpgsqlCommand(statsSql, connection, transaction))
+        {
+            command.Parameters.AddWithValue("@OldPrice", oldPrice);
+            command.Parameters.AddWithValue("@Price", product.Price);
+            await command.ExecuteNonQueryAsync();
+        }
+        
+        await transaction.CommitAsync();
+    }
+    catch
+    {
+        await transaction.RollbackAsync();
+        throw;
+    }
+}
+```
+
+#### Statement 5: DeleteProductAsync (Lines 192-222)
+**Changes:** Similar transaction handling pattern, GETDATE() → CURRENT_TIMESTAMP
+
+#### Statement 6: GetProductsByPriceRangeAsync (Lines 228-255)
+**Schema Changes:** Products → productmanagement_dbo.products
+**Identifier Changes:** All lowercase
+**Added:** NULLS FIRST
+
+**New SQL:**
+```sql
+WITH rankedproducts
+AS (SELECT
+    p.*, RANK() OVER (ORDER BY p.price) AS pricerank, percent_rank() OVER (ORDER BY p.price) AS pricepercentile
+    FROM productmanagement_dbo.products AS p
+    WHERE p.price BETWEEN @MinPrice AND @MaxPrice)
+SELECT
+    rp.*,
+    CASE
+        WHEN rp.pricepercentile <= 0.25 THEN 'Budget'
+        WHEN rp.pricepercentile <= 0.75 THEN 'Mid-Range'
+        ELSE 'Premium'
+    END AS pricesegment
+    FROM rankedproducts AS rp
+    ORDER BY rp.pricerank NULLS FIRST;
+```
+
+#### Statement 7: GetLowStockProductsAsync (Lines 260-291)
+**Schema Changes:** Products → productmanagement_dbo.products
+**Identifier Changes:** All lowercase
+**Added:** NULLS FIRST
+
+**New SQL:**
+```sql
+WITH stockanalysis
+AS (SELECT
+    p.*, AVG(stockquantity) OVER () AS avgstock, MIN(stockquantity) OVER () AS minstock, MAX(stockquantity) OVER () AS maxstock
+    FROM productmanagement_dbo.products AS p)
+SELECT
+    sa.*,
+    CASE
+        WHEN stockquantity <= @Threshold THEN 'Critical'
+        WHEN stockquantity <= avgstock * 0.5 THEN 'Low'
+        ELSE 'Adequate'
+    END AS stockstatus, ROUND((stockquantity / avgstock) * 100, 2) AS stockpercentageofaverage
+    FROM stockanalysis AS sa
+    WHERE stockquantity <= @Threshold
+    ORDER BY stockquantity NULLS FIRST;
+```
+
+### 4. MapProductFromReader Method Changes
+**Line 344:**
+```csharp
+private static Product MapProductFromReader(NpgsqlDataReader reader)
+{
+    return new Product
+    {
+        ProductId = Convert.ToInt32(reader["productid"]),  // lowercase
+        Name = reader["name"].ToString(),  // lowercase
+        Description = reader["description"] == DBNull.Value ? null : reader["description"].ToString(),  // lowercase
+        Price = Convert.ToDecimal(reader["price"]),  // lowercase
+        StockQuantity = Convert.ToInt32(reader["stockquantity"]),  // lowercase
+        CreatedDate = Convert.ToDateTime(reader["createddate"]),  // lowercase
+        ModifiedDate = reader["modifieddate"] == DBNull.Value ? null : (DateTime?)Convert.ToDateTime(reader["modifieddate"])  // lowercase
+    };
+}
+```
+
+## Summary of Changes
+
+**Total Lines Modified:** ~370 lines
+**Package Changes:** Microsoft.Data.SqlClient → Npgsql
+**Class Changes:** 
+- SqlConnection → NpgsqlConnection (3 occurrences)
+- SqlCommand → NpgsqlCommand (14+ occurrences)
+- SqlDataReader → NpgsqlDataReader (2 occurrences)
+
+**SQL Changes:**
+- All table names: Products → productmanagement_dbo.products (with lowercase)
+- All column names: MixedCase → lowercase
+- GETDATE() → CURRENT_TIMESTAMP (9 occurrences)
+- SCOPE_IDENTITY() → RETURNING clause (1 occurrence)
+- Transaction handling: Moved from SQL to application level (3 methods)
+- Added NULLS FIRST to ORDER BY clauses (3 statements)
+
+**Critical Schema Transformation:**
+- Schema prefix: productmanagement_dbo
+- All identifiers: lowercase
+
+## Testing Requirements
+
+1. Verify all SQL statements execute correctly against PostgreSQL database
+2. Test transaction handling (Insert, Update, Delete operations)
+3. Verify RETURNING clause properly returns new ProductId
+4. Test all query methods return correct data with lowercase column names
+5. Verify parameter bindings work correctly with @ prefix
+6. Test connection pooling with Npgsql
+7. Verify transaction rollback functionality
+
+## Known Issues / Limitations
+
+1. Transaction blocks moved from SQL to C# code - requires more round trips
+2. SCOPE_IDENTITY() replacement changes the execution pattern
+3. Case-sensitive identifiers may cause issues if schema doesn't match exactly
+4. productmanagement_dbo schema must exist in target PostgreSQL database
+
+## End of Re-integration Log
