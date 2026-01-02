@@ -1,0 +1,370 @@
+================================================================================
+DMS MCP TOOL CONVERSION LOG
+Microsoft SQL Server to PostgreSQL Migration
+Conversion Session: 2026-01-02
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Database: ProductManagement
+Schema: dbo
+Region: us-east-1
+Server: 172.31.94.132
+================================================================================
+
+This log documents all interactions with the DMS MCP statement conversion tool
+(dms-mcp____statement_conversion_tool) during the SQL Server to PostgreSQL
+migration process.
+
+================================================================================
+STATEMENT #1: GetAllProductsAsync - Complex CTE with Window Functions
+================================================================================
+Invocation Time: 2026-01-02T19:55:34.421256
+
+Input Parameters:
+- schema_name: dbo
+- sql_text: [Complex CTE with AVG/COUNT OVER, INNER JOIN, CASE expressions]
+
+DMS Workflow Steps:
+1. create_metadata_model
+   - Timestamp: 2026-01-02T19:55:36.829261
+   - Status: completed
+   - Request ID: 0b2af01a-92dd-4c45-974b-228a4a399e0d
+   - Metadata Model: sql-conversion-1767383736
+   - Poll Attempts: 2
+
+2. convert_metadata_model
+   - Timestamp: 2026-01-02T19:55:49.475778
+   - Status: completed
+   - Conversion Request ID: 7d4624bf-cc70-4a32-87e4-56c5988c8151
+   - Poll Attempts: 5
+
+3. extract_converted_sql
+   - Timestamp: 2026-01-02T19:56:34.320461
+   - Status: completed
+
+Conversion Result: SUCCESS
+Converted SQL Count: 1
+Primary Converted SQL: WITH productstats AS (SELECT...) [full statement in converted_statements.sql]
+
+Key Changes Applied by DMS:
+- Schema: Products -> productmanagement_dbo.products
+- All identifiers lowercased
+- Added NULLS FIRST to ORDER BY clauses
+
+================================================================================
+STATEMENT #2: GetProductByIdAsync - CTE with LAG Window Function
+================================================================================
+Invocation Time: 2026-01-02T19:56:50.039152
+
+Input Parameters:
+- schema_name: dbo
+- sql_text: [CTE with LAG window function, LEFT JOIN, parameter @ProductId]
+
+DMS Workflow Steps:
+1. create_metadata_model
+   - Timestamp: 2026-01-02T19:56:52.245320
+   - Status: completed
+   - Request ID: 58d49163-ab34-4804-8496-31d40426ff57
+   - Metadata Model: sql-conversion-1767383812
+   - Poll Attempts: 2
+
+2. convert_metadata_model
+   - Timestamp: 2026-01-02T19:57:04.997071
+   - Status: completed
+   - Conversion Request ID: f13ee611-6252-4945-9f01-42d62bf1b705
+   - Poll Attempts: 5
+
+3. extract_converted_sql
+   - Timestamp: 2026-01-02T19:57:49.666411
+   - Status: completed
+
+Conversion Result: SUCCESS
+Converted SQL Count: 1
+Primary Converted SQL: WITH producthistory AS (SELECT...) [full statement in converted_statements.sql]
+
+Key Changes Applied by DMS:
+- Schema: Products -> productmanagement_dbo.products
+- LEFT JOIN -> LEFT OUTER JOIN
+- All identifiers lowercased
+- Parameter @ProductId preserved
+
+================================================================================
+STATEMENT #3: InsertProductAsync - Multi-Statement Transaction Block
+================================================================================
+Invocation Time: 2026-01-02T19:58:05.608223
+
+Input Parameters:
+- schema_name: dbo
+- sql_text: [Transaction block with DECLARE, INSERT, SCOPE_IDENTITY(), UPDATE, COMMIT]
+
+DMS Workflow Steps:
+1. create_metadata_model
+   - Timestamp: 2026-01-02T19:58:08.036745
+   - Status: started (NEVER COMPLETED)
+
+Conversion Result: ERROR
+Error Message: "Metadata model creation failed: {'error': \"Metadata model creation failed: {'default_error_details': {'message': 'Statement definition is not valid.'}}\"}"
+Error Timestamp: 2026-01-02T19:58:21.029420
+
+Root Cause Analysis:
+DMS MCP tool cannot process complex multi-statement transaction blocks that:
+1. Use DECLARE statements for variables
+2. Use SCOPE_IDENTITY() function  
+3. Contain multiple INSERT/UPDATE operations within a single transaction
+4. Have explicit BEGIN TRANSACTION/COMMIT syntax
+
+Manual Intervention Required:
+Since DMS failed, manual conversion was performed:
+- Converted SCOPE_IDENTITY() to PostgreSQL RETURNING clause
+- Split multi-statement block into separate operations
+- GETDATE() -> CURRENT_TIMESTAMP
+- Transaction management moved to C# application layer
+- Schema changes: productmanagement_dbo.* with lowercase identifiers
+
+Manual Conversion Documented In: converted_statements.sql (Statement #3)
+
+================================================================================
+STATEMENT #4: UpdateProductAsync - Transaction with Variable Declarations
+================================================================================
+Invocation Time: 2026-01-02T19:58:31.760211
+
+Input Parameters:
+- schema_name: dbo
+- sql_text: [BEGIN TRANSACTION with DECLARE, SELECT into vars, UPDATE, INSERT, COMMIT]
+
+DMS Workflow Steps:
+1. create_metadata_model
+   - Timestamp: 2026-01-02T19:58:33.977925
+   - Status: completed
+   - Request ID: 1bb765b0-d6b5-47e8-b62b-f0ea4a525760
+   - Metadata Model: sql-conversion-1767383913
+   - Poll Attempts: 2
+
+2. convert_metadata_model
+   - Timestamp: 2026-01-02T19:58:46.815710
+   - Status: completed
+   - Conversion Request ID: 640f29e3-f186-44f9-9740-ee4814289cca
+   - Poll Attempts: 5
+
+3. extract_converted_sql
+   - Timestamp: 2026-01-02T19:59:31.795259
+   - Status: completed
+
+Conversion Result: SUCCESS WITH WARNINGS
+Converted SQL Count: 1
+
+DMS Warning Issued:
+[7807 - Severity CRITICAL] PostgreSQL does not support explicit transaction 
+management commands such as BEGIN TRAN, SAVE TRAN in functions. Convert your 
+source code manually.
+
+Primary Converted SQL: DECLARE var_OldPrice NUMERIC(18, 2)... [full statement in converted_statements.sql]
+
+Key Changes Applied by DMS:
+- DECLARE @variable -> DECLARE var_variable
+- DECIMAL(18,2) -> NUMERIC(18, 2)
+- INT -> INTEGER
+- GETDATE() -> clock_timestamp()
+- BEGIN TRANSACTION commented out (/* [7807...] BEGIN TRANSACTION; */)
+- SELECT @var = column -> SELECT column AS var_variable
+- Schema: productmanagement_dbo.* with lowercase identifiers
+
+Action Required:
+Transaction management must be handled in C# code using NpgsqlTransaction
+
+================================================================================
+STATEMENT #5: DeleteProductAsync - Transaction with Conditional CASE
+================================================================================
+Invocation Time: 2026-01-02T19:59:49.908573
+
+Input Parameters:
+- schema_name: dbo
+- sql_text: [BEGIN TRANSACTION with DECLARE, INSERT, DELETE, UPDATE with CASE, COMMIT]
+
+DMS Workflow Steps:
+1. create_metadata_model
+   - Timestamp: 2026-01-02T19:59:52.084326
+   - Status: completed
+   - Request ID: a48a8fba-7b88-43e2-a22d-a0f5f35d9bfd
+   - Metadata Model: sql-conversion-1767383992
+   - Poll Attempts: 2
+
+2. convert_metadata_model
+   - Timestamp: 2026-01-02T20:00:04.859417
+   - Status: completed
+   - Conversion Request ID: 7043acbe-88d3-403b-910d-eaf43bf7302d
+   - Poll Attempts: 5
+
+3. extract_converted_sql
+   - Timestamp: 2026-01-02T20:00:49.597750
+   - Status: completed
+
+Conversion Result: SUCCESS WITH WARNINGS
+Converted SQL Count: 1
+
+DMS Warning Issued:
+[7807 - Severity CRITICAL] PostgreSQL does not support explicit transaction 
+management commands such as BEGIN TRAN, SAVE TRAN in functions. Convert your 
+source code manually.
+
+Primary Converted SQL: DECLARE var_OldPrice NUMERIC(18, 2)... [full statement in converted_statements.sql]
+
+Key Changes Applied by DMS:
+- Same variable and function transformations as Statement #4
+- DELETE statement preserved
+- CASE expression in UPDATE preserved
+- BEGIN TRANSACTION commented out
+- Schema: productmanagement_dbo.* with lowercase identifiers
+
+Action Required:
+Transaction management must be handled in C# code using NpgsqlTransaction
+
+================================================================================
+STATEMENT #6: GetProductsByPriceRangeAsync - CTE with RANK and PERCENT_RANK
+================================================================================
+Invocation Time: 2026-01-02T20:01:04.327982
+
+Input Parameters:
+- schema_name: dbo
+- sql_text: [CTE with RANK/PERCENT_RANK window functions, BETWEEN clause]
+
+DMS Workflow Steps:
+1. create_metadata_model
+   - Timestamp: 2026-01-02T20:01:06.491770
+   - Status: completed
+   - Request ID: 855d171a-1700-4488-8e50-c205e6f852f7
+   - Metadata Model: sql-conversion-1767384066
+   - Poll Attempts: 2
+
+2. convert_metadata_model
+   - Timestamp: 2026-01-02T20:01:19.327257
+   - Status: completed
+   - Conversion Request ID: 73e4b869-13df-4c76-99a4-efb9fee27578
+   - Poll Attempts: 5
+
+3. extract_converted_sql
+   - Timestamp: 2026-01-02T20:02:04.365319
+   - Status: completed
+
+Conversion Result: SUCCESS
+Converted SQL Count: 1
+Primary Converted SQL: WITH rankedproducts AS (SELECT...) [full statement in converted_statements.sql]
+
+Key Changes Applied by DMS:
+- RANK() and PERCENT_RANK() functions preserved (names lowercased)
+- BETWEEN clause preserved
+- Parameters @MinPrice, @MaxPrice preserved
+- Schema: productmanagement_dbo.products
+- All identifiers lowercased
+- Added NULLS FIRST to ORDER BY
+
+================================================================================
+STATEMENT #7: GetLowStockProductsAsync - CTE with Multiple Aggregate Window Functions
+================================================================================
+Invocation Time: 2026-01-02T20:02:20.009349
+
+Input Parameters:
+- schema_name: dbo
+- sql_text: [CTE with AVG/MIN/MAX OVER() window functions, CASE for status]
+
+DMS Workflow Steps:
+1. create_metadata_model
+   - Timestamp: 2026-01-02T20:02:22.111441
+   - Status: completed
+   - Request ID: 10c86cba-7cd3-4396-844d-4e96a5016476
+   - Metadata Model: sql-conversion-1767384142
+   - Poll Attempts: 2
+
+2. convert_metadata_model
+   - Timestamp: 2026-01-02T20:02:34.905147
+   - Status: completed
+   - Conversion Request ID: 0eac5bb2-e902-497d-b115-18dfcc685467
+   - Poll Attempts: 5
+
+3. extract_converted_sql
+   - Timestamp: 2026-01-02T20:03:19.761001
+   - Status: completed
+
+Conversion Result: SUCCESS
+Converted SQL Count: 1
+Primary Converted SQL: WITH stockanalysis AS (SELECT...) [full statement in converted_statements.sql]
+
+Key Changes Applied by DMS:
+- Multiple window functions (AVG/MIN/MAX OVER) preserved
+- CASE expression preserved
+- Parameter @Threshold preserved
+- Schema: productmanagement_dbo.products
+- All identifiers lowercased
+- Added NULLS FIRST to ORDER BY
+
+================================================================================
+OVERALL CONVERSION SUMMARY
+================================================================================
+
+Total Statements Submitted: 7
+Successful Conversions: 6
+  - Clean Success: 4 (Statements 1, 2, 6, 7)
+  - Success with Warnings: 2 (Statements 4, 5)
+Failed Conversions: 1 (Statement 3)
+Manual Conversions Required: 1 (Statement 3)
+
+Common DMS Transformations Applied:
+1. Schema Conversion: dbo -> productmanagement_dbo
+2. Identifier Case: ALL UPPERCASE/MixedCase -> lowercase
+3. Function Names: MixedCase -> lowercase (e.g., LAG -> lag)
+4. JOIN Syntax: LEFT JOIN -> LEFT OUTER JOIN
+5. ORDER BY: Added NULLS FIRST clauses
+6. Date Functions: GETDATE() -> clock_timestamp() or CURRENT_TIMESTAMP
+7. Data Types: DECIMAL -> NUMERIC, INT -> INTEGER
+8. Variable Syntax: @variable -> var_variable (in DECLARE blocks)
+
+Critical Warnings from DMS:
+- Warning 7807 (Severity CRITICAL): PostgreSQL does not support explicit 
+  transaction management (BEGIN TRAN, COMMIT) in functions
+  Affected: Statements 4, 5
+  Resolution: Handle transactions in C# application code
+
+Failed Statement Analysis:
+- Statement 3 failed because it combined:
+  * DECLARE statements
+  * SCOPE_IDENTITY() (requires special handling)
+  * Multiple operations in single transaction block
+  * Complex multi-statement logic
+  
+  DMS could not parse this as a valid statement for conversion.
+  Manual conversion successfully applied using PostgreSQL RETURNING clause.
+
+Schema Object Name Changes (CRITICAL for C# integration):
+- Products -> productmanagement_dbo.products
+- ProductHistory -> productmanagement_dbo.producthistory  
+- ProductStats -> productmanagement_dbo.productstats
+- ProductId -> productid (all column names lowercase)
+- StockQuantity -> stockquantity
+- CreatedDate -> createddate
+- ModifiedDate -> modifieddate
+... (all identifiers follow this pattern)
+
+Next Steps for Integration:
+1. Update ProductRepository.cs with converted SQL statements
+2. Ensure schema references use productmanagement_dbo prefix
+3. Handle transaction management in C# for Statements 3, 4, 5
+4. Update Statement 3 to use RETURNING clause approach
+5. Verify parameter binding works with @Parameter syntax
+6. Update column name references if C# code directly uses column names
+7. Test all queries against PostgreSQL database with new schema
+
+Total Conversion Time: ~7.5 minutes (all 7 statements)
+Average Time per Statement: ~1 minute
+
+DMS MCP Tool Performance:
+- Metadata model creation: ~2 seconds per statement
+- Conversion processing: ~10-15 seconds per statement
+- SQL extraction: ~40-45 seconds per statement
+- Total workflow: ~1 minute per statement
+
+Tool Reliability:
+- 85.7% success rate (6 of 7 statements)
+- 28.6% with warnings requiring manual intervention (2 of 7)
+- 14.3% complete failures requiring manual conversion (1 of 7)
+
+================================================================================
+END OF DMS CONVERSION LOG
+================================================================================
