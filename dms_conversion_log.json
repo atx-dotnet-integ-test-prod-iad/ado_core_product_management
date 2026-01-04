@@ -1,0 +1,265 @@
+{
+  "migration_project": "arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU",
+  "conversion_date": "2026-01-04",
+  "total_statements": 7,
+  "successful_conversions": 6,
+  "failed_conversions": 1,
+  "manual_interventions": 1,
+  "conversions": [
+    {
+      "statement_number": 1,
+      "method_name": "GetAllProductsAsync",
+      "conversion_timestamp": "2026-01-04T04:05:19.526308",
+      "status": "success",
+      "dms_output": {
+        "workflow_steps": [
+          {
+            "step": "create_metadata_model",
+            "timestamp": "2026-01-04T04:05:21.945200",
+            "status": "completed",
+            "request_identifier": "07bb7c68-bcd0-45fd-9b67-f2a32c9df6fd",
+            "metadata_model_name": "sql-conversion-1767499521",
+            "poll_attempts": 2
+          },
+          {
+            "step": "convert_metadata_model",
+            "timestamp": "2026-01-04T04:05:34.768028",
+            "status": "completed",
+            "conversion_request_identifier": "508ba52b-a256-4f02-adbc-e9fd31974470",
+            "poll_attempts": 6
+          },
+          {
+            "step": "extract_converted_sql",
+            "timestamp": "2026-01-04T04:06:30.579913",
+            "status": "completed"
+          }
+        ],
+        "converted_sql_count": 1,
+        "schema_changes": {
+          "table_name": "Products -> productmanagement_dbo.products",
+          "column_names": "All converted to lowercase"
+        },
+        "notes": "CTE with window functions (AVG, COUNT OVER) converted successfully"
+      }
+    },
+    {
+      "statement_number": 2,
+      "method_name": "GetProductByIdAsync",
+      "conversion_timestamp": "2026-01-04T04:06:47.296808",
+      "status": "success",
+      "dms_output": {
+        "workflow_steps": [
+          {
+            "step": "create_metadata_model",
+            "timestamp": "2026-01-04T04:06:49.299317",
+            "status": "completed",
+            "request_identifier": "e676b558-6519-4047-b4ee-c110a5f11b76",
+            "metadata_model_name": "sql-conversion-1767499609",
+            "poll_attempts": 2
+          },
+          {
+            "step": "convert_metadata_model",
+            "timestamp": "2026-01-04T04:07:02.094970",
+            "status": "completed",
+            "conversion_request_identifier": "8dd8c3f0-a549-4a17-b45a-d6bfd4fea89d",
+            "poll_attempts": 6
+          },
+          {
+            "step": "extract_converted_sql",
+            "timestamp": "2026-01-04T04:07:57.591966",
+            "status": "completed"
+          }
+        ],
+        "converted_sql_count": 1,
+        "schema_changes": {
+          "table_name": "Products -> productmanagement_dbo.products",
+          "column_names": "All converted to lowercase"
+        },
+        "notes": "CTE with LAG window function converted successfully, LEFT JOIN converted to LEFT OUTER JOIN"
+      }
+    },
+    {
+      "statement_number": 3,
+      "method_name": "InsertProductAsync",
+      "conversion_timestamp": "2026-01-04T04:08:15.389851",
+      "status": "error",
+      "dms_output": {
+        "workflow_steps": [
+          {
+            "step": "create_metadata_model",
+            "timestamp": "2026-01-04T04:08:17.541348",
+            "status": "started"
+          }
+        ],
+        "error": "Metadata model creation failed: {'error': \"Metadata model creation failed: {'default_error_details': {'message': 'Statement definition is not valid.'}}\"}",
+        "error_timestamp": "2026-01-04T04:08:30.262427"
+      },
+      "manual_conversion_applied": true,
+      "manual_conversion_notes": "DMS tool could not process multi-statement transaction block with DECLARE/SET variable declarations. Manual conversion applied following PostgreSQL best practices: (1) Removed DECLARE/SET for variables - will be handled in C# code, (2) Replaced SCOPE_IDENTITY() with RETURNING clause on INSERT, (3) Replaced GETDATE() with CURRENT_TIMESTAMP, (4) Removed BEGIN TRANSACTION/COMMIT - will be handled by NpgsqlTransaction in C# code, (5) Split into 3 separate commands to be executed within a transaction, (6) Applied schema changes: Products -> productmanagement_dbo.products, ProductHistory -> productmanagement_dbo.producthistory, ProductStats -> productmanagement_dbo.productstats, (7) Converted all column names to lowercase"
+    },
+    {
+      "statement_number": 4,
+      "method_name": "UpdateProductAsync",
+      "conversion_timestamp": "2026-01-04T04:08:40.616060",
+      "status": "success_with_warnings",
+      "dms_output": {
+        "workflow_steps": [
+          {
+            "step": "create_metadata_model",
+            "timestamp": "2026-01-04T04:08:42.714841",
+            "status": "completed",
+            "request_identifier": "fa9b70b3-2402-45dd-8a3b-5dcc9f420e50",
+            "metadata_model_name": "sql-conversion-1767499722",
+            "poll_attempts": 2
+          },
+          {
+            "step": "convert_metadata_model",
+            "timestamp": "2026-01-04T04:08:55.467502",
+            "status": "completed",
+            "conversion_request_identifier": "1c29e57a-46c8-4f85-801c-76139448d971",
+            "poll_attempts": 6
+          },
+          {
+            "step": "extract_converted_sql",
+            "timestamp": "2026-01-04T04:09:51.217671",
+            "status": "completed"
+          }
+        ],
+        "converted_sql_count": 1,
+        "schema_changes": {
+          "table_name": "Products -> productmanagement_dbo.products, ProductHistory -> productmanagement_dbo.producthistory, ProductStats -> productmanagement_dbo.productstats",
+          "column_names": "All converted to lowercase"
+        },
+        "warnings": [
+          "[7807 - Severity CRITICAL] PostgreSQL does not support explicit transaction management commands such as BEGIN TRAN, SAVE TRAN in functions. Convert your source code manually."
+        ],
+        "notes": "Variable declarations converted (@OldPrice -> var_OldPrice), GETDATE() -> clock_timestamp(), transaction commands included in output but need to be handled in application code. For ADO.NET usage, split into individual commands."
+      }
+    },
+    {
+      "statement_number": 5,
+      "method_name": "DeleteProductAsync",
+      "conversion_timestamp": "2026-01-04T04:10:07.815568",
+      "status": "success_with_warnings",
+      "dms_output": {
+        "workflow_steps": [
+          {
+            "step": "create_metadata_model",
+            "timestamp": "2026-01-04T04:10:09.817131",
+            "status": "completed",
+            "request_identifier": "bb57e234-d4ce-46e1-826f-ef15f9a22a3d",
+            "metadata_model_name": "sql-conversion-1767499809",
+            "poll_attempts": 2
+          },
+          {
+            "step": "convert_metadata_model",
+            "timestamp": "2026-01-04T04:10:22.900646",
+            "status": "completed",
+            "conversion_request_identifier": "0742ce16-c3fa-4fb5-88d1-94fde30cee34",
+            "poll_attempts": 6
+          },
+          {
+            "step": "extract_converted_sql",
+            "timestamp": "2026-01-04T04:11:18.401688",
+            "status": "completed"
+          }
+        ],
+        "converted_sql_count": 1,
+        "schema_changes": {
+          "table_name": "Products -> productmanagement_dbo.products, ProductHistory -> productmanagement_dbo.producthistory, ProductStats -> productmanagement_dbo.productstats",
+          "column_names": "All converted to lowercase"
+        },
+        "warnings": [
+          "[7807 - Severity CRITICAL] PostgreSQL does not support explicit transaction management commands such as BEGIN TRAN, SAVE TRAN in functions. Convert your source code manually."
+        ],
+        "notes": "Variable declarations converted (@OldPrice -> var_OldPrice), GETDATE() -> clock_timestamp(), CASE expression in UPDATE preserved. For ADO.NET usage, split into individual commands."
+      }
+    },
+    {
+      "statement_number": 6,
+      "method_name": "GetProductsByPriceRangeAsync",
+      "conversion_timestamp": "2026-01-04T04:11:34.550619",
+      "status": "success",
+      "dms_output": {
+        "workflow_steps": [
+          {
+            "step": "create_metadata_model",
+            "timestamp": "2026-01-04T04:11:36.611781",
+            "status": "completed",
+            "request_identifier": "cb7b211b-afcc-4678-b39a-3ac7847531b4",
+            "metadata_model_name": "sql-conversion-1767499896",
+            "poll_attempts": 2
+          },
+          {
+            "step": "convert_metadata_model",
+            "timestamp": "2026-01-04T04:11:49.396630",
+            "status": "completed",
+            "conversion_request_identifier": "a85d1bbb-1cbb-43aa-948f-7becdeb3b9c5",
+            "poll_attempts": 6
+          },
+          {
+            "step": "extract_converted_sql",
+            "timestamp": "2026-01-04T04:12:45.069168",
+            "status": "completed"
+          }
+        ],
+        "converted_sql_count": 1,
+        "schema_changes": {
+          "table_name": "Products -> productmanagement_dbo.products",
+          "column_names": "All converted to lowercase"
+        },
+        "notes": "CTE with RANK and PERCENT_RANK window functions converted successfully, BETWEEN clause preserved"
+      }
+    },
+    {
+      "statement_number": 7,
+      "method_name": "GetLowStockProductsAsync",
+      "conversion_timestamp": "2026-01-04T04:13:01.897277",
+      "status": "success",
+      "dms_output": {
+        "workflow_steps": [
+          {
+            "step": "create_metadata_model",
+            "timestamp": "2026-01-04T04:13:03.951045",
+            "status": "completed",
+            "request_identifier": "32da4028-e35f-4854-bb71-fba36058b180",
+            "metadata_model_name": "sql-conversion-1767499983",
+            "poll_attempts": 2
+          },
+          {
+            "step": "convert_metadata_model",
+            "timestamp": "2026-01-04T04:13:16.664258",
+            "status": "completed",
+            "conversion_request_identifier": "3dded295-c68b-43d2-9e51-132e7f0765ef",
+            "poll_attempts": 6
+          },
+          {
+            "step": "extract_converted_sql",
+            "timestamp": "2026-01-04T04:14:12.317068",
+            "status": "completed"
+          }
+        ],
+        "converted_sql_count": 1,
+        "schema_changes": {
+          "table_name": "Products -> productmanagement_dbo.products",
+          "column_names": "All converted to lowercase"
+        },
+        "notes": "CTE with AVG, MIN, MAX window functions converted successfully, CASE expression preserved"
+      }
+    }
+  ],
+  "schema_transformation_summary": {
+    "schema_name_change": "dbo -> productmanagement_dbo",
+    "table_transformations": {
+      "Products": "productmanagement_dbo.products",
+      "ProductHistory": "productmanagement_dbo.producthistory",
+      "ProductStats": "productmanagement_dbo.productstats"
+    },
+    "column_name_convention": "All column names converted to lowercase",
+    "function_transformations": {
+      "GETDATE()": "CURRENT_TIMESTAMP or clock_timestamp()",
+      "SCOPE_IDENTITY()": "RETURNING clause pattern"
+    }
+  },
+  "transaction_management_notes": "BEGIN TRANSACTION/COMMIT statements are not directly supported in PostgreSQL ADO.NET code the same way as SQL Server. These need to be handled using NpgsqlTransaction objects in C# code. Statements 3, 4, and 5 require transaction management to be implemented at the application level."
+}
