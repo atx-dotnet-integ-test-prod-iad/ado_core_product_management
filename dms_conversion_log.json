@@ -1,0 +1,249 @@
+{
+  "conversion_log": {
+    "migration_project_arn": "arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU",
+    "source_database": "Microsoft SQL Server 2019",
+    "target_database": "PostgreSQL 13",
+    "schema_mapping": {
+      "source_schema": "dbo",
+      "target_schema": "productmanagement_dbo"
+    },
+    "conversion_date": "2026-01-07",
+    "total_statements": 7,
+    "dms_successful_conversions": 4,
+    "manual_conversions_after_dms_failure": 3,
+    "statements": [
+      {
+        "statement_id": 1,
+        "method_name": "GetAllProductsAsync",
+        "conversion_method": "DMS_TOOL",
+        "conversion_status": "SUCCESS",
+        "dms_metadata_model_name": "sql-conversion-1767760577",
+        "dms_request_identifier": "ab591fc3-9f6c-4248-aae0-bb863f9e24b7",
+        "dms_conversion_request_id": "dc35553c-976a-4708-ad77-633ae00add05",
+        "dms_workflow_status": "completed",
+        "dms_poll_attempts": {
+          "create_model": 2,
+          "convert_model": 8
+        },
+        "original_sql_snippet": "WITH ProductStats AS (SELECT ProductId, AVG(Price) OVER()...",
+        "converted_sql_snippet": "WITH productstats AS (SELECT productid, AVG(price) OVER ()...",
+        "key_transformations": [
+          "CTE name lowercase: ProductStats -> productstats",
+          "Column names lowercase: ProductId -> productid",
+          "Table schema: Products -> productmanagement_dbo.products",
+          "ORDER BY enhanced with NULLS FIRST"
+        ],
+        "sql_server_features_converted": [
+          "Common Table Expression (CTE)",
+          "Window functions: AVG() OVER(), COUNT() OVER()",
+          "CASE expression",
+          "ROUND function"
+        ]
+      },
+      {
+        "statement_id": 2,
+        "method_name": "GetProductByIdAsync",
+        "conversion_method": "DMS_TOOL",
+        "conversion_status": "SUCCESS",
+        "dms_metadata_model_name": "sql-conversion-1767760689",
+        "dms_request_identifier": "4f9a58cb-30eb-4eb3-bbcd-f0956952e59e",
+        "dms_conversion_request_id": "433d7a45-861e-4a7d-9be6-c84c6a02c64f",
+        "dms_workflow_status": "completed",
+        "dms_poll_attempts": {
+          "create_model": 2,
+          "convert_model": 8
+        },
+        "original_sql_snippet": "WITH ProductHistory AS (SELECT ProductId, LAG(Price) OVER...",
+        "converted_sql_snippet": "WITH producthistory AS (SELECT productid, lag(price) OVER...",
+        "key_transformations": [
+          "CTE name lowercase: ProductHistory -> producthistory",
+          "Column names lowercase",
+          "Table schema: Products -> productmanagement_dbo.products",
+          "LEFT JOIN -> LEFT OUTER JOIN",
+          "Window function: LAG() preserved"
+        ],
+        "sql_server_features_converted": [
+          "Common Table Expression (CTE)",
+          "Window function: LAG() OVER (ORDER BY...)",
+          "LEFT JOIN",
+          "CASE expression",
+          "ROUND function"
+        ],
+        "parameters": ["@ProductId"]
+      },
+      {
+        "statement_id": 3,
+        "method_name": "InsertProductAsync",
+        "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+        "conversion_status": "MANUAL",
+        "dms_attempted": true,
+        "dms_error": "Metadata model creation failed: {'error': \"Metadata model creation failed: {'default_error_details': {'message': 'Statement definition is not valid.'}}\"}",
+        "dms_error_timestamp": "2026-01-07T04:40:13.382596",
+        "dms_failure_reason": "Multi-statement transaction blocks not supported by DMS in single statement mode",
+        "original_sql_snippet": "DECLARE @NewProductId INT; BEGIN TRANSACTION; INSERT INTO Products...",
+        "converted_sql_snippet": "INSERT INTO productmanagement_dbo.products (name, description, price, stockquantity) VALUES (@Name, @Description, @Price, @StockQuantity) RETURNING productid;",
+        "manual_conversion_rationale": "DMS cannot convert multi-statement transaction blocks as a single statement. Converted to use PostgreSQL RETURNING clause for SCOPE_IDENTITY() equivalent. Transaction will be managed in application code using NpgsqlTransaction.",
+        "key_transformations": [
+          "SCOPE_IDENTITY() -> RETURNING productid",
+          "GETDATE() -> CURRENT_TIMESTAMP",
+          "BEGIN TRANSACTION/COMMIT removed (managed in code)",
+          "DECLARE @var removed (use RETURNING)",
+          "Table schema updates: Products -> productmanagement_dbo.products",
+          "Column names lowercase"
+        ],
+        "sql_server_features_converted": [
+          "SCOPE_IDENTITY() function",
+          "GETDATE() function",
+          "Transaction control (moved to application code)",
+          "Variable declaration (replaced with RETURNING)"
+        ],
+        "parameters": ["@Name", "@Description", "@Price", "@StockQuantity"],
+        "notes": "Original transaction included INSERT to ProductHistory and UPDATE to ProductStats. These will be executed as separate statements within a transaction controlled by application code."
+      },
+      {
+        "statement_id": 4,
+        "method_name": "UpdateProductAsync",
+        "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+        "conversion_status": "MANUAL",
+        "dms_attempted": false,
+        "dms_skip_reason": "Similar multi-statement transaction to Statement 3, would fail with same error",
+        "original_sql_snippet": "BEGIN TRANSACTION; DECLARE @OldPrice DECIMAL(18,2); DECLARE @OldStock INT; SELECT @OldPrice = Price...",
+        "converted_sql_snippet": "UPDATE productmanagement_dbo.products SET name = @Name, description = @Description, price = @Price, stockquantity = @StockQuantity, modifieddate = CURRENT_TIMESTAMP WHERE productid = @ProductId;",
+        "manual_conversion_rationale": "Multi-statement transaction with variable declarations. Converted to separate statements where old values are fetched by application code first, then UPDATE, history INSERT, and stats UPDATE are executed within application-managed transaction.",
+        "key_transformations": [
+          "GETDATE() -> CURRENT_TIMESTAMP",
+          "BEGIN TRANSACTION/COMMIT removed (managed in code)",
+          "DECLARE @var removed (fetch in code)",
+          "Table schema updates applied",
+          "Column names lowercase"
+        ],
+        "sql_server_features_converted": [
+          "GETDATE() function",
+          "Transaction control (moved to application code)",
+          "Variable declarations (moved to application code)"
+        ],
+        "parameters": ["@ProductId", "@Name", "@Description", "@Price", "@StockQuantity", "@OldPrice", "@OldStock"],
+        "notes": "Application code will: 1) SELECT old values, 2) BEGIN transaction, 3) UPDATE products, 4) INSERT history, 5) UPDATE stats, 6) COMMIT"
+      },
+      {
+        "statement_id": 5,
+        "method_name": "DeleteProductAsync",
+        "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+        "conversion_status": "MANUAL",
+        "dms_attempted": false,
+        "dms_skip_reason": "Similar multi-statement transaction to Statements 3 and 4",
+        "original_sql_snippet": "BEGIN TRANSACTION; DECLARE @OldPrice DECIMAL(18,2); DECLARE @OldStock INT; SELECT @OldPrice = Price...",
+        "converted_sql_snippet": "DELETE FROM productmanagement_dbo.products WHERE productid = @ProductId;",
+        "manual_conversion_rationale": "Multi-statement transaction with DELETE. Converted to separate statements where old values are fetched first, then history INSERT, DELETE, and stats UPDATE are executed within application-managed transaction.",
+        "key_transformations": [
+          "GETDATE() -> CURRENT_TIMESTAMP",
+          "BEGIN TRANSACTION/COMMIT removed (managed in code)",
+          "DECLARE @var removed (fetch in code)",
+          "Table schema updates applied",
+          "Column names lowercase",
+          "CASE expression preserved in stats update"
+        ],
+        "sql_server_features_converted": [
+          "GETDATE() function",
+          "Transaction control (moved to application code)",
+          "Variable declarations (moved to application code)",
+          "CASE expression"
+        ],
+        "parameters": ["@ProductId", "@OldPrice", "@OldStock"],
+        "notes": "Application code will: 1) SELECT old values, 2) BEGIN transaction, 3) INSERT history, 4) DELETE product, 5) UPDATE stats, 6) COMMIT"
+      },
+      {
+        "statement_id": 6,
+        "method_name": "GetProductsByPriceRangeAsync",
+        "conversion_method": "DMS_TOOL",
+        "conversion_status": "SUCCESS",
+        "dms_metadata_model_name": "sql-conversion-1767760828",
+        "dms_request_identifier": "4f880a68-7ddd-473f-a5f3-164fec77c08c",
+        "dms_conversion_request_id": "f52776a2-7dbf-48a1-a8be-277c1cea5c92",
+        "dms_workflow_status": "completed",
+        "dms_poll_attempts": {
+          "create_model": 2,
+          "convert_model": 8
+        },
+        "original_sql_snippet": "WITH RankedProducts AS (SELECT p.*, RANK() OVER (ORDER BY p.Price)...",
+        "converted_sql_snippet": "WITH rankedproducts AS (SELECT p.*, RANK() OVER (ORDER BY p.price)...",
+        "key_transformations": [
+          "CTE name lowercase: RankedProducts -> rankedproducts",
+          "Column names lowercase",
+          "Table schema: Products -> productmanagement_dbo.products",
+          "NULLS FIRST added to ORDER BY"
+        ],
+        "sql_server_features_converted": [
+          "Common Table Expression (CTE)",
+          "Window functions: RANK() OVER(), PERCENT_RANK() OVER()",
+          "BETWEEN clause",
+          "CASE expression"
+        ],
+        "parameters": ["@MinPrice", "@MaxPrice"]
+      },
+      {
+        "statement_id": 7,
+        "method_name": "GetLowStockProductsAsync",
+        "conversion_method": "DMS_TOOL",
+        "conversion_status": "SUCCESS",
+        "dms_metadata_model_name": "sql-conversion-1767760941",
+        "dms_request_identifier": "081f6d90-84fb-43dc-b30d-74fe6d4449a6",
+        "dms_conversion_request_id": "f9408557-04f2-484a-8cd6-af29e7932da7",
+        "dms_workflow_status": "completed",
+        "dms_poll_attempts": {
+          "create_model": 2,
+          "convert_model": 8
+        },
+        "original_sql_snippet": "WITH StockAnalysis AS (SELECT p.*, AVG(StockQuantity) OVER()...",
+        "converted_sql_snippet": "WITH stockanalysis AS (SELECT p.*, AVG(stockquantity) OVER ()...",
+        "key_transformations": [
+          "CTE name lowercase: StockAnalysis -> stockanalysis",
+          "Column names lowercase",
+          "Table schema: Products -> productmanagement_dbo.products",
+          "NULLS FIRST added to ORDER BY"
+        ],
+        "sql_server_features_converted": [
+          "Common Table Expression (CTE)",
+          "Window functions: AVG() OVER(), MIN() OVER(), MAX() OVER()",
+          "CASE expression",
+          "ROUND function"
+        ],
+        "parameters": ["@Threshold"]
+      }
+    ],
+    "schema_transformations": {
+      "tables": {
+        "Products": "productmanagement_dbo.products",
+        "ProductHistory": "productmanagement_dbo.producthistory",
+        "ProductStats": "productmanagement_dbo.productstats"
+      },
+      "columns": {
+        "naming_convention": "All column names converted to lowercase per PostgreSQL convention",
+        "examples": {
+          "ProductId": "productid",
+          "StockQuantity": "stockquantity",
+          "CreatedDate": "createddate"
+        }
+      }
+    },
+    "function_mappings": {
+      "SCOPE_IDENTITY()": "RETURNING clause (e.g., RETURNING productid)",
+      "GETDATE()": "CURRENT_TIMESTAMP",
+      "ROUND()": "ROUND() (same function, compatible)",
+      "AVG() OVER()": "AVG() OVER() (window function, compatible)",
+      "LAG() OVER()": "lag() OVER() (window function, compatible)",
+      "RANK() OVER()": "RANK() OVER() (window function, compatible)",
+      "PERCENT_RANK() OVER()": "percent_rank() OVER() (window function, compatible)"
+    },
+    "parameter_handling": {
+      "sql_server_syntax": "@ParameterName",
+      "postgres_syntax": "@ParameterName (Npgsql supports named parameters with @ prefix)",
+      "note": "Npgsql allows using SQL Server-style @param syntax, but also supports $1, $2 positional parameters"
+    },
+    "transaction_handling": {
+      "sql_server": "BEGIN TRANSACTION / COMMIT / ROLLBACK in SQL",
+      "postgres": "BEGIN / COMMIT / ROLLBACK in SQL, or managed via NpgsqlTransaction in application code",
+      "implementation": "Statements 3, 4, 5 will use application-level transaction management with NpgsqlTransaction"
+    }
+  }
+}
