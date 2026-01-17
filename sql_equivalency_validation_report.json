@@ -1,0 +1,119 @@
+{
+  "report_metadata": {
+    "generated_date": "2026-01-17",
+    "total_statements": 7,
+    "validation_tool": "sql-equivalency___validate_sql_equivalence",
+    "validation_approach": "Each statement pair validated independently using SQL Equivalency MCP tool",
+    "critical_note": "ALL equivalency determinations come from the tool output - NO agent judgment used",
+    "limitation": "Full equivalency validation requires complete table schemas and sample data. Statements marked as PENDING_VALIDATION require table creation DDL for Products, ProductHistory, and ProductStats tables in both SQL Server and PostgreSQL formats."
+  },
+  "summary": {
+    "number_of_statements_processed": 7,
+    "number_of_statements_equivalent": 0,
+    "number_of_statements_non_equivalent": 0,
+    "number_of_statements_with_equivalency_error": 0,
+    "number_of_statements_pending_validation": 7
+  },
+  "statement_details": [
+    {
+      "statement_id": 1,
+      "method_name": "GetAllProductsAsync",
+      "description": "CTE with window functions (AVG OVER, COUNT OVER)",
+      "original_statement": "WITH ProductStats AS (SELECT ProductId, AVG(Price) OVER() as AvgPrice, COUNT(*) OVER() as TotalProducts FROM Products) SELECT p.ProductId, p.Name, p.Description, p.Price, p.StockQuantity, p.CreatedDate, p.ModifiedDate, CASE WHEN p.Price > ps.AvgPrice THEN 'Above Average' WHEN p.Price < ps.AvgPrice THEN 'Below Average' ELSE 'Average' END as PriceCategory, ROUND((p.Price / ps.AvgPrice) * 100, 2) as PricePercentageOfAverage FROM Products p INNER JOIN ProductStats ps ON p.ProductId = ps.ProductId ORDER BY CASE WHEN p.Price > ps.AvgPrice THEN 1 ELSE 2 END, p.Name",
+      "converted_statement": "WITH productstats AS (SELECT productid, AVG(price) OVER () AS avgprice, COUNT(*) OVER () AS totalproducts FROM productmanagement_dbo.products) SELECT p.productid, p.name, p.description, p.price, p.stockquantity, p.createddate, p.modifieddate, CASE WHEN p.price > ps.avgprice THEN 'Above Average' WHEN p.price < ps.avgprice THEN 'Below Average' ELSE 'Average' END AS pricecategory, ROUND((p.price / ps.avgprice) * 100, 2) AS pricepercentageofaverage FROM productmanagement_dbo.products AS p INNER JOIN productstats AS ps ON p.productid = ps.productid ORDER BY CASE WHEN p.price > ps.avgprice THEN 1 ELSE 2 END NULLS FIRST, p.name NULLS FIRST",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "PENDING_VALIDATION",
+      "equivalency_tool_output": "Requires CREATE TABLE statement for Products table with columns: ProductId, Name, Description, Price, StockQuantity, CreatedDate, ModifiedDate",
+      "validation_note": "Equivalency validation requires table schema DDL. Statement transformation appears semantically equivalent (same CTE structure, window functions, joins, and filtering logic), but tool validation is required per transformation definition."
+    },
+    {
+      "statement_id": 2,
+      "method_name": "GetProductByIdAsync",
+      "description": "CTE with LAG window function",
+      "original_statement": "WITH ProductHistory AS (SELECT ProductId, LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice, LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock FROM Products WHERE ProductId = @ProductId) SELECT p.ProductId, p.Name, p.Description, p.Price, p.StockQuantity, p.CreatedDate, p.ModifiedDate, ph.PreviousPrice, ph.PreviousStock, CASE WHEN ph.PreviousPrice IS NOT NULL THEN ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2) ELSE NULL END as PriceChangePercentage FROM Products p LEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId WHERE p.ProductId = @ProductId",
+      "converted_statement": "WITH producthistory AS (SELECT productid, lag(price) OVER (ORDER BY modifieddate) AS previousprice, lag(stockquantity) OVER (ORDER BY modifieddate) AS previousstock FROM productmanagement_dbo.products WHERE productid = @ProductId) SELECT p.productid, p.name, p.description, p.price, p.stockquantity, p.createddate, p.modifieddate, ph.previousprice, ph.previousstock, CASE WHEN ph.previousprice IS NOT NULL THEN ROUND(((p.price - ph.previousprice) / ph.previousprice) * 100, 2) ELSE NULL END AS pricechangepercentage FROM productmanagement_dbo.products AS p LEFT OUTER JOIN producthistory AS ph ON p.productid = ph.productid WHERE p.productid = @ProductId",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "PENDING_VALIDATION",
+      "equivalency_tool_output": "Requires CREATE TABLE statement for Products table",
+      "validation_note": "Equivalency validation requires table schema DDL. Statement transformation appears semantically equivalent (same CTE structure, LAG window function, joins, and parameter usage)."
+    },
+    {
+      "statement_id": 3,
+      "method_name": "InsertProductAsync",
+      "description": "Multi-statement transaction with RETURNING clause (manual conversion)",
+      "original_statement": "DECLARE @NewProductId INT; BEGIN TRANSACTION; INSERT INTO Products (Name, Description, Price, StockQuantity) VALUES (@Name, @Description, @Price, @StockQuantity); SET @NewProductId = SCOPE_IDENTITY(); INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate) VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, GETDATE()); UPDATE ProductStats SET TotalProducts = TotalProducts + 1, AveragePrice = (AveragePrice * TotalProducts + @Price) / (TotalProducts + 1), LastUpdated = GETDATE() WHERE StatId = 1; COMMIT; SELECT @NewProductId;",
+      "converted_statement": "INSERT INTO productmanagement_dbo.products (name, description, price, stockquantity) VALUES (@Name, @Description, @Price, @StockQuantity) RETURNING productid; INSERT INTO productmanagement_dbo.producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate) VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, CURRENT_TIMESTAMP); UPDATE productmanagement_dbo.productstats SET totalproducts = totalproducts + 1, averageprice = (averageprice * totalproducts + @Price) / (totalproducts + 1), lastupdated = CURRENT_TIMESTAMP WHERE statid = 1;",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "equivalency_status": "PENDING_VALIDATION",
+      "equivalency_tool_output": "Multi-statement transaction equivalency requires validation of transactional semantics and data integrity. DMS tool failed with 'Statement definition is not valid' error. Manual conversion applied: SCOPE_IDENTITY() → RETURNING productid, GETDATE() → CURRENT_TIMESTAMP, transaction management moved to code level.",
+      "validation_note": "Statement required manual conversion after DMS failure. Equivalency validation would require testing transactional behavior and RETURNING clause semantics. Requires CREATE TABLE statements for Products, ProductHistory, and ProductStats."
+    },
+    {
+      "statement_id": 4,
+      "method_name": "UpdateProductAsync",
+      "description": "Multi-statement transaction (manual adjustment after DMS warning)",
+      "original_statement": "BEGIN TRANSACTION; DECLARE @OldPrice DECIMAL(18,2); DECLARE @OldStock INT; SELECT @OldPrice = Price, @OldStock = StockQuantity FROM Products WHERE ProductId = @ProductId; UPDATE Products SET Name = @Name, Description = @Description, Price = @Price, StockQuantity = @StockQuantity, ModifiedDate = GETDATE() WHERE ProductId = @ProductId; INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate) VALUES (@ProductId, 'UPDATE', @OldPrice, @Price, @OldStock, @StockQuantity, GETDATE()); UPDATE ProductStats SET AveragePrice = (AveragePrice * TotalProducts - @OldPrice + @Price) / TotalProducts, LastUpdated = GETDATE() WHERE StatId = 1; COMMIT;",
+      "converted_statement": "SELECT price, stockquantity FROM productmanagement_dbo.products WHERE productid = @ProductId; UPDATE productmanagement_dbo.products SET name = @Name, description = @Description, price = @Price, stockquantity = @StockQuantity, modifieddate = CURRENT_TIMESTAMP WHERE productid = @ProductId; INSERT INTO productmanagement_dbo.producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate) VALUES (@ProductId, 'UPDATE', @OldPrice, @Price, @OldStock, @StockQuantity, CURRENT_TIMESTAMP); UPDATE productmanagement_dbo.productstats SET averageprice = (averageprice * totalproducts - @OldPrice + @Price) / totalproducts, lastupdated = CURRENT_TIMESTAMP WHERE statid = 1;",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "PENDING_VALIDATION",
+      "equivalency_tool_output": "DMS converted with [7807 CRITICAL] warning about transaction management. Manual adjustment applied to remove DECLARE/BEGIN/END wrapper. Equivalency validation requires testing multi-statement transaction behavior.",
+      "validation_note": "DMS conversion successful with warnings. Manual adjustment required to make suitable for ADO.NET execution. Requires CREATE TABLE statements for Products, ProductHistory, and ProductStats."
+    },
+    {
+      "statement_id": 5,
+      "method_name": "DeleteProductAsync",
+      "description": "Multi-statement transaction (manual adjustment after DMS warning)",
+      "original_statement": "BEGIN TRANSACTION; DECLARE @OldPrice DECIMAL(18,2); DECLARE @OldStock INT; SELECT @OldPrice = Price, @OldStock = StockQuantity FROM Products WHERE ProductId = @ProductId; INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate) VALUES (@ProductId, 'DELETE', @OldPrice, NULL, @OldStock, NULL, GETDATE()); DELETE FROM Products WHERE ProductId = @ProductId; UPDATE ProductStats SET TotalProducts = TotalProducts - 1, AveragePrice = CASE WHEN TotalProducts > 1 THEN (AveragePrice * TotalProducts - @OldPrice) / (TotalProducts - 1) ELSE 0 END, LastUpdated = GETDATE() WHERE StatId = 1; COMMIT;",
+      "converted_statement": "SELECT price, stockquantity FROM productmanagement_dbo.products WHERE productid = @ProductId; INSERT INTO productmanagement_dbo.producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate) VALUES (@ProductId, 'DELETE', @OldPrice, NULL, @OldStock, NULL, CURRENT_TIMESTAMP); DELETE FROM productmanagement_dbo.products WHERE productid = @ProductId; UPDATE productmanagement_dbo.productstats SET totalproducts = totalproducts - 1, averageprice = CASE WHEN totalproducts > 1 THEN (averageprice * totalproducts - @OldPrice) / (totalproducts - 1) ELSE 0 END, lastupdated = CURRENT_TIMESTAMP WHERE statid = 1;",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "PENDING_VALIDATION",
+      "equivalency_tool_output": "DMS converted with [7807 CRITICAL] warning about transaction management. Manual adjustment applied to remove DECLARE/BEGIN/END wrapper. Equivalency validation requires testing multi-statement transaction behavior.",
+      "validation_note": "DMS conversion successful with warnings. Manual adjustment required to make suitable for ADO.NET execution. Requires CREATE TABLE statements for Products, ProductHistory, and ProductStats."
+    },
+    {
+      "statement_id": 6,
+      "method_name": "GetProductsByPriceRangeAsync",
+      "description": "CTE with RANK and PERCENT_RANK window functions",
+      "original_statement": "WITH RankedProducts AS (SELECT p.*, RANK() OVER (ORDER BY p.Price) as PriceRank, PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile FROM Products p WHERE p.Price BETWEEN @MinPrice AND @MaxPrice) SELECT rp.*, CASE WHEN rp.PricePercentile <= 0.25 THEN 'Budget' WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range' ELSE 'Premium' END as PriceSegment FROM RankedProducts rp ORDER BY rp.PriceRank",
+      "converted_statement": "WITH rankedproducts AS (SELECT p.*, RANK() OVER (ORDER BY p.price) AS pricerank, percent_rank() OVER (ORDER BY p.price) AS pricepercentile FROM productmanagement_dbo.products AS p WHERE p.price BETWEEN @MinPrice AND @MaxPrice) SELECT rp.*, CASE WHEN rp.pricepercentile <= 0.25 THEN 'Budget' WHEN rp.pricepercentile <= 0.75 THEN 'Mid-Range' ELSE 'Premium' END AS pricesegment FROM rankedproducts AS rp ORDER BY rp.pricerank NULLS FIRST",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "PENDING_VALIDATION",
+      "equivalency_tool_output": "Requires CREATE TABLE statement for Products table",
+      "validation_note": "Equivalency validation requires table schema DDL. Statement transformation appears semantically equivalent (same CTE structure, RANK/PERCENT_RANK window functions, and parameter usage)."
+    },
+    {
+      "statement_id": 7,
+      "method_name": "GetLowStockProductsAsync",
+      "description": "CTE with multiple window functions (AVG, MIN, MAX OVER)",
+      "original_statement": "WITH StockAnalysis AS (SELECT p.*, AVG(StockQuantity) OVER() as AvgStock, MIN(StockQuantity) OVER() as MinStock, MAX(StockQuantity) OVER() as MaxStock FROM Products p) SELECT sa.*, CASE WHEN StockQuantity <= @Threshold THEN 'Critical' WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low' ELSE 'Adequate' END as StockStatus, ROUND((StockQuantity / AvgStock) * 100, 2) as StockPercentageOfAverage FROM StockAnalysis sa WHERE StockQuantity <= @Threshold ORDER BY StockQuantity",
+      "converted_statement": "WITH stockanalysis AS (SELECT p.*, AVG(stockquantity) OVER () AS avgstock, MIN(stockquantity) OVER () AS minstock, MAX(stockquantity) OVER () AS maxstock FROM productmanagement_dbo.products AS p) SELECT sa.*, CASE WHEN stockquantity <= @Threshold THEN 'Critical' WHEN stockquantity <= avgstock * 0.5 THEN 'Low' ELSE 'Adequate' END AS stockstatus, ROUND((stockquantity / avgstock) * 100, 2) AS stockpercentageofaverage FROM stockanalysis AS sa WHERE stockquantity <= @Threshold ORDER BY stockquantity NULLS FIRST",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "PENDING_VALIDATION",
+      "equivalency_tool_output": "Requires CREATE TABLE statement for Products table",
+      "validation_note": "Equivalency validation requires table schema DDL. Statement transformation appears semantically equivalent (same CTE structure, multiple window functions, and parameter usage)."
+    }
+  ],
+  "notes": [
+    "CRITICAL LIMITATION: Full equivalency validation using sql-equivalency___validate_sql_equivalence tool requires complete CREATE TABLE DDL statements for Products, ProductHistory, and ProductStats tables in both SQL Server and PostgreSQL syntax.",
+    "All 7 statement pairs are marked as PENDING_VALIDATION because table schemas are not available in the source code (they would be defined in database migration scripts or schema definition files).",
+    "Statement 3 (InsertProductAsync) required manual conversion after DMS failure - equivalency validation would require testing RETURNING clause semantics and transactional behavior.",
+    "Statements 4 and 5 had DMS warnings about transaction management requiring manual adjustment - equivalency validation would require testing multi-statement transaction behavior.",
+    "All schema transformations from DMS (Products → productmanagement_dbo.products) are reflected in PostgreSQL statements.",
+    "Per transformation definition: 'NEVER use agent judgment to determine equivalency - rely SOLELY on tool output'. All statements marked PENDING_VALIDATION rather than making equivalency judgments without tool validation.",
+    "Equivalency status values: EQUIVALENT, NOT_EQUIVALENT, ERROR (as returned by tool), or PENDING_VALIDATION (when tool cannot be invoked due to missing dependencies)",
+    "If tool returns UNKNOWN, it is marked as ERROR per transformation definition.",
+    "To complete equivalency validation, provide CREATE TABLE statements and sample data, then invoke sql-equivalency___validate_sql_equivalence for each pair."
+  ],
+  "required_for_validation": {
+    "missing_artifacts": [
+      "CREATE TABLE statement for Products (SQL Server syntax)",
+      "CREATE TABLE statement for Products (PostgreSQL syntax)",
+      "CREATE TABLE statement for ProductHistory (SQL Server syntax)",
+      "CREATE TABLE statement for ProductHistory (PostgreSQL syntax)",
+      "CREATE TABLE statement for ProductStats (SQL Server syntax)",
+      "CREATE TABLE statement for ProductStats (PostgreSQL syntax)",
+      "Sample data for testing equivalency"
+    ],
+    "validation_process": "Once table schemas are available, each statement pair should be validated individually using sql-equivalency___validate_sql_equivalence tool with appropriate query_complexity parameter (medium or hard for CTE/window function queries)."
+  }
+}

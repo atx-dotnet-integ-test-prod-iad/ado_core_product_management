@@ -1,131 +1,18 @@
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Threading.Tasks;
-using Npgsql;
-using Microsoft.Extensions.Configuration;
-using AdoCore.Models;
+#!/usr/bin/env python3
+"""
+Fix ProductRepository.cs to use proper PostgreSQL syntax with code-level transaction management.
+Replaces SQL Server specific syntax (DECLARE, BEGIN TRANSACTION, SCOPE_IDENTITY(), etc.)
+with PostgreSQL-compatible code.
+"""
 
-namespace AdoCore.DataAccess
-{
-    public class ProductRepository : IAsyncDisposable
-    {
-        private readonly string _connectionString;
-        private NpgsqlConnection _connection;
-        private readonly IConfiguration _configuration;
+import re
 
-        public ProductRepository(IConfiguration configuration)
-        {
-            _configuration = configuration;
-            var environment = _configuration["Environment"];
-            var connectionName = environment == "Production" ? "ProdConnection" : "DevConnection";
-            _connectionString = _configuration.GetConnectionString(connectionName);
-        }
-
-        private async Task<NpgsqlConnection> GetConnectionAsync()
-        {
-            if (_connection == null)
-            {
-                _connection = new NpgsqlConnection(_connectionString);
-            }
-            if (_connection.State != ConnectionState.Open)
-            {
-                await _connection.OpenAsync();
-            }
-            return _connection;
-        }
-
-        public async Task<List<Product>> GetAllProductsAsync()
-        {
-            var products = new List<Product>();
-            var connection = await GetConnectionAsync();
-
-            const string sql = @"
-                WITH productstats AS (
-                    SELECT 
-                        ProductId,
-                        AVG(Price) OVER() as AvgPrice,
-                        COUNT(*) OVER() as TotalProducts
-                    FROM productmanagement_dbo.products
-                )
-                SELECT 
-                    p.ProductId,
-                    p.Name,
-                    p.Description,
-                    p.Price,
-                    p.StockQuantity,
-                    p.CreatedDate,
-                    p.ModifiedDate,
-                    CASE 
-                        WHEN p.Price > ps.AvgPrice THEN 'Above Average'
-                        WHEN p.Price < ps.AvgPrice THEN 'Below Average'
-                        ELSE 'Average'
-                    END as PriceCategory,
-                    ROUND((p.Price / ps.AvgPrice) * 100, 2) as PricePercentageOfAverage
-                FROM productmanagement_dbo.products p
-                INNER JOIN productstats ps ON p.ProductId = ps.ProductId
-                ORDER BY 
-                    CASE 
-                        WHEN p.Price > ps.AvgPrice THEN 1
-                        ELSE 2
-                    END,
-                    p.Name";
-
-            using var command = new NpgsqlCommand(sql, connection);
-            using var reader = await command.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-            {
-                products.Add(MapProductFromReader(reader));
-            }
-
-            return products;
-        }
-
-        public async Task<Product> GetProductByIdAsync(int productId)
-        {
-            var connection = await GetConnectionAsync();
-
-            const string sql = @"
-                WITH producthistory AS (
-                    SELECT 
-                        ProductId,
-                        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,
-                        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock
-                    FROM productmanagement_dbo.products
-                    WHERE ProductId = @ProductId
-                )
-                SELECT 
-                    p.ProductId,
-                    p.Name,
-                    p.Description,
-                    p.Price,
-                    p.StockQuantity,
-                    p.CreatedDate,
-                    p.ModifiedDate,
-                    ph.PreviousPrice,
-                    ph.PreviousStock,
-                    CASE 
-                        WHEN ph.PreviousPrice IS NOT NULL THEN 
-                            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)
-                        ELSE NULL
-                    END as PriceChangePercentage
-                FROM productmanagement_dbo.products p
-                LEFT JOIN producthistory ph ON p.ProductId = ph.ProductId
-                WHERE p.ProductId = @ProductId";
-
-            using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("@ProductId", productId);
-
-            using var reader = await command.ExecuteReaderAsync();
-            if (await reader.ReadAsync())
-            {
-                return MapProductFromReader(reader);
-            }
-
-            return null;
-        }
-
-        public async Task<int> InsertProductAsync(Product product)
+def fix_insert_method(content):
+    """Fix InsertProductAsync method to use RETURNING clause and code-level transactions"""
+    
+    insert_pattern = r'(        public async Task<int> InsertProductAsync\(Product product\)\r?\n        \{\r?\n            var connection = await GetConnectionAsync\(\);\r?\n\r?\n            const string sql = @")\r?\n                DECLARE @NewProductId INT;\r?\n                \r?\n                BEGIN TRANSACTION;[\s\S]*?SELECT @NewProductId;";(\r?\n\r?\n            using var command = new NpgsqlCommand\(sql, connection\);[\s\S]*?return Convert\.ToInt32\(await command\.ExecuteScalarAsync\(\)\);\r?\n        \})'
+    
+    insert_replacement = r'''        public async Task<int> InsertProductAsync(Product product)
         {
             var connection = await GetConnectionAsync();
             using var transaction = await connection.BeginTransactionAsync();
@@ -187,9 +74,17 @@ namespace AdoCore.DataAccess
                 await transaction.RollbackAsync();
                 throw;
             }
-        }
+        }'''
+    
+    content = re.sub(insert_pattern, insert_replacement, content, flags=re.MULTILINE | re.DOTALL)
+    return content
 
-        public async Task UpdateProductAsync(Product product)
+def fix_update_method(content):
+    """Fix UpdateProductAsync method to use code-level transactions"""
+    
+    update_pattern = r'(        public async Task UpdateProductAsync\(Product product\)\r?\n        \{\r?\n            var connection = await GetConnectionAsync\(\);\r?\n\r?\n            const string sql = @")\r?\n                BEGIN TRANSACTION;[\s\S]*?COMMIT;";(\r?\n\r?\n            using var command = new NpgsqlCommand\(sql, connection\);[\s\S]*?await command\.ExecuteNonQueryAsync\(\);\r?\n        \})'
+    
+    update_replacement = r'''        public async Task UpdateProductAsync(Product product)
         {
             var connection = await GetConnectionAsync();
             using var transaction = await connection.BeginTransactionAsync();
@@ -279,9 +174,17 @@ namespace AdoCore.DataAccess
                 await transaction.RollbackAsync();
                 throw;
             }
-        }
+        }'''
+    
+    content = re.sub(update_pattern, update_replacement, content, flags=re.MULTILINE | re.DOTALL)
+    return content
 
-        public async Task DeleteProductAsync(int productId)
+def fix_delete_method(content):
+    """Fix DeleteProductAsync method to use code-level transactions"""
+    
+    delete_pattern = r'(        public async Task DeleteProductAsync\(int productId\)\r?\n        \{\r?\n            var connection = await GetConnectionAsync\(\);\r?\n\r?\n            const string sql = @")\r?\n                BEGIN TRANSACTION;[\s\S]*?COMMIT;";(\r?\n\r?\n            using var command = new NpgsqlCommand\(sql, connection\);[\s\S]*?await command\.ExecuteNonQueryAsync\(\);\r?\n        \})'
+    
+    delete_replacement = r'''        public async Task DeleteProductAsync(int productId)
         {
             var connection = await GetConnectionAsync();
             using var transaction = await connection.BeginTransactionAsync();
@@ -363,124 +266,31 @@ namespace AdoCore.DataAccess
                 await transaction.RollbackAsync();
                 throw;
             }
-        }
+        }'''
+    
+    content = re.sub(delete_pattern, delete_replacement, content, flags=re.MULTILINE | re.DOTALL)
+    return content
 
-        public async Task<List<Product>> GetProductsByPriceRangeAsync(decimal minPrice, decimal maxPrice)
-        {
-            var products = new List<Product>();
-            var connection = await GetConnectionAsync();
+def main():
+    # Read the original file
+    with open('ProductRepository.cs', 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    # Apply fixes
+    print("Fixing InsertProductAsync...")
+    content = fix_insert_method(content)
+    
+    print("Fixing UpdateProductAsync...")
+    content = fix_update_method(content)
+    
+    print("Fixing DeleteProductAsync...")
+    content = fix_delete_method(content)
+    
+    # Write the fixed content
+    with open('ProductRepository.cs', 'w', encoding='utf-8') as f:
+        f.write(content)
+    
+    print("ProductRepository.cs has been updated with PostgreSQL-compatible code.")
 
-            const string sql = @"
-                WITH rankedproducts AS (
-                    SELECT 
-                        p.*,
-                        RANK() OVER (ORDER BY p.Price) as PriceRank,
-                        PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile
-                    FROM productmanagement_dbo.products p
-                    WHERE p.Price BETWEEN @MinPrice AND @MaxPrice
-                )
-                SELECT 
-                    rp.*,
-                    CASE 
-                        WHEN rp.PricePercentile <= 0.25 THEN 'Budget'
-                        WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range'
-                        ELSE 'Premium'
-                    END as PriceSegment
-                FROM rankedproducts rp
-                ORDER BY rp.PriceRank";
-
-            using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("@MinPrice", minPrice);
-            command.Parameters.AddWithValue("@MaxPrice", maxPrice);
-
-            using var reader = await command.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-            {
-                products.Add(MapProductFromReader(reader));
-            }
-
-            return products;
-        }
-
-        public async Task<List<Product>> GetLowStockProductsAsync(int threshold)
-        {
-            var products = new List<Product>();
-            var connection = await GetConnectionAsync();
-
-            const string sql = @"
-                WITH stockanalysis AS (
-                    SELECT 
-                        p.*,
-                        AVG(StockQuantity) OVER() as AvgStock,
-                        MIN(StockQuantity) OVER() as MinStock,
-                        MAX(StockQuantity) OVER() as MaxStock
-                    FROM productmanagement_dbo.products p
-                )
-                SELECT 
-                    sa.*,
-                    CASE 
-                        WHEN StockQuantity <= @Threshold THEN 'Critical'
-                        WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low'
-                        ELSE 'Adequate'
-                    END as StockStatus,
-                    ROUND((StockQuantity / AvgStock) * 100, 2) as StockPercentageOfAverage
-                FROM stockanalysis sa
-                WHERE StockQuantity <= @Threshold
-                ORDER BY StockQuantity";
-
-            using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("@Threshold", threshold);
-
-            using var reader = await command.ExecuteReaderAsync();
-            while (await reader.ReadAsync())
-            {
-                products.Add(MapProductFromReader(reader));
-            }
-
-            return products;
-        }
-
-        public async Task ExecuteInTransactionAsync(Func<Task> action)
-        {
-            var connection = await GetConnectionAsync();
-            using var transaction = await connection.BeginTransactionAsync();
-            try
-            {
-                await action();
-                await transaction.CommitAsync();
-            }
-            catch
-            {
-                await transaction.RollbackAsync();
-                throw;
-            }
-        }
-
-        private static Product MapProductFromReader(NpgsqlDataReader reader)
-        {
-            return new Product
-            {
-                ProductId = Convert.ToInt32(reader["ProductId"]),
-                Name = reader["Name"].ToString(),
-                Description = reader["Description"] == DBNull.Value ? null : reader["Description"].ToString(),
-                Price = Convert.ToDecimal(reader["Price"]),
-                StockQuantity = Convert.ToInt32(reader["StockQuantity"]),
-                CreatedDate = Convert.ToDateTime(reader["CreatedDate"]),
-                ModifiedDate = reader["ModifiedDate"] == DBNull.Value ? null : (DateTime?)Convert.ToDateTime(reader["ModifiedDate"])
-            };
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            if (_connection != null)
-            {
-                if (_connection.State == ConnectionState.Open)
-                {
-                    await _connection.CloseAsync();
-                }
-                await _connection.DisposeAsync();
-                _connection = null;
-            }
-        }
-    }
-} 
+if __name__ == '__main__':
+    main()
