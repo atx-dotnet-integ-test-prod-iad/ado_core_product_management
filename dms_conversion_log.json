@@ -1,0 +1,145 @@
+{
+  "conversion_summary": {
+    "total_statements": 7,
+    "dms_successful": 6,
+    "dms_failed": 1,
+    "manual_conversions": 1,
+    "migration_project_arn": "arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU",
+    "conversion_timestamp": "2026-01-19T19:08:30 to 2026-01-19T19:21:21",
+    "schema_changes_detected": true,
+    "primary_schema_change": "All table references converted from 'TableName' to 'productmanagement_dbo.tablename'"
+  },
+  "conversions": [
+    {
+      "statement_number": 1,
+      "source_method": "GetAllProductsAsync",
+      "conversion_status": "SUCCESS",
+      "conversion_method": "DMS_TOOL",
+      "dms_metadata_model": "sql-conversion-1768849713",
+      "dms_request_id": "50a8f7c7-59e2-4d54-9c6d-9d80adb78a26",
+      "dms_conversion_id": "b9052cb7-1362-45ca-a55e-e7d0d1e027e6",
+      "conversion_timestamp": "2026-01-19T19:08:30.975836",
+      "poll_attempts": 12,
+      "schema_changes": [
+        "Products -> productmanagement_dbo.products"
+      ],
+      "warnings": [],
+      "notes": "CTE with window functions (AVG, COUNT OVER) converted successfully. Added NULLS FIRST to ORDER BY clauses."
+    },
+    {
+      "statement_number": 2,
+      "source_method": "GetProductByIdAsync",
+      "conversion_status": "SUCCESS",
+      "conversion_method": "DMS_TOOL",
+      "dms_metadata_model": "sql-conversion-1768849845",
+      "dms_request_id": "33e8a6da-dfa3-4a9d-8db7-5ad9847a8616",
+      "dms_conversion_id": "f9bad748-4216-4adf-8866-72ff9d4ba530",
+      "conversion_timestamp": "2026-01-19T19:10:43.423491",
+      "poll_attempts": 11,
+      "schema_changes": [
+        "Products -> productmanagement_dbo.products"
+      ],
+      "warnings": [],
+      "notes": "CTE with LAG window function converted successfully. LEFT JOIN changed to LEFT OUTER JOIN."
+    },
+    {
+      "statement_number": 3,
+      "source_method": "InsertProductAsync",
+      "conversion_status": "FAILED",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_error": "Metadata model creation failed: {'error': \"Metadata model creation failed: {'default_error_details': {'message': 'Statement definition is not valid.'}}\"}",
+      "conversion_timestamp": "2026-01-19T19:12:45.537349",
+      "manual_conversion_applied": true,
+      "manual_conversion_rationale": "DMS tool cannot convert complex transaction blocks with DECLARE statements and SCOPE_IDENTITY(). Manual conversion applied based on PostgreSQL best practices: (1) Transaction management moved to ADO.NET code using BeginTransactionAsync, (2) SCOPE_IDENTITY() replaced with RETURNING clause in INSERT statement, (3) GETDATE() replaced with CURRENT_TIMESTAMP, (4) Schema names updated to productmanagement_dbo prefix consistent with other conversions.",
+      "schema_changes": [
+        "Products -> productmanagement_dbo.products",
+        "ProductHistory -> productmanagement_dbo.producthistory",
+        "ProductStats -> productmanagement_dbo.productstats"
+      ],
+      "warnings": [
+        "Transaction control must be implemented in C# code, not in SQL statement"
+      ],
+      "notes": "Requires code restructuring to handle RETURNING clause and multi-statement transaction."
+    },
+    {
+      "statement_number": 4,
+      "source_method": "UpdateProductAsync",
+      "conversion_status": "SUCCESS",
+      "conversion_method": "DMS_TOOL",
+      "dms_metadata_model": "sql-conversion-1768849993",
+      "dms_request_id": "9b52cf07-5cbc-47db-9491-9d0ed7e42d8f",
+      "dms_conversion_id": "26f6c5ef-a75a-4475-aa42-37e324d3d8b3",
+      "conversion_timestamp": "2026-01-19T19:13:11.258957",
+      "poll_attempts": 11,
+      "schema_changes": [
+        "Products -> productmanagement_dbo.products",
+        "ProductHistory -> productmanagement_dbo.producthistory",
+        "ProductStats -> productmanagement_dbo.productstats"
+      ],
+      "warnings": [
+        "[7807 - Severity CRITICAL] PostgreSQL does not support explicit transaction management commands such as BEGIN TRAN, SAVE TRAN in functions. Convert your source code manually."
+      ],
+      "notes": "DMS converted the statement structure but warns about transaction management. BEGIN TRANSACTION and COMMIT must be removed; transaction control handled by ADO.NET. Variable declarations converted to DECLARE block format. GETDATE() converted to clock_timestamp()."
+    },
+    {
+      "statement_number": 5,
+      "source_method": "DeleteProductAsync",
+      "conversion_status": "SUCCESS",
+      "conversion_method": "DMS_TOOL",
+      "dms_metadata_model": "sql-conversion-1768850115",
+      "dms_request_id": "6dc15633-816f-4fd1-b2f3-0911ecd59722",
+      "dms_conversion_id": "d3fa44bc-3cf0-48bb-bdb5-8357a8dfb77d",
+      "conversion_timestamp": "2026-01-19T19:15:13.170963",
+      "poll_attempts": 11,
+      "schema_changes": [
+        "Products -> productmanagement_dbo.products",
+        "ProductHistory -> productmanagement_dbo.producthistory",
+        "ProductStats -> productmanagement_dbo.productstats"
+      ],
+      "warnings": [
+        "[7807 - Severity CRITICAL] PostgreSQL does not support explicit transaction management commands such as BEGIN TRAN, SAVE TRAN in functions. Convert your source code manually."
+      ],
+      "notes": "Similar to UpdateProductAsync - transaction management warning. DMS successfully converted statement structure but BEGIN TRANSACTION and COMMIT must be removed. Transaction control will be in C# code."
+    },
+    {
+      "statement_number": 6,
+      "source_method": "GetProductsByPriceRangeAsync",
+      "conversion_status": "SUCCESS",
+      "conversion_method": "DMS_TOOL",
+      "dms_metadata_model": "sql-conversion-1768850237",
+      "dms_request_id": "bb696b22-cea9-4612-984a-71e6307cd83c",
+      "dms_conversion_id": "aad630f4-47ef-4b7e-833e-7fcaf742270b",
+      "conversion_timestamp": "2026-01-19T19:17:15.032341",
+      "poll_attempts": 12,
+      "schema_changes": [
+        "Products -> productmanagement_dbo.products"
+      ],
+      "warnings": [],
+      "notes": "CTE with RANK() and PERCENT_RANK() window functions converted successfully. PostgreSQL supports these functions natively."
+    },
+    {
+      "statement_number": 7,
+      "source_method": "GetLowStockProductsAsync",
+      "conversion_status": "SUCCESS",
+      "conversion_method": "DMS_TOOL",
+      "dms_metadata_model": "sql-conversion-1768850369",
+      "dms_request_id": "54f5cb23-fdaf-4604-a4e5-14637d2ab6b0",
+      "dms_conversion_id": "6543aa19-b591-4864-a926-5aa724413fa8",
+      "conversion_timestamp": "2026-01-19T19:19:27.698551",
+      "poll_attempts": 12,
+      "schema_changes": [
+        "Products -> productmanagement_dbo.products"
+      ],
+      "warnings": [],
+      "notes": "CTE with aggregate window functions (AVG, MIN, MAX OVER) converted successfully."
+    }
+  ],
+  "critical_findings": {
+    "schema_prefix_required": true,
+    "schema_prefix_value": "productmanagement_dbo",
+    "transaction_management_notes": "Statements 3, 4, and 5 involve transactions. PostgreSQL transaction control (BEGIN/COMMIT) must be managed in ADO.NET code using BeginTransactionAsync(), not in SQL statements. DMS correctly identified this limitation.",
+    "scope_identity_replacement": "SCOPE_IDENTITY() replaced with RETURNING clause in INSERT statements (Statement 3)",
+    "date_function_changes": "GETDATE() converted to clock_timestamp() or CURRENT_TIMESTAMP",
+    "case_sensitivity": "All identifiers converted to lowercase as per PostgreSQL convention"
+  }
+}
