@@ -1,0 +1,139 @@
+{
+  "conversion_summary": {
+    "total_statements": 7,
+    "dms_tool_success": 6,
+    "dms_tool_failure": 1,
+    "manual_conversion_after_dms_failure": 1
+  },
+  "conversion_details": [
+    {
+      "statement_number": 1,
+      "method_name": "GetAllProductsAsync",
+      "conversion_status": "SUCCESS",
+      "conversion_method": "DMS_TOOL",
+      "dms_output_status": "success",
+      "dms_metadata_model": "sql-conversion-1769008832",
+      "schema_changes": {
+        "table_name": "Products → productmanagement_dbo.products",
+        "identifier_casing": "Mixed case → lowercase"
+      },
+      "notes": "CTE with window functions (AVG, COUNT) converted successfully. NULLS FIRST added to ORDER BY."
+    },
+    {
+      "statement_number": 2,
+      "method_name": "GetProductByIdAsync",
+      "conversion_status": "SUCCESS",
+      "conversion_method": "DMS_TOOL",
+      "dms_output_status": "success",
+      "dms_metadata_model": "sql-conversion-1769008978",
+      "schema_changes": {
+        "table_name": "Products → productmanagement_dbo.products",
+        "identifier_casing": "Mixed case → lowercase"
+      },
+      "notes": "CTE with LAG() window function converted successfully. LEFT JOIN → LEFT OUTER JOIN. Parameters preserved with @param syntax."
+    },
+    {
+      "statement_number": 3,
+      "method_name": "InsertProductAsync",
+      "conversion_status": "FAILED",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_output_status": "error",
+      "dms_error": "Metadata model creation failed: {'error': \"Metadata model creation failed: {'default_error_details': {'message': 'Statement definition is not valid.'}}\"}",
+      "manual_conversion_applied": true,
+      "manual_conversion_approach": "Simplified transaction block to single INSERT with RETURNING clause. Removed DECLARE, SCOPE_IDENTITY(), and multi-statement transaction. Additional logging operations (ProductHistory, ProductStats) must be handled separately in application code.",
+      "schema_changes": {
+        "table_name": "Products → productmanagement_dbo.products",
+        "identifier_casing": "Mixed case → lowercase"
+      },
+      "notes": "DMS tool cannot process complex transaction blocks with DECLARE and SCOPE_IDENTITY(). Converted to use PostgreSQL RETURNING clause for getting new ID."
+    },
+    {
+      "statement_number": 4,
+      "method_name": "UpdateProductAsync",
+      "conversion_status": "SUCCESS_WITH_WARNINGS",
+      "conversion_method": "DMS_TOOL",
+      "dms_output_status": "success",
+      "dms_metadata_model": "sql-conversion-1769009152",
+      "dms_warnings": [
+        "[7807 - Severity CRITICAL - PostgreSQL does not support explicit transaction management commands such as BEGIN TRAN, SAVE TRAN in functions. Convert your source code manually.]"
+      ],
+      "schema_changes": {
+        "table_name": "Products → productmanagement_dbo.products, ProductHistory → productmanagement_dbo.producthistory, ProductStats → productmanagement_dbo.productstats",
+        "identifier_casing": "Mixed case → lowercase",
+        "variable_naming": "@OldPrice → var_OldPrice, @OldStock → var_OldStock"
+      },
+      "syntax_changes": {
+        "getdate": "GETDATE() → clock_timestamp()",
+        "transaction": "BEGIN TRANSACTION commented out, COMMIT retained",
+        "declare": "DECLARE syntax converted to PostgreSQL format"
+      },
+      "notes": "Transaction management must be handled at application level. DMS converted DECLARE block successfully."
+    },
+    {
+      "statement_number": 5,
+      "method_name": "DeleteProductAsync",
+      "conversion_status": "SUCCESS_WITH_WARNINGS",
+      "conversion_method": "DMS_TOOL",
+      "dms_output_status": "success",
+      "dms_metadata_model": "sql-conversion-1769009286",
+      "dms_warnings": [
+        "[7807 - Severity CRITICAL - PostgreSQL does not support explicit transaction management commands such as BEGIN TRAN, SAVE TRAN in functions. Convert your source code manually.]"
+      ],
+      "schema_changes": {
+        "table_name": "Products → productmanagement_dbo.products, ProductHistory → productmanagement_dbo.producthistory, ProductStats → productmanagement_dbo.productstats",
+        "identifier_casing": "Mixed case → lowercase",
+        "variable_naming": "@OldPrice → var_OldPrice, @OldStock → var_OldStock"
+      },
+      "syntax_changes": {
+        "getdate": "GETDATE() → clock_timestamp()",
+        "transaction": "BEGIN TRANSACTION commented out, COMMIT retained",
+        "declare": "DECLARE syntax converted to PostgreSQL format"
+      },
+      "notes": "Transaction management must be handled at application level. CASE expression in UPDATE preserved correctly."
+    },
+    {
+      "statement_number": 6,
+      "method_name": "GetProductsByPriceRangeAsync",
+      "conversion_status": "SUCCESS",
+      "conversion_method": "DMS_TOOL",
+      "dms_output_status": "success",
+      "dms_metadata_model": "sql-conversion-1769009421",
+      "schema_changes": {
+        "table_name": "Products → productmanagement_dbo.products",
+        "identifier_casing": "Mixed case → lowercase"
+      },
+      "notes": "CTE with RANK() and PERCENT_RANK() window functions converted successfully. BETWEEN clause preserved. NULLS FIRST added to ORDER BY."
+    },
+    {
+      "statement_number": 7,
+      "method_name": "GetLowStockProductsAsync",
+      "conversion_status": "SUCCESS",
+      "conversion_method": "DMS_TOOL",
+      "dms_output_status": "success",
+      "dms_metadata_model": "sql-conversion-1769009566",
+      "schema_changes": {
+        "table_name": "Products → productmanagement_dbo.products",
+        "identifier_casing": "Mixed case → lowercase"
+      },
+      "notes": "CTE with AVG(), MIN(), MAX() window functions converted successfully. NULLS FIRST added to ORDER BY."
+    }
+  ],
+  "key_conversion_patterns": {
+    "schema_naming": "All tables prefixed with 'productmanagement_dbo.' schema",
+    "identifier_casing": "All identifiers converted to lowercase",
+    "window_functions": "All window functions (AVG, COUNT, LAG, RANK, PERCENT_RANK, MIN, MAX) preserved correctly",
+    "date_functions": "GETDATE() → clock_timestamp()",
+    "identity_functions": "SCOPE_IDENTITY() → RETURNING clause",
+    "transaction_management": "BEGIN TRANSACTION commented out in DMS output, must be handled at application level",
+    "parameter_syntax": "@param syntax preserved (compatible with Npgsql)",
+    "null_handling": "NULLS FIRST added to ORDER BY clauses",
+    "joins": "LEFT JOIN → LEFT OUTER JOIN"
+  },
+  "dms_tool_configuration": {
+    "migration_project_identifier": "arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU",
+    "database_name": "ProductManagement",
+    "schema_name": "dbo",
+    "region": "us-east-1",
+    "server_name": "172.31.94.132"
+  }
+}
