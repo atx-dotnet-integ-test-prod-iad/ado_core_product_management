@@ -1,0 +1,103 @@
+====================================================================
+DMS CONVERSION FAILURES LOG
+Microsoft SQL Server to PostgreSQL Migration
+====================================================================
+
+Statement Number: 3
+Method Name: InsertProductAsync
+Source: ProductRepository.cs, lines 115-145
+
+Original SQL Statement:
+-----------------------
+DECLARE @NewProductId INT;
+
+BEGIN TRANSACTION;
+    INSERT INTO Products (Name, Description, Price, StockQuantity)
+    VALUES (@Name, @Description, @Price, @StockQuantity);
+    
+    SET @NewProductId = SCOPE_IDENTITY();
+    
+    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+    VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, GETDATE());
+    
+    UPDATE ProductStats
+    SET 
+        TotalProducts = TotalProducts + 1,
+        AveragePrice = (AveragePrice * TotalProducts + @Price) / (TotalProducts + 1),
+        LastUpdated = GETDATE()
+    WHERE StatId = 1;
+COMMIT;
+
+SELECT @NewProductId;
+
+DMS Tool Output:
+----------------
+{
+  "conversion_timestamp": "2026-01-21T07:59:09.288355",
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': \"Metadata model creation failed: {'default_error_details': {'message': 'Statement definition is not valid.'}}\"}",
+  "error_timestamp": "2026-01-21T07:59:24.305732"
+}
+
+DMS Error Analysis:
+-------------------
+The DMS tool failed to create a metadata model for this statement due to:
+1. DECLARE statement placed before BEGIN TRANSACTION (SQL Server pattern)
+2. Multi-statement transaction block with variable assignments
+3. SCOPE_IDENTITY() function usage within transaction
+4. Complex transaction flow with INSERT, SET, INSERT, UPDATE, COMMIT, SELECT
+
+This is a known limitation of DMS when handling complex procedural SQL with 
+variable declarations and multi-statement transaction blocks in non-procedure context.
+
+Manual Conversion Reasoning:
+----------------------------
+Since this code is executed within ADO.NET application context (not as a stored procedure),
+the best approach is to:
+
+1. Split into separate statements executed within application-managed transaction
+2. Use PostgreSQL RETURNING clause to get the inserted ID directly
+3. Replace GETDATE() with NOW() or CURRENT_TIMESTAMP
+4. Maintain schema changes from DMS (Products → productmanagement_dbo.products)
+
+Manual Converted Statement:
+---------------------------
+Option 1 - Primary INSERT with RETURNING (for immediate ID retrieval):
+INSERT INTO productmanagement_dbo.products (name, description, price, stockquantity)
+VALUES (@Name, @Description, @Price, @StockQuantity)
+RETURNING productid;
+
+Option 2 - Subsequent statements (executed within same transaction in application):
+INSERT INTO productmanagement_dbo.producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate)
+VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, NOW());
+
+UPDATE productmanagement_dbo.productstats
+SET totalproducts = totalproducts + 1,
+    averageprice = (averageprice * totalproducts + @Price) / (totalproducts + 1),
+    lastupdated = NOW()
+WHERE statid = 1;
+
+Application Implementation Notes:
+---------------------------------
+The C# code in InsertProductAsync will need to be restructured to:
+1. Start transaction using NpgsqlConnection.BeginTransactionAsync()
+2. Execute INSERT with RETURNING to get new product ID
+3. Use returned ID for subsequent INSERT into ProductHistory
+4. Execute UPDATE for ProductStats
+5. Commit transaction
+6. Return the new product ID
+
+This pattern is common in ADO.NET and provides better control over transaction
+boundaries than embedding transaction logic in SQL statements.
+
+Conversion Validation:
+----------------------
+- Schema objects updated to match DMS naming (productmanagement_dbo.*)
+- GETDATE() replaced with NOW()
+- SCOPE_IDENTITY() replaced with RETURNING clause
+- Transaction management moved to application level
+- All column names converted to lowercase per DMS conventions
+
+Status: MANUAL_AFTER_DMS_FAILURE - Ready for code integration
+
+====================================================================

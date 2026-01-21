@@ -1,0 +1,143 @@
+{
+  "dms_conversion_summary": {
+    "total_statements_submitted": 7,
+    "successfully_converted": 6,
+    "failed_conversions": 1,
+    "conversions_with_warnings": 2,
+    "conversion_date": "2026-01-21",
+    "dms_region": "us-east-1",
+    "migration_project": "arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU"
+  },
+  "successfully_converted_statements": [
+    {
+      "statement_number": 1,
+      "method_name": "GetAllProductsAsync",
+      "dms_status": "success",
+      "metadata_model_name": "sql-conversion-1768982083",
+      "conversion_notes": "Clean conversion with lowercase identifiers and schema prefix",
+      "key_transformations": [
+        "Products → productmanagement_dbo.products",
+        "Lowercase all identifiers",
+        "Added NULLS FIRST to ORDER BY"
+      ]
+    },
+    {
+      "statement_number": 2,
+      "method_name": "GetProductByIdAsync",
+      "dms_status": "success",
+      "metadata_model_name": "sql-conversion-1768982217",
+      "conversion_notes": "LAG window function converted successfully",
+      "key_transformations": [
+        "Products → productmanagement_dbo.products",
+        "LEFT JOIN → LEFT OUTER JOIN",
+        "Lowercase all identifiers",
+        "@ProductId parameter preserved"
+      ]
+    },
+    {
+      "statement_number": 4,
+      "method_name": "UpdateProductAsync",
+      "dms_status": "success_with_warning",
+      "metadata_model_name": "sql-conversion-1768982378",
+      "dms_warning": "[7807 - Severity CRITICAL - PostgreSQL does not support explicit transaction management commands such as BEGIN TRAN, SAVE TRAN in functions. Convert your source code manually.]",
+      "conversion_notes": "Transaction block converted but BEGIN TRANSACTION commented out by DMS",
+      "key_transformations": [
+        "DECLARE @OldPrice DECIMAL(18,2) → DECLARE var_OldPrice NUMERIC(18, 2)",
+        "GETDATE() → clock_timestamp()",
+        "Products → productmanagement_dbo.products",
+        "ProductHistory → productmanagement_dbo.producthistory",
+        "ProductStats → productmanagement_dbo.productstats",
+        "Transaction management requires application-level handling"
+      ]
+    },
+    {
+      "statement_number": 5,
+      "method_name": "DeleteProductAsync",
+      "dms_status": "success_with_warning",
+      "metadata_model_name": "sql-conversion-1768982512",
+      "dms_warning": "[7807 - Severity CRITICAL - PostgreSQL does not support explicit transaction management commands such as BEGIN TRAN, SAVE TRAN in functions. Convert your source code manually.]",
+      "conversion_notes": "Transaction block with DELETE converted with same warning as Statement 4",
+      "key_transformations": [
+        "DECLARE syntax converted to PostgreSQL",
+        "GETDATE() → clock_timestamp()",
+        "All tables with schema prefix",
+        "CASE expression in UPDATE preserved",
+        "Transaction management requires application-level handling"
+      ]
+    },
+    {
+      "statement_number": 6,
+      "method_name": "GetProductsByPriceRangeAsync",
+      "dms_status": "success",
+      "metadata_model_name": "sql-conversion-1768982654",
+      "conversion_notes": "RANK() and PERCENT_RANK() window functions converted cleanly",
+      "key_transformations": [
+        "Products → productmanagement_dbo.products",
+        "RANK() and percent_rank() preserved",
+        "BETWEEN clause preserved",
+        "Added NULLS FIRST to ORDER BY"
+      ]
+    },
+    {
+      "statement_number": 7,
+      "method_name": "GetLowStockProductsAsync",
+      "dms_status": "success",
+      "metadata_model_name": "sql-conversion-1768982788",
+      "conversion_notes": "Multiple window functions (AVG, MIN, MAX) converted successfully",
+      "key_transformations": [
+        "Products → productmanagement_dbo.products",
+        "Window functions preserved",
+        "ROUND function preserved",
+        "Added NULLS FIRST to ORDER BY"
+      ]
+    }
+  ],
+  "failed_conversions": [
+    {
+      "statement_number": 3,
+      "method_name": "InsertProductAsync",
+      "dms_status": "error",
+      "error_message": "Statement definition is not valid",
+      "error_details": "Metadata model creation failed due to DECLARE before BEGIN TRANSACTION pattern with SCOPE_IDENTITY()",
+      "manual_conversion_applied": true,
+      "manual_conversion_approach": "Split into INSERT with RETURNING clause and separate statements for transaction",
+      "requires_code_changes": true
+    }
+  ],
+  "schema_object_mappings": {
+    "tables": {
+      "Products": "productmanagement_dbo.products",
+      "ProductHistory": "productmanagement_dbo.producthistory",
+      "ProductStats": "productmanagement_dbo.productstats"
+    },
+    "schema_naming_convention": "lowercase",
+    "schema_prefix_added": "productmanagement_dbo",
+    "notes": "All table references must use the schema-prefixed lowercase names in PostgreSQL code"
+  },
+  "common_transformations": {
+    "functions": {
+      "GETDATE()": "clock_timestamp() or NOW()",
+      "SCOPE_IDENTITY()": "RETURNING clause",
+      "ROUND()": "ROUND() (compatible)"
+    },
+    "data_types": {
+      "DECIMAL(18,2)": "NUMERIC(18,2)",
+      "INT": "INTEGER"
+    },
+    "syntax": {
+      "BEGIN TRANSACTION": "Transaction managed at application level",
+      "COMMIT": "COMMIT (at application level)",
+      "ORDER BY column": "ORDER BY column NULLS FIRST",
+      "LEFT JOIN": "LEFT OUTER JOIN",
+      "Identifiers": "All lowercase"
+    }
+  },
+  "recommendations": [
+    "Review Statement 3 manual conversion and update C# code accordingly",
+    "Test transaction handling for Statements 3, 4, and 5 with PostgreSQL database",
+    "Verify that application-level transaction management works correctly",
+    "Update all code references to use new schema-prefixed table names",
+    "Test window functions behavior with actual data",
+    "Verify NULLS FIRST ordering matches application expectations"
+  ]
+}

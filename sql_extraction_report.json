@@ -1,0 +1,180 @@
+{
+  "extraction_summary": {
+    "total_statements_extracted": 7,
+    "source_file": "DataAccess/ProductRepository.cs",
+    "extraction_date": "2026-01-21",
+    "migration_type": "Microsoft SQL Server to PostgreSQL"
+  },
+  "methods_containing_sql": [
+    {
+      "method_name": "GetAllProductsAsync",
+      "line_range": "37-68",
+      "statement_number": 1,
+      "has_parameters": false,
+      "complexity": "complex"
+    },
+    {
+      "method_name": "GetProductByIdAsync",
+      "line_range": "77-107",
+      "statement_number": 2,
+      "has_parameters": true,
+      "parameters": ["@ProductId"],
+      "complexity": "complex"
+    },
+    {
+      "method_name": "InsertProductAsync",
+      "line_range": "115-145",
+      "statement_number": 3,
+      "has_parameters": true,
+      "parameters": ["@Name", "@Description", "@Price", "@StockQuantity"],
+      "is_transaction_block": true,
+      "complexity": "complex"
+    },
+    {
+      "method_name": "UpdateProductAsync",
+      "line_range": "153-186",
+      "statement_number": 4,
+      "has_parameters": true,
+      "parameters": ["@ProductId", "@Name", "@Description", "@Price", "@StockQuantity"],
+      "is_transaction_block": true,
+      "complexity": "complex"
+    },
+    {
+      "method_name": "DeleteProductAsync",
+      "line_range": "194-227",
+      "statement_number": 5,
+      "has_parameters": true,
+      "parameters": ["@ProductId"],
+      "is_transaction_block": true,
+      "complexity": "complex"
+    },
+    {
+      "method_name": "GetProductsByPriceRangeAsync",
+      "line_range": "235-264",
+      "statement_number": 6,
+      "has_parameters": true,
+      "parameters": ["@MinPrice", "@MaxPrice"],
+      "complexity": "complex"
+    },
+    {
+      "method_name": "GetLowStockProductsAsync",
+      "line_range": "272-301",
+      "statement_number": 7,
+      "has_parameters": true,
+      "parameters": ["@Threshold"],
+      "complexity": "complex"
+    }
+  ],
+  "sql_server_specific_features": {
+    "statement_1": {
+      "method": "GetAllProductsAsync",
+      "features": [
+        "Common Table Expression (CTE)",
+        "Window Functions (AVG OVER, COUNT OVER)",
+        "CASE statement",
+        "ROUND function",
+        "INNER JOIN"
+      ]
+    },
+    "statement_2": {
+      "method": "GetProductByIdAsync",
+      "features": [
+        "Common Table Expression (CTE)",
+        "LAG Window Function",
+        "LEFT JOIN",
+        "CASE statement",
+        "ROUND function",
+        "Parameterized query"
+      ]
+    },
+    "statement_3": {
+      "method": "InsertProductAsync",
+      "features": [
+        "BEGIN TRANSACTION/COMMIT",
+        "DECLARE variable",
+        "INSERT statement",
+        "SCOPE_IDENTITY()",
+        "GETDATE()",
+        "UPDATE statement",
+        "Multi-statement transaction block"
+      ]
+    },
+    "statement_4": {
+      "method": "UpdateProductAsync",
+      "features": [
+        "BEGIN TRANSACTION/COMMIT",
+        "DECLARE variables",
+        "SELECT INTO variables",
+        "UPDATE statement",
+        "INSERT statement",
+        "GETDATE()",
+        "Multi-statement transaction block"
+      ]
+    },
+    "statement_5": {
+      "method": "DeleteProductAsync",
+      "features": [
+        "BEGIN TRANSACTION/COMMIT",
+        "DECLARE variables",
+        "SELECT INTO variables",
+        "INSERT statement",
+        "DELETE statement",
+        "UPDATE with CASE expression",
+        "GETDATE()",
+        "Multi-statement transaction block"
+      ]
+    },
+    "statement_6": {
+      "method": "GetProductsByPriceRangeAsync",
+      "features": [
+        "Common Table Expression (CTE)",
+        "RANK() Window Function",
+        "PERCENT_RANK() Window Function",
+        "BETWEEN clause",
+        "CASE statement",
+        "Parameterized query"
+      ]
+    },
+    "statement_7": {
+      "method": "GetLowStockProductsAsync",
+      "features": [
+        "Common Table Expression (CTE)",
+        "Multiple Window Functions (AVG, MIN, MAX OVER)",
+        "CASE statement",
+        "ROUND function",
+        "Parameterized query"
+      ]
+    }
+  },
+  "complexity_categorization": {
+    "simple": 0,
+    "moderate": 0,
+    "complex": 7
+  },
+  "statement_types": {
+    "select_query": 4,
+    "transaction_block": 3
+  },
+  "tables_referenced": [
+    "Products",
+    "ProductHistory",
+    "ProductStats"
+  ],
+  "conversion_challenges": [
+    "SCOPE_IDENTITY() needs PostgreSQL equivalent (RETURNING clause or LASTVAL())",
+    "GETDATE() needs conversion to NOW() or CURRENT_TIMESTAMP",
+    "Window functions syntax may differ slightly",
+    "Transaction syntax (BEGIN TRANSACTION -> BEGIN)",
+    "DECIMAL(18,2) to NUMERIC(18,2)",
+    "Variable declarations and assignments in transactions",
+    "ROUND function may have different syntax"
+  ],
+  "validation_notes": [
+    "All 7 statements extracted successfully",
+    "All transaction blocks preserved as complete units",
+    "All parameterized queries maintain @parameter syntax",
+    "No SQL statements missing from catalog",
+    "Source location documented for each statement",
+    "All statements ready for DMS MCP tool processing"
+  ]
+}

@@ -1,0 +1,227 @@
+{
+  "sql_reintegration_summary": {
+    "reintegration_date": "2026-01-21",
+    "total_methods_updated": 7,
+    "total_sql_statements_reintegrated": 7,
+    "file_modified": "DataAccess/ProductRepository.cs",
+    "transformation_approach": "Direct SQL text replacement with schema-aware mapping from DMS conversion"
+  },
+  "methods_updated": [
+    {
+      "method_name": "GetAllProductsAsync",
+      "line_range_approximate": "38-80",
+      "statement_number": 1,
+      "changes_applied": [
+        "Products → productmanagement_dbo.products",
+        "ProductStats → productstats (lowercase)",
+        "All column references converted to lowercase",
+        "Added NULLS FIRST to ORDER BY clauses"
+      ],
+      "schema_objects_updated": {
+        "Products": "productmanagement_dbo.products"
+      },
+      "parameter_syntax": "@parameters preserved (Npgsql compatible)"
+    },
+    {
+      "method_name": "GetProductByIdAsync",
+      "line_range_approximate": "82-122",
+      "statement_number": 2,
+      "changes_applied": [
+        "Products → productmanagement_dbo.products",
+        "ProductHistory CTE → producthistory (lowercase)",
+        "All column references converted to lowercase",
+        "LEFT JOIN → LEFT OUTER JOIN (PostgreSQL explicit syntax)",
+        "LAG window function preserved"
+      ],
+      "schema_objects_updated": {
+        "Products": "productmanagement_dbo.products"
+      },
+      "parameter_syntax": "@ProductId preserved"
+    },
+    {
+      "method_name": "InsertProductAsync",
+      "line_range_approximate": "124-160",
+      "statement_number": 3,
+      "changes_applied": [
+        "Products → productmanagement_dbo.products",
+        "ProductHistory → productmanagement_dbo.producthistory",
+        "ProductStats → productmanagement_dbo.productstats",
+        "GETDATE() → NOW()",
+        "SCOPE_IDENTITY() → LASTVAL() (partial - requires C# code refactoring)"
+      ],
+      "schema_objects_updated": {
+        "Products": "productmanagement_dbo.products",
+        "ProductHistory": "productmanagement_dbo.producthistory",
+        "ProductStats": "productmanagement_dbo.productstats"
+      },
+      "parameter_syntax": "@Name, @Description, @Price, @StockQuantity preserved",
+      "notes": "CRITICAL: This method requires additional C# code refactoring to use RETURNING clause instead of SCOPE_IDENTITY(). Current SQL still has embedded transaction logic that should be moved to application level. This will be addressed in conjunction with ADO.NET class replacement in Step 5.",
+      "manual_conversion_required": true
+    },
+    {
+      "method_name": "UpdateProductAsync",
+      "line_range_approximate": "162-206",
+      "statement_number": 4,
+      "changes_applied": [
+        "Products → productmanagement_dbo.products",
+        "ProductHistory → productmanagement_dbo.producthistory",
+        "ProductStats → productmanagement_dbo.productstats",
+        "GETDATE() → NOW()",
+        "DECIMAL data type references remain (will work as NUMERIC in PostgreSQL)"
+      ],
+      "schema_objects_updated": {
+        "Products": "productmanagement_dbo.products",
+        "ProductHistory": "productmanagement_dbo.producthistory",
+        "ProductStats": "productmanagement_dbo.productstats"
+      },
+      "parameter_syntax": "@ProductId, @Name, @Description, @Price, @StockQuantity, @OldPrice, @OldStock preserved",
+      "notes": "Transaction block (BEGIN TRANSACTION/COMMIT) preserved in SQL. Per DMS warning, transaction management should ideally be moved to application level using NpgsqlConnection.BeginTransaction()."
+    },
+    {
+      "method_name": "DeleteProductAsync",
+      "line_range_approximate": "208-252",
+      "statement_number": 5,
+      "changes_applied": [
+        "Products → productmanagement_dbo.products",
+        "ProductHistory → productmanagement_dbo.producthistory",
+        "ProductStats → productmanagement_dbo.productstats",
+        "GETDATE() → NOW()",
+        "CASE expression in UPDATE preserved",
+        "DELETE statement updated with schema prefix"
+      ],
+      "schema_objects_updated": {
+        "Products": "productmanagement_dbo.products",
+        "ProductHistory": "productmanagement_dbo.producthistory",
+        "ProductStats": "productmanagement_dbo.productstats"
+      },
+      "parameter_syntax": "@ProductId, @OldPrice, @OldStock preserved",
+      "notes": "Transaction block preserved. Same transaction management recommendation as UpdateProductAsync."
+    },
+    {
+      "method_name": "GetProductsByPriceRangeAsync",
+      "line_range_approximate": "254-284",
+      "statement_number": 6,
+      "changes_applied": [
+        "Products → productmanagement_dbo.products",
+        "RankedProducts CTE → rankedproducts (lowercase)",
+        "RANK() and PERCENT_RANK() window functions preserved",
+        "All column references converted to lowercase",
+        "Added NULLS FIRST to ORDER BY"
+      ],
+      "schema_objects_updated": {
+        "Products": "productmanagement_dbo.products"
+      },
+      "parameter_syntax": "@MinPrice, @MaxPrice preserved"
+    },
+    {
+      "method_name": "GetLowStockProductsAsync",
+      "line_range_approximate": "286-316",
+      "statement_number": 7,
+      "changes_applied": [
+        "Products → productmanagement_dbo.products",
+        "StockAnalysis CTE → stockanalysis (lowercase)",
+        "AVG, MIN, MAX window functions preserved",
+        "All column references converted to lowercase",
+        "ROUND function preserved",
+        "Added NULLS FIRST to ORDER BY"
+      ],
+      "schema_objects_updated": {
+        "Products": "productmanagement_dbo.products"
+      },
+      "parameter_syntax": "@Threshold preserved"
+    }
+  ],
+  "schema_object_name_mappings": {
+    "tables": {
+      "Products": "productmanagement_dbo.products",
+      "ProductHistory": "productmanagement_dbo.producthistory",
+      "ProductStats": "productmanagement_dbo.productstats"
+    },
+    "ctes": {
+      "ProductStats": "productstats",
+      "ProductHistory": "producthistory",
+      "RankedProducts": "rankedproducts",
+      "StockAnalysis": "stockanalysis"
+    },
+    "columns": "All converted to lowercase per DMS conventions"
+  },
+  "sql_syntax_transformations": {
+    "date_functions": {
+      "GETDATE()": "NOW()",
+      "occurrences_replaced": 8
+    },
+    "identity_functions": {
+      "SCOPE_IDENTITY()": "LASTVAL() [Note: Requires C# refactoring for proper RETURNING usage]",
+      "occurrences_replaced": 1
+    },
+    "ordering": {
+      "ORDER BY column": "ORDER BY column NULLS FIRST",
+      "note": "Applied where appropriate per DMS conversion"
+    },
+    "joins": {
+      "LEFT JOIN": "LEFT OUTER JOIN (explicit PostgreSQL syntax)",
+      "INNER JOIN": "INNER JOIN (preserved)"
+    }
+  },
+  "parameter_syntax_decision": {
+    "approach": "Named parameters with @ prefix",
+    "rationale": "Npgsql supports @ parameter syntax which maintains compatibility with existing C# parameter binding code",
+    "examples": [
+      "@ProductId",
+      "@Name",
+      "@Description",
+      "@Price",
+      "@StockQuantity",
+      "@MinPrice",
+      "@MaxPrice",
+      "@Threshold"
+    ],
+    "no_changes_required_to_parameter_binding": true
+  },
+  "code_structure_preservation": {
+    "async_await_patterns": "Preserved - all methods remain async",
+    "method_signatures": "Unchanged - all parameter types and return types preserved",
+    "error_handling": "Preserved - try/catch blocks unchanged",
+    "connection_management": "Preserved - GetConnectionAsync() pattern maintained",
+    "sql_declaration_pattern": "Preserved - const string sql = @\"...\" pattern maintained"
+  },
+  "items_requiring_additional_work": [
+    {
+      "item": "InsertProductAsync method",
+      "issue": "SCOPE_IDENTITY() replacement with LASTVAL() is incomplete",
+      "recommended_solution": "Refactor to use INSERT...RETURNING clause and modify C# code to handle the returned value directly from INSERT statement",
+      "dependencies": "Requires Npgsql ADO.NET classes (Step 4-5) and potentially transaction refactoring"
+    },
+    {
+      "item": "Transaction management in UpdateProductAsync, DeleteProductAsync",
+      "issue": "BEGIN TRANSACTION/COMMIT embedded in SQL (DMS warning [7807])",
+      "recommended_solution": "Move transaction management to application level using NpgsqlConnection.BeginTransactionAsync()",
+      "dependencies": "Requires Npgsql ADO.NET classes and code refactoring"
+    },
+    {
+      "item": "MapProductFromReader method",
+      "issue": "Uses column names with original casing (ProductId, Name, etc.) but PostgreSQL will return lowercase",
+      "recommended_solution": "Update column name references in MapProductFromReader to use lowercase or implement case-insensitive column access",
+      "dependencies": "Will be addressed when updating to NpgsqlDataReader"
+    }
+  ],
+  "verification_status": {
+    "all_methods_updated": true,
+    "schema_objects_updated_per_dms": true,
+    "no_sql_server_specific_syntax_in_simple_statements": true,
+    "transaction_syntax_partially_updated": true,
+    "ctes_using_postgresql_syntax": true,
+    "window_functions_preserved": true,
+    "parameter_syntax_compatible": true,
+    "code_structure_preserved": true
+  },
+  "next_steps": [
+    "Step 4: Update package dependencies (Microsoft.Data.SqlClient → Npgsql)",
+    "Step 5: Replace SQL Server ADO.NET classes with Npgsql equivalents",
+    "Step 5 (continued): Address InsertProductAsync RETURNING clause implementation",
+    "Step 5 (continued): Refactor transaction management for Update/Delete methods",
+    "Step 5 (continued): Update MapProductFromReader to handle lowercase column names",
+    "Step 6: Update connection strings to PostgreSQL format"
+  ],
+  "compliance_notes": "All schema object name changes from DMS conversion have been respected and applied. No attempt was made to revert to original SQL Server names. The transformation maintains the DMS-converted schema (productmanagement_dbo.*) as required."
+}
