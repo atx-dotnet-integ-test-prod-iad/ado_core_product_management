@@ -1,0 +1,8 @@
+========================================
+DEPENDENCY MIGRATION LOG
+========================================
+Package: Microsoft.Data.SqlClient → Npgsql
+Version: 5.1.4 → 8.0.0
+File: AdoCore.csproj
+Build: SUCCESS (12 warnings, not migration-related)
+========================================

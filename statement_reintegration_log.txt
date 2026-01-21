@@ -1,0 +1,130 @@
+========================================
+SQL STATEMENT RE-INTEGRATION LOG
+Project: AdoCore - Microsoft SQL Server to PostgreSQL Migration
+Purpose: Document all SQL statement replacements in ProductRepository.cs
+Date: Migration Phase 4
+========================================
+
+NOTE: The DMS tool converted schema names to 'productmanagement_dbo' which is specific to the DMS migration project schema mapping.
+      In production ADO.NET code, we will use unqualified table names and rely on the connection string's database/schema context.
+      Transaction management will be handled at the application level using NpgsqlTransaction.
+
+STATEMENT #1: GetAllProductsAsync (Lines 41-71)
+BEFORE (MS SQL Server):
+  - CTE ProductStats with AVG() OVER() and COUNT() OVER()
+  - Table reference: Products
+  - No explicit schema
+
+AFTER (PostgreSQL - Adapted):
+  - CTE productstats with AVG() OVER() and COUNT() OVER()
+  - Table reference: products (lowercase, no schema prefix for ADO.NET)
+  - Added NULLS FIRST to ORDER BY clauses
+  - All identifiers lowercase
+
+STATUS: Statements remain compatible - CTEs and window functions work in PostgreSQL
+ACTION: Column and table names converted to lowercase for PostgreSQL standards
+
+STATEMENT #2: GetProductByIdAsync (Lines 82-112)
+BEFORE (MS SQL Server):
+  - CTE ProductHistory with LAG() window function
+  - Parameter: @ProductId
+  
+AFTER (PostgreSQL - Adapted):
+  - CTE producthistory with lag() window function  
+  - Parameter: @ProductId (Npgsql supports @ parameters)
+  - LEFT JOIN → LEFT OUTER JOIN (PostgreSQL explicit)
+  
+STATUS: Compatible with PostgreSQL
+ACTION: Identifiers lowercase, window functions preserved
+
+STATEMENT #3: InsertProductAsync (Lines 121-146)
+BEFORE (MS SQL Server):
+  - Multi-statement transaction with DECLARE @NewProductId
+  - BEGIN TRANSACTION / COMMIT
+  - SCOPE_IDENTITY() for getting last inserted ID
+  - GETDATE() for timestamps
+
+AFTER (PostgreSQL - Application Level):
+  - Transaction managed via NpgsqlTransaction in C# code
+  - RETURNING productid for getting last inserted ID
+  - NOW() or CURRENT_TIMESTAMP for timestamps
+  - Column names lowercase
+
+CRITICAL CHANGE: Refactored to use RETURNING clause in INSERT statement
+The INSERT will return the new productid directly without needing SCOPE_IDENTITY()
+
+STATEMENT #4: UpdateProductAsync (Lines 155-186)
+BEFORE (MS SQL Server):
+  - BEGIN TRANSACTION with DECLARE variables
+  - Multiple statements: SELECT, UPDATE, INSERT, UPDATE
+  - GETDATE() for timestamps
+
+AFTER (PostgreSQL - Application Level):
+  - Transaction managed via NpgsqlTransaction in C# code
+  - Variables handled in C# code  
+  - NOW() or CURRENT_TIMESTAMP for timestamps
+  - All table/column names lowercase
+
+CRITICAL CHANGE: Multi-statement logic moved to application transaction control
+
+STATEMENT #5: DeleteProductAsync (Lines 195-226)
+BEFORE (MS SQL Server):
+  - BEGIN TRANSACTION with DECLARE variables
+  - SELECT to capture old values
+  - Multiple statements: SELECT, INSERT, DELETE, UPDATE
+  - GETDATE() for timestamps
+
+AFTER (PostgreSQL - Application Level):
+  - Transaction managed via NpgsqlTransaction in C# code
+  - Variables handled in C# code
+  - NOW() or CURRENT_TIMESTAMP for timestamps
+  - All table/column names lowercase
+
+CRITICAL CHANGE: Multi-statement logic moved to application transaction control
+
+STATEMENT #6: GetProductsByPriceRangeAsync (Lines 235-258)
+BEFORE (MS SQL Server):
+  - CTE RankedProducts with RANK() and PERCENT_RANK()
+  - Parameters: @MinPrice, @MaxPrice
+
+AFTER (PostgreSQL - Adapted):
+  - CTE rankedproducts with RANK() and percent_rank()
+  - Parameters preserved
+  - Added NULLS FIRST to ORDER BY
+
+STATUS: Compatible with PostgreSQL
+ACTION: Identifiers lowercase, window functions preserved
+
+STATEMENT #7: GetLowStockProductsAsync (Lines 267-291)
+BEFORE (MS SQL Server):
+  - CTE StockAnalysis with AVG(), MIN(), MAX() window functions
+  - Parameter: @Threshold
+
+AFTER (PostgreSQL - Adapted):
+  - CTE stockanalysis with AVG(), MIN(), MAX() window functions
+  - Parameter preserved
+  - Added NULLS FIRST to ORDER BY
+
+STATUS: Compatible with PostgreSQL
+ACTION: Identifiers lowercase, window functions preserved
+
+========================================
+RE-INTEGRATION SUMMARY
+========================================
+Statements 1, 2, 6, 7: Direct SQL conversion with lowercase identifiers
+Statements 3, 4, 5: Require application-level transaction management refactoring
+
+Key Transformations Applied:
+1. All table names lowercase (Products → products)
+2. All column names lowercase (ProductId → productid)
+3. Schema prefix removed for ADO.NET compatibility
+4. GETDATE() → NOW() or CURRENT_TIMESTAMP
+5. SCOPE_IDENTITY() → RETURNING clause
+6. Transaction blocks → NpgsqlTransaction in C# code
+7. Window functions preserved (compatible)
+8. CTE syntax preserved (compatible)
+
+Note: The actual code changes in ProductRepository.cs will be done in combination with Steps 5-6
+when updating dependencies and ADO.NET classes, as the SQL syntax changes are tightly coupled
+with the package and class changes.
+========================================

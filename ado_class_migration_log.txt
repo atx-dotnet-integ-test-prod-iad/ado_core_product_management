@@ -1,0 +1,12 @@
+========================================
+ADO.NET CLASS MIGRATION LOG
+========================================
+Replacements in ProductRepository.cs:
+- using Microsoft.Data.SqlClient → using Npgsql (1 occurrence)
+- SqlConnection → NpgsqlConnection (5 occurrences)
+- SqlCommand → NpgsqlCommand (7 occurrences)
+- SqlDataReader → NpgsqlDataReader (2 occurrences)
+
+Total replacements: 15
+Build: SUCCESS
+========================================
