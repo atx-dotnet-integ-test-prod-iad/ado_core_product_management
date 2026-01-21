@@ -1,0 +1,159 @@
+{
+  "conversion_summary": {
+    "total_statements": 7,
+    "successful_dms_conversions": 6,
+    "manual_conversions_after_dms_failure": 1,
+    "conversion_timestamp": "2026-01-21T03:20:12Z",
+    "dms_migration_project": "arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU",
+    "source_database": "ProductManagement",
+    "source_schema": "dbo",
+    "target_schema": "productmanagement_dbo"
+  },
+  "statements": [
+    {
+      "statement_id": 1,
+      "method_name": "GetAllProductsAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "conversion_status": "SUCCESS",
+      "conversion_method": "DMS_TOOL",
+      "dms_metadata_model": "sql-conversion-1768965614",
+      "dms_request_identifier": "b491a565-7564-4f53-81e1-f47fb9b52ff4",
+      "dms_conversion_identifier": "8527325c-085f-4281-b036-6aa57fcbae84",
+      "dms_poll_attempts": 12,
+      "conversion_notes": "CTE with window functions (AVG OVER, COUNT OVER) converted successfully. Schema changed from 'dbo' to 'productmanagement_dbo'.",
+      "warnings": []
+    },
+    {
+      "statement_id": 2,
+      "method_name": "GetProductByIdAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "conversion_status": "SUCCESS",
+      "conversion_method": "DMS_TOOL",
+      "dms_metadata_model": "sql-conversion-1768965748",
+      "dms_request_identifier": "cdf35ba7-1b2e-47ff-ab80-5b9b9f600b89",
+      "dms_conversion_identifier": "bab2b02e-74db-4916-8f25-16d370e39e32",
+      "dms_poll_attempts": 12,
+      "conversion_notes": "CTE with LAG window function converted successfully. LEFT JOIN converted to LEFT OUTER JOIN.",
+      "warnings": []
+    },
+    {
+      "statement_id": 3,
+      "method_name": "InsertProductAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "conversion_status": "ERROR",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_metadata_model": null,
+      "dms_request_identifier": null,
+      "dms_conversion_identifier": null,
+      "dms_poll_attempts": 0,
+      "dms_error": "Metadata model creation failed: {'error': \"Metadata model creation failed: {'default_error_details': {'message': 'Statement definition is not valid.'}}\"}",
+      "dms_error_timestamp": "2026-01-21T03:24:54.921114",
+      "conversion_notes": "DMS could not process this multi-statement transaction with SCOPE_IDENTITY(). Manual conversion applied: (1) INSERT with RETURNING clause to get new product ID, (2) Separate INSERT for ProductHistory, (3) UPDATE for ProductStats. Transaction management delegated to application level. GETDATE() converted to NOW().",
+      "manual_conversion_rationale": "PostgreSQL does not support SCOPE_IDENTITY(). The RETURNING clause provides equivalent functionality. The multi-statement transaction block structure is not supported by DMS for conversion, requiring manual decomposition into separate SQL statements to be executed within an application-managed transaction.",
+      "warnings": [
+        "SCOPE_IDENTITY() is not supported in PostgreSQL - replaced with RETURNING clause",
+        "Transaction must be managed at application level using NpgsqlTransaction",
+        "Multiple statements must be executed sequentially within the same transaction context"
+      ]
+    },
+    {
+      "statement_id": 4,
+      "method_name": "UpdateProductAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "conversion_status": "SUCCESS",
+      "conversion_method": "DMS_TOOL",
+      "dms_metadata_model": "sql-conversion-1768965910",
+      "dms_request_identifier": "6731af0e-980d-42a4-b206-27fd9fc105f9",
+      "dms_conversion_identifier": "eec37a59-2467-47d2-ad69-e74ecbceb57c",
+      "dms_poll_attempts": 12,
+      "conversion_notes": "Multi-statement transaction converted with warnings. GETDATE() converted to clock_timestamp() by DMS (normalized to NOW() in final version). Variable declarations converted. Transaction management delegated to application level.",
+      "warnings": [
+        "[DMS 7807 - Severity CRITICAL] PostgreSQL does not support explicit transaction management commands such as BEGIN TRAN, SAVE TRAN in functions. Convert your source code manually.",
+        "BEGIN TRANSACTION/COMMIT removed from SQL - must be managed at application level"
+      ]
+    },
+    {
+      "statement_id": 5,
+      "method_name": "DeleteProductAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "conversion_status": "SUCCESS",
+      "conversion_method": "DMS_TOOL",
+      "dms_metadata_model": "sql-conversion-1768966043",
+      "dms_request_identifier": "cfdad7a7-dfab-41dd-95ea-3ca0fa07f385",
+      "dms_conversion_identifier": "8d7dc3f6-24ab-49f7-89ee-749ef706b8e6",
+      "dms_poll_attempts": 12,
+      "conversion_notes": "Multi-statement transaction with DELETE converted with warnings. GETDATE() converted to clock_timestamp() by DMS (normalized to NOW() in final version). Transaction management delegated to application level.",
+      "warnings": [
+        "[DMS 7807 - Severity CRITICAL] PostgreSQL does not support explicit transaction management commands such as BEGIN TRAN, SAVE TRAN in functions. Convert your source code manually.",
+        "BEGIN TRANSACTION/COMMIT removed from SQL - must be managed at application level"
+      ]
+    },
+    {
+      "statement_id": 6,
+      "method_name": "GetProductsByPriceRangeAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "conversion_status": "SUCCESS",
+      "conversion_method": "DMS_TOOL",
+      "dms_metadata_model": "sql-conversion-1768966176",
+      "dms_request_identifier": "f532eae7-a4d1-4bd4-b3b5-04a83db30758",
+      "dms_conversion_identifier": "7cc0d18a-ecc6-467f-b53a-8e807a13c88d",
+      "dms_poll_attempts": 12,
+      "conversion_notes": "CTE with RANK() and PERCENT_RANK() window functions converted successfully. NULLS FIRST added to ORDER BY clause.",
+      "warnings": []
+    },
+    {
+      "statement_id": 7,
+      "method_name": "GetLowStockProductsAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "conversion_status": "SUCCESS",
+      "conversion_method": "DMS_TOOL",
+      "dms_metadata_model": "sql-conversion-1768966310",
+      "dms_request_identifier": "ddbe3601-a823-472b-a6bf-f6f96568ff3e",
+      "dms_conversion_identifier": "a478548a-b3f3-45b9-8037-a6d138bed763",
+      "dms_poll_attempts": 12,
+      "conversion_notes": "CTE with multiple window functions (AVG, MIN, MAX OVER) converted successfully. NULLS FIRST added to ORDER BY clause.",
+      "warnings": []
+    }
+  ],
+  "schema_transformations": {
+    "table_name_mappings": {
+      "Products": "productmanagement_dbo.products",
+      "ProductHistory": "productmanagement_dbo.producthistory",
+      "ProductStats": "productmanagement_dbo.productstats"
+    },
+    "function_mappings": {
+      "GETDATE()": "NOW()",
+      "SCOPE_IDENTITY()": "RETURNING clause",
+      "LAG()": "lag()",
+      "AVG() OVER()": "AVG() OVER ()",
+      "COUNT() OVER()": "COUNT() OVER ()",
+      "RANK() OVER()": "RANK() OVER ()",
+      "PERCENT_RANK() OVER()": "percent_rank() OVER ()"
+    },
+    "transaction_handling": "BEGIN TRANSACTION/COMMIT removed from SQL statements and delegated to application-level transaction management using NpgsqlTransaction"
+  },
+  "required_code_changes": [
+    {
+      "change_type": "InsertProductAsync Method Refactoring",
+      "description": "The InsertProductAsync method must be refactored to handle the RETURNING clause from the INSERT statement. The method should execute the INSERT and capture the returned productid, then use it in subsequent INSERT and UPDATE statements within the same transaction.",
+      "impact": "HIGH",
+      "file": "DataAccess/ProductRepository.cs"
+    },
+    {
+      "change_type": "Transaction Management",
+      "description": "UpdateProductAsync, DeleteProductAsync methods must wrap their multi-statement operations in explicit application-level transactions using NpgsqlTransaction. The SQL statements have had BEGIN TRANSACTION/COMMIT removed.",
+      "impact": "HIGH",
+      "files": [
+        "DataAccess/ProductRepository.cs"
+      ]
+    },
+    {
+      "change_type": "Variable Handling for Multi-Statement Operations",
+      "description": "Methods that retrieve values for use in subsequent statements (UpdateProductAsync, DeleteProductAsync) need to execute SELECT statements first and capture results before executing UPDATE/INSERT/DELETE operations.",
+      "impact": "MEDIUM",
+      "files": [
+        "DataAccess/ProductRepository.cs"
+      ]
+    }
+  ]
+}
