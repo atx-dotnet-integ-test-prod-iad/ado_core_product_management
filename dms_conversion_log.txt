@@ -1,0 +1,411 @@
+=============================================================================
+DMS MCP TOOL CONVERSION LOG
+=============================================================================
+Date: 2026-01-22
+Migration Project: Microsoft SQL Server to PostgreSQL
+Total Statements Processed: 7
+DMS Tool Successful Conversions: 5 (full statements) + 3 (partial)
+DMS Tool Failures: 1 (multi-statement transaction block)
+Manual Conversions Required: 3 (full transaction blocks after DMS partial success)
+=============================================================================
+
+-----------------------------------------------------------------------------
+STATEMENT 1: GetAllProductsAsync - Complex CTE with Window Functions
+-----------------------------------------------------------------------------
+DMS Conversion Status: SUCCESS
+DMS Conversion Timestamp: 2026-01-22T15:11:29.232277
+Metadata Model: sql-conversion-1769094691
+Conversion Request ID: c36ffc5e-4250-41fc-a42c-26b874b170b6
+
+Original SQL Server Statement:
+WITH ProductStats AS (
+    SELECT 
+        ProductId,
+        AVG(Price) OVER() as AvgPrice,
+        COUNT(*) OVER() as TotalProducts
+    FROM Products
+)
+SELECT 
+    p.ProductId,
+    p.Name,
+    p.Description,
+    p.Price,
+    p.StockQuantity,
+    p.CreatedDate,
+    p.ModifiedDate,
+    CASE 
+        WHEN p.Price > ps.AvgPrice THEN 'Above Average'
+        WHEN p.Price < ps.AvgPrice THEN 'Below Average'
+        ELSE 'Average'
+    END as PriceCategory,
+    ROUND((p.Price / ps.AvgPrice) * 100, 2) as PricePercentageOfAverage
+FROM Products p
+INNER JOIN ProductStats ps ON p.ProductId = ps.ProductId
+ORDER BY 
+    CASE 
+        WHEN p.Price > ps.AvgPrice THEN 1
+        ELSE 2
+    END,
+    p.Name
+
+DMS Converted PostgreSQL Statement:
+WITH productstats
+AS (SELECT
+    productid, AVG(price) OVER () AS avgprice, COUNT(*) OVER () AS totalproducts
+    FROM productmanagement_dbo.products)
+SELECT
+    p.productid, p.name, p.description, p.price, p.stockquantity, p.createddate, p.modifieddate,
+    CASE
+        WHEN p.price > ps.avgprice THEN 'Above Average'
+        WHEN p.price < ps.avgprice THEN 'Below Average'
+        ELSE 'Average'
+    END AS pricecategory, ROUND((p.price / ps.avgprice) * 100, 2) AS pricepercentageofaverage
+    FROM productmanagement_dbo.products AS p
+    INNER JOIN productstats AS ps
+        ON p.productid = ps.productid
+    ORDER BY
+    CASE
+        WHEN p.price > ps.avgprice THEN 1
+        ELSE 2
+    END NULLS FIRST, p.name NULLS FIRST;
+
+Schema Changes Applied by DMS:
+- Products -> productmanagement_dbo.products
+- All identifiers converted to lowercase
+
+Notes: DMS successfully converted this complex CTE with window functions.
+
+-----------------------------------------------------------------------------
+STATEMENT 2: GetProductByIdAsync - CTE with LAG Window Function
+-----------------------------------------------------------------------------
+DMS Conversion Status: SUCCESS
+DMS Conversion Timestamp: 2026-01-22T15:14:07.413920
+Metadata Model: sql-conversion-1769094849
+Conversion Request ID: 94886349-1e69-4d91-80c4-a57368d43346
+
+Original SQL Server Statement:
+WITH ProductHistory AS (
+    SELECT 
+        ProductId,
+        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,
+        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock
+    FROM Products
+    WHERE ProductId = @ProductId
+)
+SELECT 
+    p.ProductId,
+    p.Name,
+    p.Description,
+    p.Price,
+    p.StockQuantity,
+    p.CreatedDate,
+    p.ModifiedDate,
+    ph.PreviousPrice,
+    ph.PreviousStock,
+    CASE 
+        WHEN ph.PreviousPrice IS NOT NULL THEN 
+            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)
+        ELSE NULL
+    END as PriceChangePercentage
+FROM Products p
+LEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId
+WHERE p.ProductId = @ProductId
+
+DMS Converted PostgreSQL Statement:
+WITH producthistory
+AS (SELECT
+    productid, lag(price) OVER (ORDER BY modifieddate) AS previousprice, lag(stockquantity) OVER (ORDER BY modifieddate) AS previousstock
+    FROM productmanagement_dbo.products
+    WHERE productid = @ProductId)
+SELECT
+    p.productid, p.name, p.description, p.price, p.stockquantity, p.createddate, p.modifieddate, ph.previousprice, ph.previousstock,
+    CASE
+        WHEN ph.previousprice IS NOT NULL THEN ROUND(((p.price - ph.previousprice) / ph.previousprice) * 100, 2)
+        ELSE NULL
+    END AS pricechangepercentage
+    FROM productmanagement_dbo.products AS p
+    LEFT OUTER JOIN producthistory AS ph
+        ON p.productid = ph.productid
+    WHERE p.productid = @ProductId;
+
+Schema Changes Applied by DMS:
+- Products -> productmanagement_dbo.products
+- All identifiers converted to lowercase
+- LEFT JOIN -> LEFT OUTER JOIN (explicit)
+
+Notes: DMS successfully converted the LAG window function.
+
+-----------------------------------------------------------------------------
+STATEMENT 3: InsertProductAsync - Multi-Statement Transaction
+-----------------------------------------------------------------------------
+DMS Conversion Status: FAILURE (Full transaction block)
+DMS Conversion Status: SUCCESS (Individual INSERT statement only)
+DMS Conversion Timestamp: 2026-01-22T15:16:45.758801 (failure), 2026-01-22T15:17:11.285217 (partial success)
+Metadata Model: sql-conversion-1769095033 (partial)
+Error: "Metadata model creation failed: {'error': \"Metadata model creation failed: {'default_error_details': {'message': 'Statement definition is not valid.'}}\"}"
+
+Original SQL Server Statement (Full):
+DECLARE @NewProductId INT;
+
+BEGIN TRANSACTION;
+    -- Insert the new product
+    INSERT INTO Products (Name, Description, Price, StockQuantity)
+    VALUES (@Name, @Description, @Price, @StockQuantity);
+    
+    SET @NewProductId = SCOPE_IDENTITY();
+    
+    -- Log the insertion
+    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+    VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, GETDATE());
+    
+    -- Update product statistics
+    UPDATE ProductStats
+    SET 
+        TotalProducts = TotalProducts + 1,
+        AveragePrice = (AveragePrice * TotalProducts + @Price) / (TotalProducts + 1),
+        LastUpdated = GETDATE()
+    WHERE StatId = 1;
+COMMIT;
+
+SELECT @NewProductId
+
+DMS Error Details:
+DMS cannot process multi-statement transaction blocks with variable declarations and 
+multiple SQL statements. The tool requires single SQL statements.
+
+DMS Converted PostgreSQL Statement (Partial - INSERT only):
+INSERT INTO productmanagement_dbo.products (name, description, price, stockquantity)
+VALUES (@Name, @Description, @Price, @StockQuantity);
+
+Manual Conversion Required: YES
+Reason: DMS cannot handle multi-statement transactions with variable declarations,
+SCOPE_IDENTITY(), and multiple interdependent statements.
+
+Manual Conversion Approach:
+1. Split transaction into multiple statements for application-level transaction handling
+2. Replace SCOPE_IDENTITY() with PostgreSQL RETURNING clause
+3. Replace GETDATE() with NOW()
+4. Application code will manage the transaction using NpgsqlTransaction
+5. Return value from INSERT...RETURNING will be used as @NewProductId in subsequent statements
+
+Schema Changes Applied:
+- Products -> productmanagement_dbo.products
+- ProductHistory -> productmanagement_dbo.producthistory (assumed)
+- ProductStats -> productmanagement_dbo.productstats (assumed)
+
+-----------------------------------------------------------------------------
+STATEMENT 4: UpdateProductAsync - Multi-Statement Transaction
+-----------------------------------------------------------------------------
+DMS Conversion Status: SUCCESS (Individual UPDATE statement)
+DMS Conversion Status: MANUAL_REQUIRED (Full transaction block)
+DMS Conversion Timestamp: 2026-01-22T15:19:46.872012
+Metadata Model: sql-conversion-1769095189
+Conversion Request ID: 44dfe804-b14d-4563-8f7e-e96223f12e23
+
+Original SQL Server Statement (Main UPDATE):
+UPDATE Products
+SET 
+    Name = @Name,
+    Description = @Description,
+    Price = @Price,
+    StockQuantity = @StockQuantity,
+    ModifiedDate = GETDATE()
+WHERE ProductId = @ProductId
+
+DMS Converted PostgreSQL Statement:
+UPDATE productmanagement_dbo.products
+SET name = @Name, description = @Description, price = @Price, stockquantity = @StockQuantity, modifieddate = clock_timestamp()
+WHERE productid = @ProductId;
+
+Schema Changes Applied by DMS:
+- Products -> productmanagement_dbo.products
+- GETDATE() -> clock_timestamp()
+- All identifiers converted to lowercase
+
+Manual Conversion Required: YES
+Reason: The full statement includes transaction blocks with variable declarations
+and multiple SQL statements that DMS cannot process as a unit.
+
+Manual Conversion Approach:
+1. Use DMS-converted UPDATE statement
+2. Split transaction into separate statements for application handling
+3. Replace clock_timestamp() with NOW() for consistency (both work)
+4. Application retrieves old values before update
+5. Application manages transaction using NpgsqlTransaction
+
+-----------------------------------------------------------------------------
+STATEMENT 5: DeleteProductAsync - Multi-Statement Transaction
+-----------------------------------------------------------------------------
+DMS Conversion Status: SUCCESS (Individual DELETE statement)
+DMS Conversion Status: MANUAL_REQUIRED (Full transaction block)
+DMS Conversion Timestamp: 2026-01-22T15:22:21.136688
+Metadata Model: sql-conversion-1769095343
+Conversion Request ID: e7b3d4a5-9058-4c82-9559-8d95be14b3ef
+
+Original SQL Server Statement (Main DELETE):
+DELETE FROM Products 
+WHERE ProductId = @ProductId
+
+DMS Converted PostgreSQL Statement:
+DELETE FROM productmanagement_dbo.products
+WHERE productid = @ProductId;
+
+Schema Changes Applied by DMS:
+- Products -> productmanagement_dbo.products
+- All identifiers converted to lowercase
+
+Manual Conversion Required: YES
+Reason: The full statement includes transaction blocks with variable declarations,
+history logging, and statistics updates that DMS cannot process as a unit.
+
+Manual Conversion Approach:
+1. Use DMS-converted DELETE statement
+2. Split transaction into separate statements for application handling
+3. Replace GETDATE() with NOW()
+4. Application retrieves product info before deletion
+5. Application manages transaction using NpgsqlTransaction
+
+-----------------------------------------------------------------------------
+STATEMENT 6: GetProductsByPriceRangeAsync - CTE with RANK/PERCENT_RANK
+-----------------------------------------------------------------------------
+DMS Conversion Status: SUCCESS
+DMS Conversion Timestamp: 2026-01-22T15:24:56.923976
+Metadata Model: sql-conversion-1769095499
+Conversion Request ID: ba3e08e6-0f87-4001-90cc-14fcae8e824b
+
+Original SQL Server Statement:
+WITH RankedProducts AS (
+    SELECT 
+        p.*,
+        RANK() OVER (ORDER BY p.Price) as PriceRank,
+        PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile
+    FROM Products p
+    WHERE p.Price BETWEEN @MinPrice AND @MaxPrice
+)
+SELECT 
+    rp.*,
+    CASE 
+        WHEN rp.PricePercentile <= 0.25 THEN 'Budget'
+        WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range'
+        ELSE 'Premium'
+    END as PriceSegment
+FROM RankedProducts rp
+ORDER BY rp.PriceRank
+
+DMS Converted PostgreSQL Statement:
+WITH rankedproducts
+AS (SELECT
+    p.*, RANK() OVER (ORDER BY p.price) AS pricerank, percent_rank() OVER (ORDER BY p.price) AS pricepercentile
+    FROM productmanagement_dbo.products AS p
+    WHERE p.price BETWEEN @MinPrice AND @MaxPrice)
+SELECT
+    rp.*,
+    CASE
+        WHEN rp.pricepercentile <= 0.25 THEN 'Budget'
+        WHEN rp.pricepercentile <= 0.75 THEN 'Mid-Range'
+        ELSE 'Premium'
+    END AS pricesegment
+    FROM rankedproducts AS rp
+    ORDER BY rp.pricerank NULLS FIRST;
+
+Schema Changes Applied by DMS:
+- Products -> productmanagement_dbo.products
+- PERCENT_RANK() -> percent_rank() (lowercase)
+- All identifiers converted to lowercase
+
+Notes: DMS successfully converted RANK() and PERCENT_RANK() window functions.
+
+-----------------------------------------------------------------------------
+STATEMENT 7: GetLowStockProductsAsync - CTE with Multiple Window Functions
+-----------------------------------------------------------------------------
+DMS Conversion Status: SUCCESS
+DMS Conversion Timestamp: 2026-01-22T15:27:32.019471
+Metadata Model: sql-conversion-1769095654
+Conversion Request ID: 46adbee8-c6dd-4d63-a9a7-4cb394918d7a
+
+Original SQL Server Statement:
+WITH StockAnalysis AS (
+    SELECT 
+        p.*,
+        AVG(StockQuantity) OVER() as AvgStock,
+        MIN(StockQuantity) OVER() as MinStock,
+        MAX(StockQuantity) OVER() as MaxStock
+    FROM Products p
+)
+SELECT 
+    sa.*,
+    CASE 
+        WHEN StockQuantity <= @Threshold THEN 'Critical'
+        WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low'
+        ELSE 'Adequate'
+    END as StockStatus,
+    ROUND((StockQuantity / AvgStock) * 100, 2) as StockPercentageOfAverage
+FROM StockAnalysis sa
+WHERE StockQuantity <= @Threshold
+ORDER BY StockQuantity
+
+DMS Converted PostgreSQL Statement:
+WITH stockanalysis
+AS (SELECT
+    p.*, AVG(stockquantity) OVER () AS avgstock, MIN(stockquantity) OVER () AS minstock, MAX(stockquantity) OVER () AS maxstock
+    FROM productmanagement_dbo.products AS p)
+SELECT
+    sa.*,
+    CASE
+        WHEN stockquantity <= @Threshold THEN 'Critical'
+        WHEN stockquantity <= avgstock * 0.5 THEN 'Low'
+        ELSE 'Adequate'
+    END AS stockstatus, ROUND((stockquantity / avgstock) * 100, 2) AS stockpercentageofaverage
+    FROM stockanalysis AS sa
+    WHERE stockquantity <= @Threshold
+    ORDER BY stockquantity NULLS FIRST;
+
+Schema Changes Applied by DMS:
+- Products -> productmanagement_dbo.products
+- All identifiers converted to lowercase
+
+Notes: DMS successfully converted all window functions (AVG, MIN, MAX).
+
+=============================================================================
+SUMMARY
+=============================================================================
+
+Total Statements Submitted to DMS: 8 attempts
+- Full transaction block (Statement 3): FAILED
+- Individual INSERT (Statement 3): SUCCESS
+- Individual UPDATE (Statement 4): SUCCESS  
+- Individual DELETE (Statement 5): SUCCESS
+- Other statements (1, 2, 6, 7): SUCCESS
+
+DMS Limitations Identified:
+1. Cannot process multi-statement transaction blocks with BEGIN TRANSACTION/COMMIT
+2. Cannot process DECLARE variable statements combined with transactions
+3. Cannot process SCOPE_IDENTITY() in multi-statement context
+4. Individual statements within transactions CAN be converted successfully
+
+Manual Conversion Strategy Applied:
+- For statements 3, 4, 5: Used DMS output for individual SQL statements where available
+- Applied PostgreSQL best practices for transaction handling
+- Replaced SQL Server-specific functions (SCOPE_IDENTITY, GETDATE) with PostgreSQL equivalents
+- Documented requirement for application-level transaction management using NpgsqlTransaction
+
+All Schema Changes Consistently Applied:
+- dbo.Products -> productmanagement_dbo.products
+- dbo.ProductHistory -> productmanagement_dbo.producthistory (assumed consistent with DMS pattern)
+- dbo.ProductStats -> productmanagement_dbo.productstats (assumed consistent with DMS pattern)
+- All column and table identifiers converted to lowercase per PostgreSQL convention
+
+DMS Tool Performance:
+- Successfully converted all SELECT statements with CTEs and window functions
+- Successfully converted individual INSERT, UPDATE, DELETE statements
+- Schema transformation applied consistently across all conversions
+- Processing time per statement: 2-3 minutes average
+
+Recommendation:
+The DMS MCP tool is highly effective for SELECT statements and individual DML statements.
+For complex multi-statement transaction blocks, a hybrid approach is needed:
+1. Use DMS to convert individual SQL statements
+2. Manually restructure transaction logic for PostgreSQL
+3. Implement transaction management in application code using database client libraries
+
+=============================================================================
