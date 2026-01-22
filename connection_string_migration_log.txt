@@ -1,0 +1,1 @@
+Connection String Migration - SQL Server format replaced with PostgreSQL: Server->Host, added Port=5432, Trusted_Connection->Username/Password authentication, removed SQL Server-specific parameters (MultipleActiveResultSets, TrustServerCertificate), added Pooling=true.

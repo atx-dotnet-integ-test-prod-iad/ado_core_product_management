@@ -1,0 +1,3 @@
+Package Dependency Migration - Microsoft.Data.SqlClient 5.1.4 replaced with Npgsql 8.0.1 in AdoCore.csproj. Using directive updated in ProductRepository.cs from Microsoft.Data.SqlClient to Npgsql.
+
+Security Update (Post-Validation) - Npgsql upgraded from version 8.0.1 to 8.0.6 to address security vulnerability GHSA-x9vc-6hfv-hg8c (high severity). Build validation confirms no errors and security warning resolved.

@@ -1,0 +1,1 @@
+ADO.NET Class Migration - All SQL Server classes replaced with Npgsql equivalents: SqlConnection->NpgsqlConnection, SqlCommand->NpgsqlCommand, SqlDataReader->NpgsqlDataReader in ProductRepository.cs.
