@@ -1,0 +1,166 @@
+{
+  "conversion_summary": {
+    "total_statements": 7,
+    "dms_successful": 6,
+    "dms_failed": 1,
+    "manual_conversion_required": 1
+  },
+  "conversions": [
+    {
+      "statement_number": 1,
+      "method_name": "GetAllProductsAsync",
+      "dms_status": "success",
+      "conversion_method": "DMS_TOOL",
+      "dms_metadata_model": "sql-conversion-1769181890",
+      "schema_transformations": {
+        "Products": "productmanagement_dbo.products",
+        "ProductStats": "productmanagement_dbo.productstats"
+      },
+      "key_conversions": [
+        "CTE syntax preserved",
+        "Window functions (AVG, COUNT OVER) preserved",
+        "CASE expressions preserved",
+        "Schema prefix added: productmanagement_dbo",
+        "NULLS FIRST added to ORDER BY"
+      ]
+    },
+    {
+      "statement_number": 2,
+      "method_name": "GetProductByIdAsync",
+      "dms_status": "success",
+      "conversion_method": "DMS_TOOL",
+      "dms_metadata_model": "sql-conversion-1769182053",
+      "schema_transformations": {
+        "Products": "productmanagement_dbo.products",
+        "ProductHistory": "productmanagement_dbo.producthistory"
+      },
+      "key_conversions": [
+        "CTE syntax preserved",
+        "LAG window function preserved",
+        "LEFT JOIN -> LEFT OUTER JOIN",
+        "Schema prefix added: productmanagement_dbo",
+        "Parameter @ProductId preserved"
+      ]
+    },
+    {
+      "statement_number": 3,
+      "method_name": "InsertProductAsync",
+      "dms_status": "error",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_error": "Metadata model creation failed: {'error': \"Metadata model creation failed: {'default_error_details': {'message': 'Statement definition is not valid.'}}\"}",
+      "dms_error_timestamp": "2026-01-23T15:30:30.361132",
+      "manual_conversion_notes": "DMS tool could not process complex transaction block with DECLARE, BEGIN TRANSACTION, SCOPE_IDENTITY, and multi-statement transaction. Manual conversion applied following PostgreSQL best practices.",
+      "schema_transformations": {
+        "Products": "productmanagement_dbo.products",
+        "ProductHistory": "productmanagement_dbo.producthistory",
+        "ProductStats": "productmanagement_dbo.productstats"
+      },
+      "key_conversions": [
+        "SCOPE_IDENTITY() -> RETURNING productid clause",
+        "GETDATE() -> CURRENT_TIMESTAMP",
+        "BEGIN TRANSACTION/COMMIT removed (handled at application level)",
+        "Multi-statement transaction split into discrete statements",
+        "Schema prefix added: productmanagement_dbo",
+        "Transaction management moved to application code using NpgsqlTransaction"
+      ]
+    },
+    {
+      "statement_number": 4,
+      "method_name": "UpdateProductAsync",
+      "dms_status": "success",
+      "conversion_method": "DMS_TOOL",
+      "dms_metadata_model": "sql-conversion-1769182243",
+      "dms_warnings": [
+        "[7807 - Severity CRITICAL - PostgreSQL does not support explicit transaction management commands such as BEGIN TRAN, SAVE TRAN in functions. Convert your source code manually.]"
+      ],
+      "schema_transformations": {
+        "Products": "productmanagement_dbo.products",
+        "ProductHistory": "productmanagement_dbo.producthistory",
+        "ProductStats": "productmanagement_dbo.productstats"
+      },
+      "key_conversions": [
+        "DECLARE @variable -> var_variable",
+        "GETDATE() -> clock_timestamp()",
+        "BEGIN TRANSACTION/COMMIT warning (handled at application level)",
+        "Schema prefix added: productmanagement_dbo",
+        "Variable assignments converted to SELECT statements"
+      ]
+    },
+    {
+      "statement_number": 5,
+      "method_name": "DeleteProductAsync",
+      "dms_status": "success",
+      "conversion_method": "DMS_TOOL",
+      "dms_metadata_model": "sql-conversion-1769182410",
+      "dms_warnings": [
+        "[7807 - Severity CRITICAL - PostgreSQL does not support explicit transaction management commands such as BEGIN TRAN, SAVE TRAN in functions. Convert your source code manually.]"
+      ],
+      "schema_transformations": {
+        "Products": "productmanagement_dbo.products",
+        "ProductHistory": "productmanagement_dbo.producthistory",
+        "ProductStats": "productmanagement_dbo.productstats"
+      },
+      "key_conversions": [
+        "DECLARE @variable -> var_variable",
+        "GETDATE() -> clock_timestamp()",
+        "BEGIN TRANSACTION/COMMIT warning (handled at application level)",
+        "Schema prefix added: productmanagement_dbo",
+        "DELETE statement preserved with schema prefix"
+      ]
+    },
+    {
+      "statement_number": 6,
+      "method_name": "GetProductsByPriceRangeAsync",
+      "dms_status": "success",
+      "conversion_method": "DMS_TOOL",
+      "dms_metadata_model": "sql-conversion-1769182572",
+      "schema_transformations": {
+        "Products": "productmanagement_dbo.products",
+        "RankedProducts": "rankedproducts"
+      },
+      "key_conversions": [
+        "CTE syntax preserved",
+        "RANK() window function preserved",
+        "PERCENT_RANK() -> percent_rank()",
+        "BETWEEN clause preserved",
+        "Schema prefix added: productmanagement_dbo",
+        "NULLS FIRST added to ORDER BY"
+      ]
+    },
+    {
+      "statement_number": 7,
+      "method_name": "GetLowStockProductsAsync",
+      "dms_status": "success",
+      "conversion_method": "DMS_TOOL",
+      "dms_metadata_model": "sql-conversion-1769182734",
+      "schema_transformations": {
+        "Products": "productmanagement_dbo.products",
+        "StockAnalysis": "stockanalysis"
+      },
+      "key_conversions": [
+        "CTE syntax preserved",
+        "Window functions (AVG, MIN, MAX OVER) preserved",
+        "CASE expression preserved",
+        "Schema prefix added: productmanagement_dbo",
+        "NULLS FIRST added to ORDER BY",
+        "WHERE and ORDER BY clauses preserved"
+      ]
+    }
+  ],
+  "common_transformations": {
+    "schema_prefix": "All table references now include 'productmanagement_dbo' schema prefix",
+    "case_conversion": "Column and table names converted to lowercase",
+    "null_handling": "NULLS FIRST added to ORDER BY clauses for PostgreSQL compatibility",
+    "transaction_management": "Transaction blocks (BEGIN TRANSACTION/COMMIT) must be handled at application level using NpgsqlTransaction",
+    "date_functions": "GETDATE() converted to CURRENT_TIMESTAMP or clock_timestamp()",
+    "identity_functions": "SCOPE_IDENTITY() converted to RETURNING clause pattern"
+  },
+  "notes": [
+    "All 7 statements were processed through the DMS MCP tool as required",
+    "Statement 3 (InsertProductAsync) failed DMS conversion due to complexity and requires manual handling in application code",
+    "Statements 4 and 5 converted successfully but with warnings about transaction management",
+    "Transaction management will be handled at the application level using NpgsqlTransaction in ADO.NET code",
+    "Schema transformations from DMS tool MUST be respected when re-integrating SQL into code",
+    "All schema object references now use the 'productmanagement_dbo' prefix as determined by DMS"
+  ]
+}

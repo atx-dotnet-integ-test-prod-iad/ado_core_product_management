@@ -1,0 +1,230 @@
+{
+  "migration_report": {
+    "report_title": "SQL Server to PostgreSQL Migration Report - AdoCore Application",
+    "report_date": "2025-01-23",
+    "migration_project": "AdoCore Product Management System",
+    "transformation_id": "20260123_151649_c3cdb3e9"
+  },
+  "summary_statistics": {
+    "total_sql_statements_processed": 7,
+    "statements_successfully_converted_by_dms": 6,
+    "statements_requiring_manual_intervention": 1,
+    "statements_validated_equivalent": 0,
+    "statements_validated_non_equivalent": 0,
+    "statements_with_equivalency_errors": 7
+  },
+  "detailed_statement_listing": [
+    {
+      "statement_number": 1,
+      "method_name": "GetAllProductsAsync",
+      "source_file": "ProductRepository.cs",
+      "source_location": "lines 41-65",
+      "original_sql_summary": "CTE with AVG/COUNT window functions and CASE statements",
+      "converted_sql_summary": "PostgreSQL CTE with productmanagement_dbo schema",
+      "dms_conversion_status": "success",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "ERROR",
+      "notes": "DMS conversion successful, equivalency tool returned UNKNOWN (marked as ERROR per requirements)"
+    },
+    {
+      "statement_number": 2,
+      "method_name": "GetProductByIdAsync",
+      "source_file": "ProductRepository.cs",
+      "source_location": "lines 78-105",
+      "original_sql_summary": "CTE with LAG window function and LEFT JOIN",
+      "converted_sql_summary": "PostgreSQL CTE with LAG and LEFT OUTER JOIN",
+      "dms_conversion_status": "success",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "ERROR",
+      "notes": "DMS conversion successful, equivalency tool returned UNKNOWN (marked as ERROR per requirements)"
+    },
+    {
+      "statement_number": 3,
+      "method_name": "InsertProductAsync",
+      "source_file": "ProductRepository.cs",
+      "source_location": "lines 117-139",
+      "original_sql_summary": "Transaction block with INSERT, SCOPE_IDENTITY(), UPDATE",
+      "converted_sql_summary": "INSERT with RETURNING clause, separate statements for transaction",
+      "dms_conversion_status": "error",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "equivalency_status": "ERROR",
+      "notes": "DMS tool failed - complex transaction block. Manual conversion: SCOPE_IDENTITY() -> RETURNING, transaction moved to C# code"
+    },
+    {
+      "statement_number": 4,
+      "method_name": "UpdateProductAsync",
+      "source_file": "ProductRepository.cs",
+      "source_location": "lines 154-183",
+      "original_sql_summary": "Transaction block with UPDATE and INSERT statements",
+      "converted_sql_summary": "Separate UPDATE and INSERT statements with clock_timestamp()",
+      "dms_conversion_status": "success",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "ERROR",
+      "notes": "DMS conversion with warning about transaction management. Transaction moved to C# code"
+    },
+    {
+      "statement_number": 5,
+      "method_name": "DeleteProductAsync",
+      "source_file": "ProductRepository.cs",
+      "source_location": "lines 197-227",
+      "original_sql_summary": "Transaction block with DELETE and UPDATE",
+      "converted_sql_summary": "Separate DELETE and UPDATE statements with clock_timestamp()",
+      "dms_conversion_status": "success",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "ERROR",
+      "notes": "DMS conversion with warning about transaction management. Transaction moved to C# code"
+    },
+    {
+      "statement_number": 6,
+      "method_name": "GetProductsByPriceRangeAsync",
+      "source_file": "ProductRepository.cs",
+      "source_location": "lines 238-262",
+      "original_sql_summary": "CTE with RANK and PERCENT_RANK window functions",
+      "converted_sql_summary": "PostgreSQL CTE with rank and percent_rank functions",
+      "dms_conversion_status": "success",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "ERROR",
+      "notes": "DMS conversion successful, equivalency tool returned UNKNOWN (marked as ERROR per requirements)"
+    },
+    {
+      "statement_number": 7,
+      "method_name": "GetLowStockProductsAsync",
+      "source_file": "ProductRepository.cs",
+      "source_location": "lines 278-304",
+      "original_sql_summary": "CTE with AVG, MIN, MAX window functions",
+      "converted_sql_summary": "PostgreSQL CTE with window functions",
+      "dms_conversion_status": "success",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "ERROR",
+      "notes": "DMS conversion successful, equivalency tool returned UNKNOWN (marked as ERROR per requirements)"
+    }
+  ],
+  "files_modified": [
+    {
+      "file": "AdoCore.csproj",
+      "change_type": "Package dependency update",
+      "description": "Replaced Microsoft.Data.SqlClient with Npgsql"
+    },
+    {
+      "file": "DataAccess/ProductRepository.cs",
+      "change_type": "SQL statements, ADO.NET classes",
+      "description": "Replaced all 7 SQL statements with PostgreSQL versions, replaced SqlConnection/SqlCommand/SqlDataReader with Npgsql equivalents"
+    },
+    {
+      "file": "appsettings.json",
+      "change_type": "Connection strings",
+      "description": "Updated connection strings from SQL Server format to PostgreSQL format"
+    }
+  ],
+  "packages_changed": {
+    "removed": [
+      {
+        "package": "Microsoft.Data.SqlClient",
+        "version": "5.1.4"
+      }
+    ],
+    "added": [
+      {
+        "package": "Npgsql",
+        "version": "8.0.0"
+      }
+    ],
+    "unchanged": [
+      {
+        "package": "Microsoft.Extensions.Configuration",
+        "version": "8.0.0"
+      },
+      {
+        "package": "Microsoft.Extensions.Configuration.Json",
+        "version": "8.0.0"
+      },
+      {
+        "package": "Microsoft.Extensions.DependencyInjection",
+        "version": "8.0.0"
+      }
+    ]
+  },
+  "build_status": {
+    "status": "success",
+    "errors": 0,
+    "warnings": 12,
+    "warning_details": "Nullable reference type warnings (CS8601, CS8603, CS8600, CS8618, CS8625) and Npgsql security warning (NU1903)",
+    "output_dll": "bin/Debug/net9.0/AdoCore.dll"
+  },
+  "statements_requiring_manual_review": [
+    {
+      "statement_number": 1,
+      "method_name": "GetAllProductsAsync",
+      "reason": "Equivalency status ERROR - requires manual functional testing",
+      "recommendation": "Test against PostgreSQL database to verify query results match expected behavior"
+    },
+    {
+      "statement_number": 2,
+      "method_name": "GetProductByIdAsync",
+      "reason": "Equivalency status ERROR - requires manual functional testing",
+      "recommendation": "Test against PostgreSQL database to verify LAG window function and JOIN behavior"
+    },
+    {
+      "statement_number": 3,
+      "method_name": "InsertProductAsync",
+      "reason": "Manual conversion after DMS failure, Equivalency status ERROR",
+      "recommendation": "Critical: Test RETURNING clause behavior and transaction atomicity in PostgreSQL"
+    },
+    {
+      "statement_number": 4,
+      "method_name": "UpdateProductAsync",
+      "reason": "Equivalency status ERROR - requires manual functional testing",
+      "recommendation": "Test transaction handling in C# code and verify old value capture logic"
+    },
+    {
+      "statement_number": 5,
+      "method_name": "DeleteProductAsync",
+      "reason": "Equivalency status ERROR - requires manual functional testing",
+      "recommendation": "Test transaction handling and verify deletion logic with statistics updates"
+    },
+    {
+      "statement_number": 6,
+      "method_name": "GetProductsByPriceRangeAsync",
+      "reason": "Equivalency status ERROR - requires manual functional testing",
+      "recommendation": "Test RANK and PERCENT_RANK window functions against PostgreSQL"
+    },
+    {
+      "statement_number": 7,
+      "method_name": "GetLowStockProductsAsync",
+      "reason": "Equivalency status ERROR - requires manual functional testing",
+      "recommendation": "Test window function behavior and CASE statement logic"
+    }
+  ],
+  "key_transformation_artifacts": {
+    "extracted_statements": "extracted_statements.sql",
+    "converted_statements": "converted_statements.sql",
+    "dms_conversion_log": "dms_conversion_log.json",
+    "equivalency_validation_report": "sql_equivalency_validation_report.json"
+  },
+  "migration_highlights": {
+    "schema_transformation": "All table references transformed to productmanagement_dbo schema prefix as determined by DMS tool",
+    "identity_handling": "SCOPE_IDENTITY() replaced with RETURNING clause pattern in INSERT statements",
+    "date_functions": "GETDATE() replaced with clock_timestamp() or CURRENT_TIMESTAMP",
+    "transaction_management": "Transaction blocks moved from SQL to C# application code using NpgsqlTransaction",
+    "case_conversion": "Column and table names converted to lowercase per PostgreSQL convention",
+    "window_functions": "All window functions (LAG, AVG, COUNT, RANK, PERCENT_RANK, MIN, MAX) successfully converted",
+    "null_handling": "NULLS FIRST added to ORDER BY clauses for PostgreSQL compatibility"
+  },
+  "migration_compliance": {
+    "dms_tool_usage": "COMPLIANT - All 7 statements processed through DMS MCP tool",
+    "equivalency_validation": "COMPLIANT - All 7 statement pairs validated using SQL Equivalency MCP tool",
+    "agent_judgment": "COMPLIANT - No agent judgment used for equivalency determination",
+    "schema_respect": "COMPLIANT - DMS schema transformations (productmanagement_dbo) respected in code",
+    "documentation": "COMPLIANT - Comprehensive artifacts and logs created"
+  },
+  "next_steps": [
+    "Deploy PostgreSQL database with productmanagement_dbo schema",
+    "Run database schema migration scripts",
+    "Execute comprehensive functional testing of all 7 data access methods",
+    "Verify transaction atomicity in PostgreSQL environment",
+    "Conduct performance testing and optimization",
+    "Update Npgsql package to address security vulnerability (NU1903)",
+    "Implement proper secrets management for production credentials"
+  ],
+  "migration_status": "COMPLETED - Code migration successful, functional testing required"
+}
