@@ -1,0 +1,155 @@
+-- ================================================================================
+-- DMS CONVERSION ISSUES LOG
+-- Microsoft SQL Server to PostgreSQL Migration
+-- Date: 2026-01-26
+-- ================================================================================
+
+SUMMARY:
+- Total statements processed: 7
+- DMS successful conversions: 0
+- DMS failed conversions: 7
+- Manual conversions applied: 7
+
+The DMS tool encountered systematic failures for all SQL statements. All statements
+were processed through the DMS tool as required, but the metadata model conversion
+did not complete successfully. Manual conversions have been applied following
+PostgreSQL best practices and T-SQL to PostgreSQL migration patterns.
+
+================================================================================
+STATEMENT 1: GetAllProductsAsync
+================================================================================
+DMS Error: Metadata model conversion failed: {'error': 'Metadata model conversion did not complete after 15 attempts'}
+Error Timestamp: 2026-01-26T17:03:32.413867
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+
+Manual Conversion Rationale:
+- CTE syntax is compatible between SQL Server and PostgreSQL
+- Window functions (AVG() OVER(), COUNT() OVER()) are PostgreSQL-compatible
+- CASE expressions are compatible
+- ROUND() function exists in PostgreSQL with same signature
+- Table name 'Products' kept as-is (no schema transformation needed)
+- Query requires no syntax changes for PostgreSQL
+
+Manual Conversion Applied: No changes needed - SQL is PostgreSQL-compatible
+
+================================================================================
+STATEMENT 2: GetProductByIdAsync
+================================================================================
+DMS Error: Metadata model conversion failed: {'error': 'Metadata model conversion did not complete after 15 attempts'}
+Error Timestamp: 2026-01-26T17:07:04.350198
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+
+Manual Conversion Rationale:
+- CTE syntax is compatible
+- LAG() window function is PostgreSQL-compatible
+- CASE expressions are compatible
+- Parameter @ProductId syntax is compatible with Npgsql
+- LEFT JOIN syntax is compatible
+- ROUND() function exists in PostgreSQL
+- No schema transformations required
+
+Manual Conversion Applied: No changes needed - SQL is PostgreSQL-compatible
+
+================================================================================
+STATEMENT 3: InsertProductAsync
+================================================================================
+DMS Error: Metadata model creation failed: {'default_error_details': {'message': 'Statement definition is not valid.'}}
+Error Timestamp: 2026-01-26T17:08:13.256639
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+
+Manual Conversion Rationale:
+- DECLARE @variable INT syntax: PostgreSQL uses DO blocks or function parameters
+- BEGIN TRANSACTION: PostgreSQL uses BEGIN (without TRANSACTION keyword)
+- SCOPE_IDENTITY(): PostgreSQL uses RETURNING clause on INSERT statement
+- GETDATE(): PostgreSQL uses CURRENT_TIMESTAMP or NOW()
+- SET @variable = value: PostgreSQL uses variable := value in DO blocks
+- COMMIT: PostgreSQL uses COMMIT (compatible)
+- SELECT @variable: Return value through RETURNING clause
+
+Key Changes:
+1. Restructured to use INSERT...RETURNING for getting new ProductId
+2. Split into multiple statements to be executed sequentially in .NET code
+3. Replaced GETDATE() with CURRENT_TIMESTAMP
+4. Removed variable declarations (will be handled in .NET code)
+5. Changed BEGIN TRANSACTION to BEGIN
+
+================================================================================
+STATEMENT 4: UpdateProductAsync
+================================================================================
+DMS Error: Metadata model conversion failed: {'error': 'Metadata model conversion did not complete after 15 attempts'}
+Error Timestamp: 2026-01-26T17:11:31.560715
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+
+Manual Conversion Rationale:
+- DECLARE @variable syntax: PostgreSQL requires DO block or function
+- BEGIN TRANSACTION: Change to BEGIN
+- SELECT @var = col: PostgreSQL uses SELECT INTO or CTE
+- GETDATE(): Replace with CURRENT_TIMESTAMP
+- Transaction structure needs to be maintained in .NET code
+- Variable assignments need to be handled through separate SELECT queries
+
+Key Changes:
+1. Changed BEGIN TRANSACTION to BEGIN
+2. Replaced GETDATE() with CURRENT_TIMESTAMP
+3. Restructured variable assignments to use separate SELECT queries
+4. Maintained transaction semantics
+
+================================================================================
+STATEMENT 5: DeleteProductAsync
+================================================================================
+DMS Error: Metadata model conversion failed: {'error': 'Metadata model conversion did not complete after 15 attempts'}
+Error Timestamp: 2026-01-26T17:15:04.797400
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+
+Manual Conversion Rationale:
+- Similar issues as Statement 4
+- DECLARE @variable syntax: PostgreSQL requires DO block
+- BEGIN TRANSACTION: Change to BEGIN
+- SELECT @var = col: PostgreSQL uses SELECT INTO or separate queries
+- GETDATE(): Replace with CURRENT_TIMESTAMP
+- CASE expression is compatible
+- DELETE syntax is compatible
+
+Key Changes:
+1. Changed BEGIN TRANSACTION to BEGIN
+2. Replaced GETDATE() with CURRENT_TIMESTAMP
+3. Restructured variable assignments to use separate SELECT queries
+4. Maintained CASE expression logic (compatible)
+
+================================================================================
+STATEMENT 6: GetProductsByPriceRangeAsync
+================================================================================
+DMS Error: Metadata model conversion failed: {'error': 'Metadata model conversion did not complete after 15 attempts'}
+Error Timestamp: 2026-01-26T17:18:47.253451
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+
+Manual Conversion Rationale:
+- CTE syntax is compatible
+- RANK() window function is PostgreSQL-compatible
+- PERCENT_RANK() window function is PostgreSQL-compatible
+- BETWEEN clause is compatible
+- CASE expressions are compatible
+- Parameter syntax (@MinPrice, @MaxPrice) is compatible with Npgsql
+
+Manual Conversion Applied: No changes needed - SQL is PostgreSQL-compatible
+
+================================================================================
+STATEMENT 7: GetLowStockProductsAsync
+================================================================================
+DMS Error: Metadata model conversion failed: {'error': 'Metadata model conversion did not complete after 15 attempts'}
+Error Timestamp: 2026-01-26T17:22:30.587630
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+
+Manual Conversion Rationale:
+- CTE syntax is compatible
+- AVG(), MIN(), MAX() window functions are PostgreSQL-compatible
+- CASE expression is compatible
+- ROUND() function exists in PostgreSQL
+- Parameter syntax (@Threshold) is compatible with Npgsql
+- WHERE and ORDER BY clauses are compatible
+
+Manual Conversion Applied: No changes needed - SQL is PostgreSQL-compatible
+
+================================================================================
+END OF DMS CONVERSION ISSUES LOG
+================================================================================

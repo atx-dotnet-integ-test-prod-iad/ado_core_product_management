@@ -1,0 +1,199 @@
+================================================================================
+CONNECTION STRING UPDATES LOG
+Microsoft SQL Server to PostgreSQL Migration
+Date: 2026-01-26
+================================================================================
+
+This log documents the transformation of connection strings from SQL Server
+format to PostgreSQL-compatible format.
+
+================================================================================
+FILE: appsettings.json
+================================================================================
+Location: sourceCode/appsettings.json
+Connection Strings Updated: DevConnection, ProdConnection
+
+ORIGINAL SQL SERVER FORMAT:
+---------------------------
+DevConnection:
+"Server=localhost;Database=ProductManagement;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True"
+
+ProdConnection:
+"Server=localhost;Database=ProductManagement;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True"
+
+NEW POSTGRESQL FORMAT:
+----------------------
+DevConnection:
+"Host=localhost;Port=5432;Database=ProductManagement;Username=postgres;Password=postgres;Include Error Detail=true"
+
+ProdConnection:
+"Host=localhost;Port=5432;Database=ProductManagement;Username=postgres;Password=postgres;Include Error Detail=true"
+
+PARAMETER MAPPINGS APPLIED:
+---------------------------
+
+1. Server Parameter:
+   OLD: Server=localhost
+   NEW: Host=localhost
+   REASON: PostgreSQL uses 'Host' instead of 'Server' for the database server address
+
+2. Port Parameter:
+   OLD: (implicit default port 1433 for SQL Server)
+   NEW: Port=5432
+   REASON: PostgreSQL default port is 5432; explicitly specified for clarity
+
+3. Database Parameter:
+   OLD: Database=ProductManagement
+   NEW: Database=ProductManagement
+   REASON: Database name parameter is the same in both SQL Server and PostgreSQL
+
+4. Authentication:
+   OLD: Trusted_Connection=True
+   NEW: Username=postgres;Password=postgres
+   REASON: 
+   - SQL Server's Trusted_Connection uses Windows authentication
+   - PostgreSQL requires explicit username and password
+   - Using default PostgreSQL superuser 'postgres' for this migration
+   - NOTE: In production, use secure credential management (environment variables,
+     secrets manager, Azure Key Vault, etc.)
+
+5. MultipleActiveResultSets Parameter:
+   OLD: MultipleActiveResultSets=true
+   NEW: (removed)
+   REASON: This parameter is specific to SQL Server and not applicable to PostgreSQL.
+   PostgreSQL handles multiple result sets differently and this parameter is not supported.
+
+6. TrustServerCertificate Parameter:
+   OLD: TrustServerCertificate=True
+   NEW: Include Error Detail=true
+   REASON:
+   - TrustServerCertificate is SQL Server specific for SSL certificate validation
+   - PostgreSQL uses different SSL parameters (not included in this basic migration)
+   - 'Include Error Detail=true' added for better PostgreSQL error diagnostics during development
+   - NOTE: For production SSL connections, use: SslMode=Require; and proper certificate validation
+
+CONNECTION STRING COMPONENTS EXPLAINED:
+---------------------------------------
+
+PostgreSQL Connection String Components:
+- Host: Server address (localhost for local development, IP/hostname for remote)
+- Port: PostgreSQL port (default 5432)
+- Database: Target database name
+- Username: PostgreSQL user account
+- Password: User password (should be encrypted/secured in production)
+- Include Error Detail: Include detailed error information in exceptions (helpful for debugging)
+
+Optional PostgreSQL Parameters (not used in this basic migration):
+- SslMode: SSL connection mode (Disable, Allow, Prefer, Require, VerifyCA, VerifyFull)
+- Timeout: Connection timeout in seconds
+- CommandTimeout: Command execution timeout
+- Pooling: Enable connection pooling (default true)
+- MinPoolSize: Minimum pool size
+- MaxPoolSize: Maximum pool size (default 100)
+- ApplicationName: Application name for PostgreSQL logs
+- SearchPath: Schema search path
+- Encoding: Character encoding (default UTF8)
+
+SECURITY CONSIDERATIONS:
+------------------------
+
+CRITICAL SECURITY WARNINGS:
+1. **Hardcoded Credentials**: This migration uses hardcoded username/password in 
+   appsettings.json for simplicity. This is **NOT recommended for production**.
+
+2. **Production Best Practices**:
+   - Use environment variables for credentials
+   - Use Azure Key Vault, AWS Secrets Manager, or HashiCorp Vault
+   - Use managed identities where available
+   - Never commit credentials to version control
+   - Rotate credentials regularly
+   - Use least-privilege accounts (not postgres superuser)
+
+3. **SSL/TLS Connections**:
+   - Enable SSL for production: SslMode=Require
+   - Use certificate validation: SslMode=VerifyFull
+   - Configure proper SSL certificates on PostgreSQL server
+
+4. **Network Security**:
+   - Use firewalls to restrict database access
+   - Use VPNs or private networks for database connections
+   - Never expose PostgreSQL directly to the internet
+   - Use connection string encryption at rest
+
+RECOMMENDED PRODUCTION CONNECTION STRING:
+-----------------------------------------
+"Host={DB_HOST};Port={DB_PORT};Database={DB_NAME};Username={DB_USER};Password={DB_PASSWORD};SslMode=Require;Include Error Detail=false;Application Name=AdoCore"
+
+Where placeholders are replaced with environment variables or secure secret storage.
+
+TESTING REQUIREMENTS:
+---------------------
+After connection string update:
+1. Verify appsettings.json has correct PostgreSQL format
+2. Ensure no SQL Server parameters remain
+3. Test connection to PostgreSQL database (requires running PostgreSQL server)
+4. Verify authentication works with provided credentials
+5. Test database operations (CRUD)
+6. Verify error handling with PostgreSQL-specific errors
+7. Test connection pooling behavior
+8. Load test with concurrent connections
+
+COMPATIBILITY NOTES:
+--------------------
+1. Npgsql Connection String:
+   - Npgsql parser is case-insensitive for parameter names
+   - Parameters can be separated by semicolon (;)
+   - Spaces around = and ; are optional
+   - Boolean values: true/false, yes/no, 1/0 all accepted
+
+2. Connection String Builder:
+   - For complex scenarios, use NpgsqlConnectionStringBuilder class
+   - Provides type-safe connection string construction
+   - Handles encoding and escaping automatically
+
+3. Environment-Specific Configuration:
+   - Current configuration supports Environment-based selection
+   - Development uses DevConnection
+   - Production uses ProdConnection
+   - Expand as needed for Staging, QA, etc.
+
+ROLLBACK PROCEDURE:
+-------------------
+If rollback to SQL Server is necessary:
+1. Restore appsettings.json from version control
+2. Replace connection strings with original SQL Server format:
+   - Host=localhost;Port=5432 → Server=localhost
+   - Username=postgres;Password=postgres → Trusted_Connection=True
+   - Remove Port parameter
+   - Add MultipleActiveResultSets=true
+   - Add TrustServerCertificate=True
+3. Remove "Include Error Detail=true"
+4. Restore SqlClient references in code
+5. Restore Microsoft.Data.SqlClient package
+6. Test against SQL Server database
+
+MIGRATION CHECKLIST:
+--------------------
+✓ SQL Server parameter 'Server' changed to PostgreSQL 'Host'
+✓ PostgreSQL Port (5432) explicitly specified
+✓ Database name preserved (ProductManagement)
+✓ Trusted_Connection replaced with Username/Password
+✓ MultipleActiveResultSets removed (not applicable)
+✓ TrustServerCertificate replaced with Include Error Detail
+✓ Both DevConnection and ProdConnection updated
+✓ Connection string format validated
+✓ Security considerations documented
+
+NEXT STEPS:
+-----------
+1. Ensure PostgreSQL server is installed and running
+2. Create ProductManagement database in PostgreSQL
+3. Run schema migration scripts (convert SQL Server schema to PostgreSQL)
+4. Create postgres user or application-specific user
+5. Grant appropriate permissions
+6. Test connection using updated connection strings
+7. Run application and verify database operations
+
+================================================================================
+END OF CONNECTION STRING UPDATES LOG
+================================================================================

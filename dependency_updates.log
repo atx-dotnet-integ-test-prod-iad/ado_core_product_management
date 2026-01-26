@@ -1,0 +1,127 @@
+================================================================================
+DEPENDENCY UPDATES LOG
+Microsoft SQL Server to PostgreSQL Migration
+Date: 2026-01-26
+================================================================================
+
+This log documents the package dependency changes for migrating from SQL Server
+to PostgreSQL database connectivity.
+
+================================================================================
+PACKAGE DEPENDENCY CHANGE
+================================================================================
+
+File Modified: AdoCore.csproj
+Change Type: Database Provider Package Replacement
+Date of Change: 2026-01-26
+
+OLD PACKAGE:
+------------
+Package Name: Microsoft.Data.SqlClient
+Version: 5.1.4
+Purpose: Microsoft SQL Server database connectivity provider for ADO.NET
+NuGet URL: https://www.nuget.org/packages/Microsoft.Data.SqlClient/5.1.4
+
+NEW PACKAGE:
+------------
+Package Name: Npgsql
+Version: 8.0.1
+Purpose: PostgreSQL database connectivity provider for ADO.NET
+NuGet URL: https://www.nuget.org/packages/Npgsql/8.0.1
+
+REASON FOR CHANGE:
+------------------
+PostgreSQL database migration - Replacing SQL Server connectivity with PostgreSQL
+connectivity as part of the comprehensive database migration project.
+
+Npgsql 8.0.1 is the latest stable version compatible with .NET 9.0 and provides:
+- Full ADO.NET provider implementation for PostgreSQL
+- Async/await support
+- Parameter binding compatible with existing @parameter syntax
+- Transaction support (BeginTransaction, Commit, Rollback)
+- Connection pooling
+- Compatible API surface with SqlClient for minimal code changes
+
+UNCHANGED DEPENDENCIES:
+-----------------------
+The following packages remain at their current versions:
+- Microsoft.Extensions.Configuration: Version 8.0.0
+- Microsoft.Extensions.Configuration.Json: Version 8.0.0
+- Microsoft.Extensions.DependencyInjection: Version 8.0.0
+
+These packages are database-agnostic and support both SQL Server and PostgreSQL
+connectivity patterns.
+
+COMPATIBILITY NOTES:
+--------------------
+1. Npgsql 8.0.1 is compatible with .NET 9.0 (current target framework)
+2. ADO.NET interfaces remain consistent (IDbConnection, IDbCommand, IDataReader)
+3. Parameter syntax (@paramName) is supported by Npgsql
+4. Async methods (ExecuteReaderAsync, ExecuteNonQueryAsync, ExecuteScalarAsync) are fully supported
+5. Transaction handling (BeginTransactionAsync, CommitAsync, RollbackAsync) is supported
+
+MIGRATION IMPACT:
+-----------------
+1. Code changes required:
+   - using Microsoft.Data.SqlClient → using Npgsql
+   - SqlConnection → NpgsqlConnection
+   - SqlCommand → NpgsqlCommand
+   - SqlDataReader → NpgsqlDataReader
+   - SqlParameter → NpgsqlParameter (if explicitly used)
+
+2. Connection string format changes required:
+   - SQL Server format → PostgreSQL format
+   - See connection_string_updates.log for details
+
+3. No changes required for:
+   - Parameter binding (Parameters.AddWithValue)
+   - Async/await patterns
+   - Using statements and IDisposable patterns
+   - Transaction patterns
+   - Error handling patterns
+
+VERSION SELECTION RATIONALE:
+----------------------------
+Npgsql 8.0.1 selected because:
+- Latest stable version as of migration date
+- Full .NET 9.0 support
+- Mature, production-ready
+- Extensive community support
+- Active maintenance and security updates
+- High compatibility with SqlClient API patterns
+
+SECURITY CONSIDERATIONS:
+------------------------
+- Always use parameterized queries (already implemented with @parameters)
+- Keep Npgsql package updated for security patches
+- Review Npgsql security advisories regularly
+- Use secure connection strings (encrypt sensitive data)
+- Follow PostgreSQL security best practices
+
+TESTING REQUIREMENTS:
+---------------------
+After this dependency change:
+1. Restore packages: dotnet restore
+2. Build project: dotnet build
+3. Verify Npgsql package appears in bin/Debug/net9.0 directory
+4. Update code to use Npgsql classes (Step 6)
+5. Update connection strings (Step 7)
+6. Run integration tests against PostgreSQL database
+7. Verify all CRUD operations work correctly
+8. Test transaction handling
+9. Verify connection pooling behavior
+10. Load test to ensure performance meets requirements
+
+ROLLBACK PROCEDURE:
+-------------------
+If rollback is necessary:
+1. Restore AdoCore.csproj from version control
+2. Change Npgsql back to Microsoft.Data.SqlClient 5.1.4
+3. Restore using statements and class names
+4. Restore connection strings
+5. Run dotnet restore and dotnet build
+6. Test against SQL Server database
+
+================================================================================
+END OF DEPENDENCY UPDATES LOG
+================================================================================

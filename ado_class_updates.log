@@ -1,0 +1,183 @@
+================================================================================
+ADO.NET CLASS UPDATES LOG
+Microsoft SQL Server to PostgreSQL Migration
+Date: 2026-01-26
+================================================================================
+
+This log documents the replacement of SQL Server-specific ADO.NET classes with
+their Npgsql (PostgreSQL) equivalents throughout the codebase.
+
+================================================================================
+FILE: ProductRepository.cs
+================================================================================
+Location: sourceCode/DataAccess/ProductRepository.cs
+Total Methods Updated: 10+ methods (all database operations)
+
+USING STATEMENT UPDATES:
+-------------------------
+REMOVED: using Microsoft.Data.SqlClient;
+ADDED:   using Npgsql;
+
+CLASS REPLACEMENTS:
+-------------------
+
+1. Connection Class:
+   OLD: SqlConnection
+   NEW: NpgsqlConnection
+   Occurrences: 3
+   Locations:
+   - Field declaration: private NpgsqlConnection _connection;
+   - GetConnectionAsync return type: Task<NpgsqlConnection>
+   - GetConnectionAsync instantiation: new NpgsqlConnection(_connectionString)
+
+2. Command Class:
+   OLD: SqlCommand
+   NEW: NpgsqlCommand
+   Occurrences: 7
+   Methods Updated:
+   - GetAllProductsAsync: new NpgsqlCommand(sql, connection)
+   - GetProductByIdAsync: new NpgsqlCommand(sql, connection)
+   - InsertProductAsync: Multiple NpgsqlCommand instances in transaction
+   - UpdateProductAsync: new NpgsqlCommand(sql, connection)
+   - DeleteProductAsync: new NpgsqlCommand(sql, connection)
+   - GetProductsByPriceRangeAsync: new NpgsqlCommand(sql, connection)
+   - GetLowStockProductsAsync: new NpgsqlCommand(sql, connection)
+
+3. DataReader Class:
+   OLD: SqlDataReader
+   NEW: NpgsqlDataReader
+   Occurrences: 1
+   Locations:
+   - MapProductFromReader method signature: private static Product MapProductFromReader(NpgsqlDataReader reader)
+
+PARAMETER HANDLING:
+-------------------
+No changes required:
+- command.Parameters.AddWithValue() method is compatible with Npgsql
+- Parameter names with @ prefix (@ProductId, @Name, etc.) are supported by Npgsql
+- Parameter binding logic remains unchanged
+
+TRANSACTION HANDLING:
+---------------------
+No changes required:
+- BeginTransactionAsync() is compatible with Npgsql
+- CommitAsync() is compatible with Npgsql
+- RollbackAsync() is compatible with Npgsql
+- Transaction patterns remain unchanged
+
+CONNECTION STATE HANDLING:
+--------------------------
+No changes required:
+- ConnectionState enum is provider-agnostic (part of System.Data)
+- OpenAsync() is compatible with Npgsql
+- CloseAsync() is compatible with Npgsql
+- DisposeAsync() is compatible with Npgsql
+- State checking (connection.State != ConnectionState.Open) remains unchanged
+
+ASYNC METHODS:
+--------------
+No changes required:
+- ExecuteReaderAsync() is compatible with Npgsql
+- ExecuteNonQueryAsync() is compatible with Npgsql
+- ExecuteScalarAsync() is compatible with Npgsql
+- All async/await patterns remain unchanged
+
+METHODS UPDATED (SUMMARY):
+---------------------------
+1. GetConnectionAsync: Changed return type and instantiation
+2. GetAllProductsAsync: Changed command class
+3. GetProductByIdAsync: Changed command class
+4. InsertProductAsync: Changed command classes (multiple in transaction)
+5. UpdateProductAsync: Changed command class
+6. DeleteProductAsync: Changed command class
+7. GetProductsByPriceRangeAsync: Changed command class
+8. GetLowStockProductsAsync: Changed command class
+9. ExecuteInTransactionAsync: No changes (uses generic patterns)
+10. MapProductFromReader: Changed parameter type
+11. DisposeAsync: No changes (uses generic patterns)
+
+NO CHANGES IN OTHER FILES:
+---------------------------
+As expected per transformation plan:
+- Business/ProductService.cs: No direct database access
+- CLI classes: No direct database access
+- Models/Product.cs: POCO class, no database dependencies
+- Program.cs: No direct database access
+
+COMPATIBILITY NOTES:
+--------------------
+1. Npgsql fully implements ADO.NET interfaces:
+   - IDbConnection (NpgsqlConnection)
+   - IDbCommand (NpgsqlCommand)
+   - IDataReader (NpgsqlDataReader)
+   
+2. Method signatures are compatible:
+   - Same parameter types
+   - Same return types
+   - Same async patterns
+
+3. Behavior is equivalent:
+   - Connection pooling works similarly
+   - Parameter binding works the same way
+   - Transaction handling follows same patterns
+   - Reader iteration is identical
+
+VERIFICATION CHECKLIST:
+-----------------------
+✓ All using statements updated
+✓ All SqlConnection references replaced with NpgsqlConnection
+✓ All SqlCommand references replaced with NpgsqlCommand
+✓ All SqlDataReader references replaced with NpgsqlDataReader
+✓ No SqlParameter references (AddWithValue used instead)
+✓ Connection state handling unchanged
+✓ Transaction handling unchanged
+✓ Parameter binding unchanged
+✓ Async/await patterns unchanged
+✓ Error handling unchanged
+✓ Null checks unchanged
+✓ Business logic unchanged
+
+TESTING REQUIREMENTS:
+---------------------
+After this update:
+1. Build project: dotnet build (should succeed)
+2. Verify no Microsoft.Data.SqlClient references remain
+3. Verify using Npgsql statement present
+4. Verify all Npgsql classes compile correctly
+5. Update connection strings (Step 7)
+6. Test connection to PostgreSQL database
+7. Test all CRUD operations:
+   - GetAllProductsAsync
+   - GetProductByIdAsync
+   - InsertProductAsync (test transaction and RETURNING clause)
+   - UpdateProductAsync (test transaction and variable handling)
+   - DeleteProductAsync (test transaction and CASE logic)
+   - GetProductsByPriceRangeAsync (test window functions)
+   - GetLowStockProductsAsync (test window functions)
+8. Verify transaction rollback on errors
+9. Test connection pooling behavior
+10. Load test for performance verification
+
+ROLLBACK PROCEDURE:
+-------------------
+If rollback is necessary:
+1. Restore ProductRepository.cs from version control
+2. Replace using Npgsql with using Microsoft.Data.SqlClient
+3. Replace all NpgsqlConnection with SqlConnection
+4. Replace all NpgsqlCommand with SqlCommand
+5. Replace all NpgsqlDataReader with SqlDataReader
+6. Restore AdoCore.csproj to use Microsoft.Data.SqlClient package
+7. Run dotnet restore and dotnet build
+8. Test against SQL Server database
+
+SECURITY CONSIDERATIONS:
+------------------------
+- Npgsql uses parameterized queries by default (already implemented)
+- Connection string security remains important (encrypt sensitive data)
+- Regular security updates recommended for Npgsql package
+- Follow PostgreSQL security best practices
+- Review Npgsql security advisories regularly
+
+================================================================================
+END OF ADO.NET CLASS UPDATES LOG
+================================================================================
