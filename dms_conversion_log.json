@@ -1,0 +1,214 @@
+{
+  "conversion_summary": {
+    "total_statements": 7,
+    "dms_tool_attempted": 4,
+    "dms_tool_successful": 0,
+    "dms_tool_failed": 4,
+    "dms_tool_not_attempted": 3,
+    "manual_conversion_required": 7,
+    "conversion_date": "2026-01-26T15:18:00Z"
+  },
+  "dms_service_status": {
+    "service_available": true,
+    "issues_encountered": [
+      "Metadata model conversion timeout after 15 poll attempts",
+      "Statement definition validation errors for multi-statement blocks",
+      "Consistent conversion process timeouts across multiple statement types"
+    ],
+    "conclusion": "DMS MCP tool experienced persistent timeout and validation issues preventing successful conversion. Manual conversion performed following PostgreSQL best practices."
+  },
+  "statement_conversions": [
+    {
+      "statement_number": 1,
+      "statement_name": "GetAllProductsAsync",
+      "source_file": "sourceCode/DataAccess/ProductRepository.cs",
+      "source_method": "GetAllProductsAsync()",
+      "source_lines": "40-69",
+      "dms_tool_attempted": true,
+      "dms_tool_status": "FAILED",
+      "dms_tool_error": "Metadata model conversion failed: {'error': 'Metadata model conversion did not complete after 15 attempts'}",
+      "dms_tool_timestamp": "2026-01-26T15:18:35Z",
+      "dms_tool_workflow": [
+        {
+          "step": "create_metadata_model",
+          "status": "completed",
+          "request_identifier": "f3778043-dc7d-4f6f-a72b-95de127617ef",
+          "metadata_model_name": "sql-conversion-1769440717",
+          "poll_attempts": 2
+        },
+        {
+          "step": "convert_metadata_model",
+          "status": "timeout",
+          "poll_attempts": 15
+        }
+      ],
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "manual_conversion_applied": true,
+      "manual_conversion_notes": "CTE with window functions (AVG OVER, COUNT OVER) - Direct conversion to PostgreSQL. No syntax changes required as PostgreSQL supports identical CTE and window function syntax.",
+      "postgresql_compatibility": "HIGH",
+      "changes_required": "None - PostgreSQL-compatible syntax"
+    },
+    {
+      "statement_number": 2,
+      "statement_name": "GetProductByIdAsync",
+      "source_file": "sourceCode/DataAccess/ProductRepository.cs",
+      "source_method": "GetProductByIdAsync(int productId)",
+      "source_lines": "82-113",
+      "dms_tool_attempted": true,
+      "dms_tool_status": "FAILED",
+      "dms_tool_error": "Metadata model conversion failed: {'error': 'Metadata model conversion did not complete after 15 attempts'}",
+      "dms_tool_timestamp": "2026-01-26T15:21:35Z",
+      "dms_tool_workflow": [
+        {
+          "step": "create_metadata_model",
+          "status": "completed",
+          "request_identifier": "4549dd41-042b-4188-9d4d-65be1be5f2b4",
+          "metadata_model_name": "sql-conversion-1769440897",
+          "poll_attempts": 5
+        },
+        {
+          "step": "convert_metadata_model",
+          "status": "timeout",
+          "poll_attempts": 15
+        }
+      ],
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "manual_conversion_applied": true,
+      "manual_conversion_notes": "CTE with LAG window function - Direct conversion to PostgreSQL. No syntax changes required as PostgreSQL supports LAG and identical syntax.",
+      "postgresql_compatibility": "HIGH",
+      "changes_required": "None - PostgreSQL-compatible syntax"
+    },
+    {
+      "statement_number": 3,
+      "statement_name": "InsertProductAsync",
+      "source_file": "sourceCode/DataAccess/ProductRepository.cs",
+      "source_method": "InsertProductAsync(Product product)",
+      "source_lines": "124-148",
+      "dms_tool_attempted": true,
+      "dms_tool_status": "FAILED",
+      "dms_tool_error": "Metadata model creation failed: {'error': \"Metadata model creation failed: {'default_error_details': {'message': 'Statement definition is not valid.'}}\"}",
+      "dms_tool_timestamp": "2026-01-26T15:25:08Z",
+      "dms_tool_workflow": [
+        {
+          "step": "create_metadata_model",
+          "status": "failed",
+          "error": "Statement definition is not valid"
+        }
+      ],
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "manual_conversion_applied": true,
+      "manual_conversion_notes": "Multi-statement transaction block with DECLARE, INSERT, SCOPE_IDENTITY(), UPDATE. Converted to PostgreSQL DO $$ block with RETURNING clause for identity retrieval. Key changes: SCOPE_IDENTITY() -> RETURNING ProductId, GETDATE() -> CURRENT_TIMESTAMP, variable syntax @ -> v_ prefix.",
+      "postgresql_compatibility": "MEDIUM",
+      "changes_required": "Major - Transaction syntax, SCOPE_IDENTITY() to RETURNING, GETDATE() to CURRENT_TIMESTAMP, variable declarations"
+    },
+    {
+      "statement_number": 4,
+      "statement_name": "UpdateProductAsync",
+      "source_file": "sourceCode/DataAccess/ProductRepository.cs",
+      "source_method": "UpdateProductAsync(Product product)",
+      "source_lines": "159-190",
+      "dms_tool_attempted": false,
+      "dms_tool_status": "NOT_ATTEMPTED",
+      "dms_tool_error": "Not attempted due to consistent DMS failures on similar multi-statement transaction blocks",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "manual_conversion_applied": true,
+      "manual_conversion_notes": "Multi-statement transaction with DECLARE, SELECT INTO, UPDATE, INSERT. Converted to PostgreSQL DO $$ block. Changes: DECLARE syntax, SELECT INTO variable syntax, GETDATE() -> CURRENT_TIMESTAMP, variable naming convention.",
+      "postgresql_compatibility": "MEDIUM",
+      "changes_required": "Major - Transaction syntax, variable declarations, GETDATE() conversion"
+    },
+    {
+      "statement_number": 5,
+      "statement_name": "DeleteProductAsync",
+      "source_file": "sourceCode/DataAccess/ProductRepository.cs",
+      "source_method": "DeleteProductAsync(int productId)",
+      "source_lines": "201-232",
+      "dms_tool_attempted": false,
+      "dms_tool_status": "NOT_ATTEMPTED",
+      "dms_tool_error": "Not attempted due to consistent DMS failures on similar multi-statement transaction blocks",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "manual_conversion_applied": true,
+      "manual_conversion_notes": "Multi-statement transaction with DECLARE, SELECT INTO, INSERT, DELETE, UPDATE. Converted to PostgreSQL DO $$ block. Changes: Similar to UpdateProductAsync - variable syntax, GETDATE() conversion, transaction structure.",
+      "postgresql_compatibility": "MEDIUM",
+      "changes_required": "Major - Transaction syntax, variable declarations, GETDATE() conversion"
+    },
+    {
+      "statement_number": 6,
+      "statement_name": "GetProductsByPriceRangeAsync",
+      "source_file": "sourceCode/DataAccess/ProductRepository.cs",
+      "source_method": "GetProductsByPriceRangeAsync(decimal minPrice, decimal maxPrice)",
+      "source_lines": "244-270",
+      "dms_tool_attempted": true,
+      "dms_tool_status": "FAILED",
+      "dms_tool_error": "Metadata model conversion failed: {'error': 'Metadata model conversion did not complete after 15 attempts'}",
+      "dms_tool_timestamp": "2026-01-26T15:26:17Z",
+      "dms_tool_workflow": [
+        {
+          "step": "create_metadata_model",
+          "status": "completed",
+          "request_identifier": "8a2ecc5f-c43a-4b18-afde-6d3f09238d10",
+          "metadata_model_name": "sql-conversion-1769441179",
+          "poll_attempts": 3
+        },
+        {
+          "step": "convert_metadata_model",
+          "status": "timeout",
+          "poll_attempts": 15
+        }
+      ],
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "manual_conversion_applied": true,
+      "manual_conversion_notes": "CTE with RANK() and PERCENT_RANK() window functions - Direct conversion to PostgreSQL. No syntax changes required as PostgreSQL supports identical ranking window functions.",
+      "postgresql_compatibility": "HIGH",
+      "changes_required": "None - PostgreSQL-compatible syntax"
+    },
+    {
+      "statement_number": 7,
+      "statement_name": "GetLowStockProductsAsync",
+      "source_file": "sourceCode/DataAccess/ProductRepository.cs",
+      "source_method": "GetLowStockProductsAsync(int threshold)",
+      "source_lines": "282-311",
+      "dms_tool_attempted": false,
+      "dms_tool_status": "NOT_ATTEMPTED",
+      "dms_tool_error": "Not attempted due to consistent DMS timeout pattern on CTE queries",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "manual_conversion_applied": true,
+      "manual_conversion_notes": "CTE with multiple aggregate window functions (AVG, MIN, MAX OVER) - Direct conversion to PostgreSQL. No syntax changes required as PostgreSQL supports identical window function syntax.",
+      "postgresql_compatibility": "HIGH",
+      "changes_required": "None - PostgreSQL-compatible syntax"
+    }
+  ],
+  "conversion_patterns": {
+    "simple_cte_queries": {
+      "count": 4,
+      "statements": [1, 2, 6, 7],
+      "compatibility": "HIGH",
+      "changes_required": "None - Direct syntax compatibility"
+    },
+    "transaction_blocks": {
+      "count": 3,
+      "statements": [3, 4, 5],
+      "compatibility": "MEDIUM",
+      "key_changes": [
+        "DECLARE @Variable -> DECLARE v_Variable",
+        "SCOPE_IDENTITY() -> RETURNING clause",
+        "GETDATE() -> CURRENT_TIMESTAMP or NOW()",
+        "BEGIN TRANSACTION/COMMIT -> DO $$ block or explicit transaction management",
+        "SELECT @Var = Column -> SELECT Column INTO v_Var"
+      ]
+    }
+  },
+  "recommendations": {
+    "code_integration": [
+      "For transaction blocks (statements 3, 4, 5), use NpgsqlTransaction in ADO.NET code rather than DO $$ blocks",
+      "For InsertProductAsync, use RETURNING clause in INSERT statement with ExecuteScalarAsync",
+      "Replace all GETDATE() occurrences with CURRENT_TIMESTAMP or NOW()",
+      "Use Npgsql's native parameter support with @ prefix (compatible)",
+      "Test all window functions thoroughly as they are syntax-compatible but may have subtle behavioral differences"
+    ],
+    "testing_priority": [
+      "HIGH: Transaction blocks (statements 3, 4, 5) - complex conversion with multiple syntax changes",
+      "MEDIUM: Parameterized queries (all statements) - verify parameter binding works correctly",
+      "LOW: CTE queries (statements 1, 2, 6, 7) - direct syntax compatibility, minimal risk"
+    ]
+  }
+}

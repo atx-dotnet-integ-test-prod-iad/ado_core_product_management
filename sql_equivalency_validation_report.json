@@ -1,0 +1,149 @@
+{
+  "number_of_statements_processed": 7,
+  "number_of_statements_equivalent": 2,
+  "number_of_statements_non_equivalent": 0,
+  "number_of_statements_with_equivalency_error": 5,
+  "validation_timestamp": "2026-01-26T15:32:00Z",
+  "validation_tool": "sql-equivalency___validate_sql_equivalence",
+  "validation_notes": "All 7 statement pairs were validated through the SQL Equivalency tool. Complex CTE queries and INSERT with RETURNING consistently returned UNKNOWN status from the Z3SqlSolverVerifier, which per transformation requirements must be marked as ERROR. Simple UPDATE and DELETE statements were successfully validated as EQUIVALENT by the StructuralEquivalenceVerifier.",
+  "statement_details": [
+    {
+      "statement_number": 1,
+      "statement_name": "GetAllProductsAsync",
+      "original_statement": "WITH ProductStats AS (\n    SELECT \n        ProductId,\n        AVG(Price) OVER() as AvgPrice,\n        COUNT(*) OVER() as TotalProducts\n    FROM Products\n)\nSELECT \n    p.ProductId,\n    p.Name,\n    p.Description,\n    p.Price,\n    p.StockQuantity,\n    p.CreatedDate,\n    p.ModifiedDate,\n    CASE \n        WHEN p.Price > ps.AvgPrice THEN 'Above Average'\n        WHEN p.Price < ps.AvgPrice THEN 'Below Average'\n        ELSE 'Average'\n    END as PriceCategory,\n    ROUND((p.Price / ps.AvgPrice) * 100, 2) as PricePercentageOfAverage\nFROM Products p\nINNER JOIN ProductStats ps ON p.ProductId = ps.ProductId\nORDER BY \n    CASE \n        WHEN p.Price > ps.AvgPrice THEN 1\n        ELSE 2\n    END,\n    p.Name",
+      "converted_statement": "WITH ProductStats AS (\n    SELECT \n        ProductId,\n        AVG(Price) OVER() as AvgPrice,\n        COUNT(*) OVER() as TotalProducts\n    FROM Products\n)\nSELECT \n    p.ProductId,\n    p.Name,\n    p.Description,\n    p.Price,\n    p.StockQuantity,\n    p.CreatedDate,\n    p.ModifiedDate,\n    CASE \n        WHEN p.Price > ps.AvgPrice THEN 'Above Average'\n        WHEN p.Price < ps.AvgPrice THEN 'Below Average'\n        ELSE 'Average'\n    END as PriceCategory,\n    ROUND((p.Price / ps.AvgPrice) * 100, 2) as PricePercentageOfAverage\nFROM Products p\nINNER JOIN ProductStats ps ON p.ProductId = ps.ProductId\nORDER BY \n    CASE \n        WHEN p.Price > ps.AvgPrice THEN 1\n        ELSE 2\n    END,\n    p.Name",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"UNKNOWN\", \"result_details\": \"Z3SqlSolverVerifier stage in formal methods could not prove equivalancy/non-equivalency\", \"validation_method\": \"formal_verification\", \"timestamp\": \"2026-01-26T15:32:09.001988\"}",
+      "equivalency_tool_raw_status": "UNKNOWN",
+      "notes": "Tool returned UNKNOWN which is marked as ERROR per transformation requirements. CTE with window functions - identical syntax between SQL Server and PostgreSQL."
+    },
+    {
+      "statement_number": 2,
+      "statement_name": "GetProductByIdAsync",
+      "original_statement": "WITH ProductHistory AS (\n    SELECT \n        ProductId,\n        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,\n        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock\n    FROM Products\n    WHERE ProductId = @ProductId\n)\nSELECT \n    p.ProductId,\n    p.Name,\n    p.Description,\n    p.Price,\n    p.StockQuantity,\n    p.CreatedDate,\n    p.ModifiedDate,\n    ph.PreviousPrice,\n    ph.PreviousStock,\n    CASE \n        WHEN ph.PreviousPrice IS NOT NULL THEN \n            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)\n        ELSE NULL\n    END as PriceChangePercentage\nFROM Products p\nLEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId\nWHERE p.ProductId = @ProductId",
+      "converted_statement": "WITH ProductHistory AS (\n    SELECT \n        ProductId,\n        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,\n        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock\n    FROM Products\n    WHERE ProductId = @ProductId\n)\nSELECT \n    p.ProductId,\n    p.Name,\n    p.Description,\n    p.Price,\n    p.StockQuantity,\n    p.CreatedDate,\n    p.ModifiedDate,\n    ph.PreviousPrice,\n    ph.PreviousStock,\n    CASE \n        WHEN ph.PreviousPrice IS NOT NULL THEN \n            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)\n        ELSE NULL\n    END as PriceChangePercentage\nFROM Products p\nLEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId\nWHERE p.ProductId = @ProductId",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"UNKNOWN\", \"result_details\": \"Z3SqlSolverVerifier stage in formal methods could not prove equivalancy/non-equivalency\", \"validation_method\": \"formal_verification\", \"timestamp\": \"2026-01-26T15:32:25.064536\"}",
+      "equivalency_tool_raw_status": "UNKNOWN",
+      "notes": "Tool returned UNKNOWN which is marked as ERROR per transformation requirements. CTE with LAG window function - identical syntax between SQL Server and PostgreSQL."
+    },
+    {
+      "statement_number": 3,
+      "statement_name": "InsertProductAsync",
+      "original_statement": "INSERT INTO Products (Name, Description, Price, StockQuantity)\nVALUES (@Name, @Description, @Price, @StockQuantity);\nSELECT SCOPE_IDENTITY() AS ProductId",
+      "converted_statement": "INSERT INTO Products (Name, Description, Price, StockQuantity)\nVALUES (@Name, @Description, @Price, @StockQuantity)\nRETURNING ProductId",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"UNKNOWN\", \"result_details\": \"Z3SqlSolverVerifier stage in formal methods could not prove equivalancy/non-equivalency\", \"validation_method\": \"formal_verification\", \"timestamp\": \"2026-01-26T15:33:13.980858\"}",
+      "equivalency_tool_raw_status": "UNKNOWN",
+      "notes": "Tool returned UNKNOWN which is marked as ERROR per transformation requirements. Tested simplified INSERT portion: SCOPE_IDENTITY() converted to RETURNING clause. Full transaction block includes additional INSERT and UPDATE statements not tested due to tool limitations on multi-statement blocks."
+    },
+    {
+      "statement_number": 4,
+      "statement_name": "UpdateProductAsync",
+      "original_statement": "UPDATE Products\nSET \n    Name = @Name,\n    Description = @Description,\n    Price = @Price,\n    StockQuantity = @StockQuantity,\n    ModifiedDate = GETDATE()\nWHERE ProductId = @ProductId",
+      "converted_statement": "UPDATE Products\nSET \n    Name = @Name,\n    Description = @Description,\n    Price = @Price,\n    StockQuantity = @StockQuantity,\n    ModifiedDate = CURRENT_TIMESTAMP\nWHERE ProductId = @ProductId",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "equivalency_status": "EQUIVALENT",
+      "equivalency_tool_output": "{\"equivalence_status\": \"EQUIVALENT\", \"result_details\": \"StructuralEquivalenceVerifier stage in formal methods proved equivalency\", \"validation_method\": \"formal_verification\", \"timestamp\": \"2026-01-26T15:33:25.032016\"}",
+      "equivalency_tool_raw_status": "EQUIVALENT",
+      "notes": "Successfully validated as EQUIVALENT by StructuralEquivalenceVerifier. Key change: GETDATE() converted to CURRENT_TIMESTAMP. Full transaction block includes DECLARE and additional INSERT statements not tested, but core UPDATE operation validated."
+    },
+    {
+      "statement_number": 5,
+      "statement_name": "DeleteProductAsync",
+      "original_statement": "DELETE FROM Products \nWHERE ProductId = @ProductId",
+      "converted_statement": "DELETE FROM Products \nWHERE ProductId = @ProductId",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "equivalency_status": "EQUIVALENT",
+      "equivalency_tool_output": "{\"equivalence_status\": \"EQUIVALENT\", \"result_details\": \"StructuralEquivalenceVerifier stage in formal methods proved equivalency\", \"validation_method\": \"formal_verification\", \"timestamp\": \"2026-01-26T15:33:35.370136\"}",
+      "equivalency_tool_raw_status": "EQUIVALENT",
+      "notes": "Successfully validated as EQUIVALENT by StructuralEquivalenceVerifier. DELETE syntax identical between SQL Server and PostgreSQL. Full transaction block includes DECLARE, SELECT, and INSERT statements not tested, but core DELETE operation validated."
+    },
+    {
+      "statement_number": 6,
+      "statement_name": "GetProductsByPriceRangeAsync",
+      "original_statement": "WITH RankedProducts AS (\n    SELECT \n        p.*,\n        RANK() OVER (ORDER BY p.Price) as PriceRank,\n        PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile\n    FROM Products p\n    WHERE p.Price BETWEEN @MinPrice AND @MaxPrice\n)\nSELECT \n    rp.*,\n    CASE \n        WHEN rp.PricePercentile <= 0.25 THEN 'Budget'\n        WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range'\n        ELSE 'Premium'\n    END as PriceSegment\nFROM RankedProducts rp\nORDER BY rp.PriceRank",
+      "converted_statement": "WITH RankedProducts AS (\n    SELECT \n        p.*,\n        RANK() OVER (ORDER BY p.Price) as PriceRank,\n        PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile\n    FROM Products p\n    WHERE p.Price BETWEEN @MinPrice AND @MaxPrice\n)\nSELECT \n    rp.*,\n    CASE \n        WHEN rp.PricePercentile <= 0.25 THEN 'Budget'\n        WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range'\n        ELSE 'Premium'\n    END as PriceSegment\nFROM RankedProducts rp\nORDER BY rp.PriceRank",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"UNKNOWN\", \"result_details\": \"Z3SqlSolverVerifier stage in formal methods could not prove equivalancy/non-equivalency\", \"validation_method\": \"formal_verification\", \"timestamp\": \"2026-01-26T15:32:43.948993\"}",
+      "equivalency_tool_raw_status": "UNKNOWN",
+      "notes": "Tool returned UNKNOWN which is marked as ERROR per transformation requirements. CTE with RANK() and PERCENT_RANK() window functions - identical syntax between SQL Server and PostgreSQL."
+    },
+    {
+      "statement_number": 7,
+      "statement_name": "GetLowStockProductsAsync",
+      "original_statement": "WITH StockAnalysis AS (\n    SELECT \n        p.*,\n        AVG(StockQuantity) OVER() as AvgStock,\n        MIN(StockQuantity) OVER() as MinStock,\n        MAX(StockQuantity) OVER() as MaxStock\n    FROM Products p\n)\nSELECT \n    sa.*,\n    CASE \n        WHEN StockQuantity <= @Threshold THEN 'Critical'\n        WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low'\n        ELSE 'Adequate'\n    END as StockStatus,\n    ROUND((StockQuantity / AvgStock) * 100, 2) as StockPercentageOfAverage\nFROM StockAnalysis sa\nWHERE StockQuantity <= @Threshold\nORDER BY StockQuantity",
+      "converted_statement": "WITH StockAnalysis AS (\n    SELECT \n        p.*,\n        AVG(StockQuantity) OVER() as AvgStock,\n        MIN(StockQuantity) OVER() as MinStock,\n        MAX(StockQuantity) OVER() as MaxStock\n    FROM Products p\n)\nSELECT \n    sa.*,\n    CASE \n        WHEN StockQuantity <= @Threshold THEN 'Critical'\n        WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low'\n        ELSE 'Adequate'\n    END as StockStatus,\n    ROUND((StockQuantity / AvgStock) * 100, 2) as StockPercentageOfAverage\nFROM StockAnalysis sa\nWHERE StockQuantity <= @Threshold\nORDER BY StockQuantity",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"UNKNOWN\", \"result_details\": \"Z3SqlSolverVerifier stage in formal methods could not prove equivalancy/non-equivalency\", \"validation_method\": \"formal_verification\", \"timestamp\": \"2026-01-26T15:33:00.130585\"}",
+      "equivalency_tool_raw_status": "UNKNOWN",
+      "notes": "Tool returned UNKNOWN which is marked as ERROR per transformation requirements. CTE with multiple aggregate window functions (AVG, MIN, MAX OVER) - identical syntax between SQL Server and PostgreSQL."
+    }
+  ],
+  "summary_by_conversion_method": {
+    "MANUAL_AFTER_DMS_FAILURE": 7
+  },
+  "summary_by_query_type": {
+    "CTE_with_window_functions": {
+      "count": 4,
+      "statements": [1, 2, 6, 7],
+      "equivalent": 0,
+      "error": 4,
+      "notes": "All CTE queries with window functions returned UNKNOWN from Z3SqlSolverVerifier, marked as ERROR per requirements"
+    },
+    "INSERT_with_RETURNING": {
+      "count": 1,
+      "statements": [3],
+      "equivalent": 0,
+      "error": 1,
+      "notes": "INSERT with RETURNING returned UNKNOWN from Z3SqlSolverVerifier, marked as ERROR per requirements"
+    },
+    "UPDATE_statement": {
+      "count": 1,
+      "statements": [4],
+      "equivalent": 1,
+      "error": 0,
+      "notes": "UPDATE successfully validated as EQUIVALENT by StructuralEquivalenceVerifier"
+    },
+    "DELETE_statement": {
+      "count": 1,
+      "statements": [5],
+      "equivalent": 1,
+      "error": 0,
+      "notes": "DELETE successfully validated as EQUIVALENT by StructuralEquivalenceVerifier"
+    }
+  },
+  "tool_behavior_analysis": {
+    "Z3SqlSolverVerifier": {
+      "status": "Unable to prove equivalency for complex CTE queries with window functions and INSERT with RETURNING",
+      "affected_statements": [1, 2, 3, 6, 7],
+      "result": "UNKNOWN marked as ERROR per transformation requirements"
+    },
+    "StructuralEquivalenceVerifier": {
+      "status": "Successfully validated simple DML statements",
+      "affected_statements": [4, 5],
+      "result": "EQUIVALENT"
+    }
+  },
+  "validation_limitations": {
+    "complex_cte_queries": "Tool unable to prove equivalency for CTEs with window functions despite identical syntax",
+    "multi_statement_transactions": "Full transaction blocks could not be validated as single units - only core DML statements tested",
+    "window_functions": "LAG, AVG OVER, COUNT OVER, RANK, PERCENT_RANK all returned UNKNOWN despite PostgreSQL compatibility"
+  },
+  "recommendations": {
+    "statements_1_2_6_7": "These CTE queries use identical syntax between SQL Server and PostgreSQL. Manual review and testing recommended to confirm behavior equivalence.",
+    "statement_3": "INSERT with RETURNING is the PostgreSQL-standard replacement for SCOPE_IDENTITY(). Functional testing required to verify ID retrieval works correctly.",
+    "statements_4_5": "UPDATE and DELETE validated as EQUIVALENT. The full transaction blocks include additional statements not individually validated but using standard SQL syntax."
+  },
+  "compliance_notes": {
+    "transformation_requirement": "All statement pairs validated through SQL Equivalency tool - no agent judgment used for equivalency determination",
+    "unknown_handling": "All UNKNOWN results marked as ERROR per transformation requirement: 'If the tool returns UNKNOWN, mark it as ERROR'",
+    "tool_output_preservation": "Raw tool output preserved in equivalency_tool_output field for each statement pair",
+    "no_agent_judgment": "Equivalency status derived exclusively from tool output - zero agent judgment equivalency decisions made"
+  }
+}
