@@ -197,7 +197,7 @@ namespace AdoCore.CLI
 
             return new Product
             {
-                Name = name,
+                Name = name ?? string.Empty,
                 Description = string.IsNullOrWhiteSpace(description) ? null : description,
                 Price = price,
                 StockQuantity = quantity

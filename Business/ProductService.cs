@@ -20,7 +20,7 @@ namespace AdoCore.Business
             return await _repository.GetAllProductsAsync();
         }
 
-        public async Task<Product> GetProductAsync(int productId)
+        public async Task<Product?> GetProductAsync(int productId)
         {
             return await _repository.GetProductByIdAsync(productId);
         }
