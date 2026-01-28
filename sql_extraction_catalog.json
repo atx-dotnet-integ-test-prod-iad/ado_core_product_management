@@ -1,0 +1,313 @@
+{
+  "extraction_metadata": {
+    "extraction_date": "2026-01-28",
+    "source_database": "Microsoft SQL Server",
+    "target_database": "PostgreSQL",
+    "total_statements": 7,
+    "source_file_count": 1
+  },
+  "statements": [
+    {
+      "statement_id": "STMT_001",
+      "method_name": "GetAllProductsAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "line_start": 40,
+      "line_end": 68,
+      "statement_type": "CTE_QUERY_WITH_WINDOW_FUNCTIONS",
+      "construction_method": "DIRECT_STRING_CONSTANT",
+      "has_parameters": false,
+      "parameters": [],
+      "tables_referenced": [
+        "Products"
+      ],
+      "sql_features": [
+        "CTE",
+        "AVG() OVER()",
+        "COUNT() OVER()",
+        "INNER JOIN",
+        "CASE EXPRESSION",
+        "ROUND FUNCTION",
+        "ORDER BY"
+      ],
+      "transaction_scope": false,
+      "description": "Retrieves all products with price statistics including average price comparison and categorization",
+      "original_sql": "WITH ProductStats AS (\n    SELECT \n        ProductId,\n        AVG(Price) OVER() as AvgPrice,\n        COUNT(*) OVER() as TotalProducts\n    FROM Products\n)\nSELECT \n    p.ProductId,\n    p.Name,\n    p.Description,\n    p.Price,\n    p.StockQuantity,\n    p.CreatedDate,\n    p.ModifiedDate,\n    CASE \n        WHEN p.Price > ps.AvgPrice THEN 'Above Average'\n        WHEN p.Price < ps.AvgPrice THEN 'Below Average'\n        ELSE 'Average'\n    END as PriceCategory,\n    ROUND((p.Price / ps.AvgPrice) * 100, 2) as PricePercentageOfAverage\nFROM Products p\nINNER JOIN ProductStats ps ON p.ProductId = ps.ProductId\nORDER BY \n    CASE \n        WHEN p.Price > ps.AvgPrice THEN 1\n        ELSE 2\n    END,\n    p.Name"
+    },
+    {
+      "statement_id": "STMT_002",
+      "method_name": "GetProductByIdAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "line_start": 78,
+      "line_end": 106,
+      "statement_type": "CTE_QUERY_WITH_LAG_WINDOW_FUNCTION",
+      "construction_method": "DIRECT_STRING_CONSTANT",
+      "has_parameters": true,
+      "parameters": [
+        {
+          "name": "@ProductId",
+          "type": "int",
+          "nullable": false
+        }
+      ],
+      "tables_referenced": [
+        "Products"
+      ],
+      "sql_features": [
+        "CTE",
+        "LAG() OVER()",
+        "LEFT JOIN",
+        "CASE EXPRESSION",
+        "ROUND FUNCTION",
+        "WHERE CLAUSE"
+      ],
+      "transaction_scope": false,
+      "description": "Retrieves a single product by ID with historical price and stock comparison using LAG window function",
+      "original_sql": "WITH ProductHistory AS (\n    SELECT \n        ProductId,\n        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,\n        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock\n    FROM Products\n    WHERE ProductId = @ProductId\n)\nSELECT \n    p.ProductId,\n    p.Name,\n    p.Description,\n    p.Price,\n    p.StockQuantity,\n    p.CreatedDate,\n    p.ModifiedDate,\n    ph.PreviousPrice,\n    ph.PreviousStock,\n    CASE \n        WHEN ph.PreviousPrice IS NOT NULL THEN \n            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)\n        ELSE NULL\n    END as PriceChangePercentage\nFROM Products p\nLEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId\nWHERE p.ProductId = @ProductId"
+    },
+    {
+      "statement_id": "STMT_003",
+      "method_name": "InsertProductAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "line_start": 119,
+      "line_end": 145,
+      "statement_type": "TRANSACTION_BLOCK_MULTI_STATEMENT",
+      "construction_method": "DIRECT_STRING_CONSTANT",
+      "has_parameters": true,
+      "parameters": [
+        {
+          "name": "@Name",
+          "type": "string",
+          "nullable": false
+        },
+        {
+          "name": "@Description",
+          "type": "string",
+          "nullable": true
+        },
+        {
+          "name": "@Price",
+          "type": "decimal",
+          "nullable": false
+        },
+        {
+          "name": "@StockQuantity",
+          "type": "int",
+          "nullable": false
+        }
+      ],
+      "tables_referenced": [
+        "Products",
+        "ProductHistory",
+        "ProductStats"
+      ],
+      "sql_features": [
+        "TRANSACTION",
+        "BEGIN TRANSACTION",
+        "COMMIT",
+        "INSERT",
+        "UPDATE",
+        "SELECT",
+        "DECLARE VARIABLE",
+        "SCOPE_IDENTITY()",
+        "GETDATE()"
+      ],
+      "transaction_scope": true,
+      "sql_server_specific_functions": [
+        "SCOPE_IDENTITY()",
+        "GETDATE()"
+      ],
+      "description": "Inserts a new product with transaction logging and statistics update. Uses SCOPE_IDENTITY() to get new product ID.",
+      "original_sql": "DECLARE @NewProductId INT;\n\nBEGIN TRANSACTION;\n    -- Insert the new product\n    INSERT INTO Products (Name, Description, Price, StockQuantity)\n    VALUES (@Name, @Description, @Price, @StockQuantity);\n    \n    SET @NewProductId = SCOPE_IDENTITY();\n    \n    -- Log the insertion\n    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)\n    VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, GETDATE());\n    \n    -- Update product statistics\n    UPDATE ProductStats\n    SET \n        TotalProducts = TotalProducts + 1,\n        AveragePrice = (AveragePrice * TotalProducts + @Price) / (TotalProducts + 1),\n        LastUpdated = GETDATE()\n    WHERE StatId = 1;\nCOMMIT;\n\nSELECT @NewProductId;"
+    },
+    {
+      "statement_id": "STMT_004",
+      "method_name": "UpdateProductAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "line_start": 161,
+      "line_end": 196,
+      "statement_type": "TRANSACTION_BLOCK_MULTI_STATEMENT",
+      "construction_method": "DIRECT_STRING_CONSTANT",
+      "has_parameters": true,
+      "parameters": [
+        {
+          "name": "@ProductId",
+          "type": "int",
+          "nullable": false
+        },
+        {
+          "name": "@Name",
+          "type": "string",
+          "nullable": false
+        },
+        {
+          "name": "@Description",
+          "type": "string",
+          "nullable": true
+        },
+        {
+          "name": "@Price",
+          "type": "decimal",
+          "nullable": false
+        },
+        {
+          "name": "@StockQuantity",
+          "type": "int",
+          "nullable": false
+        }
+      ],
+      "tables_referenced": [
+        "Products",
+        "ProductHistory",
+        "ProductStats"
+      ],
+      "sql_features": [
+        "TRANSACTION",
+        "BEGIN TRANSACTION",
+        "COMMIT",
+        "UPDATE",
+        "INSERT",
+        "SELECT",
+        "DECLARE VARIABLE",
+        "GETDATE()"
+      ],
+      "transaction_scope": true,
+      "sql_server_specific_functions": [
+        "GETDATE()"
+      ],
+      "description": "Updates an existing product with transaction logging and statistics recalculation",
+      "original_sql": "BEGIN TRANSACTION;\n    -- Store old values for history\n    DECLARE @OldPrice DECIMAL(18,2);\n    DECLARE @OldStock INT;\n    \n    SELECT @OldPrice = Price, @OldStock = StockQuantity\n    FROM Products\n    WHERE ProductId = @ProductId;\n    \n    -- Update the product\n    UPDATE Products\n    SET \n        Name = @Name,\n        Description = @Description,\n        Price = @Price,\n        StockQuantity = @StockQuantity,\n        ModifiedDate = GETDATE()\n    WHERE ProductId = @ProductId;\n    \n    -- Log the changes\n    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)\n    VALUES (@ProductId, 'UPDATE', @OldPrice, @Price, @OldStock, @StockQuantity, GETDATE());\n    \n    -- Update product statistics\n    UPDATE ProductStats\n    SET \n        AveragePrice = (AveragePrice * TotalProducts - @OldPrice + @Price) / TotalProducts,\n        LastUpdated = GETDATE()\n    WHERE StatId = 1;\nCOMMIT;"
+    },
+    {
+      "statement_id": "STMT_005",
+      "method_name": "DeleteProductAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "line_start": 205,
+      "line_end": 239,
+      "statement_type": "TRANSACTION_BLOCK_MULTI_STATEMENT",
+      "construction_method": "DIRECT_STRING_CONSTANT",
+      "has_parameters": true,
+      "parameters": [
+        {
+          "name": "@ProductId",
+          "type": "int",
+          "nullable": false
+        }
+      ],
+      "tables_referenced": [
+        "Products",
+        "ProductHistory",
+        "ProductStats"
+      ],
+      "sql_features": [
+        "TRANSACTION",
+        "BEGIN TRANSACTION",
+        "COMMIT",
+        "DELETE",
+        "INSERT",
+        "SELECT",
+        "UPDATE",
+        "DECLARE VARIABLE",
+        "CASE EXPRESSION",
+        "GETDATE()"
+      ],
+      "transaction_scope": true,
+      "sql_server_specific_functions": [
+        "GETDATE()"
+      ],
+      "description": "Deletes a product with transaction logging and statistics recalculation",
+      "original_sql": "BEGIN TRANSACTION;\n    -- Store product info for history\n    DECLARE @OldPrice DECIMAL(18,2);\n    DECLARE @OldStock INT;\n    \n    SELECT @OldPrice = Price, @OldStock = StockQuantity\n    FROM Products\n    WHERE ProductId = @ProductId;\n    \n    -- Log the deletion\n    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)\n    VALUES (@ProductId, 'DELETE', @OldPrice, NULL, @OldStock, NULL, GETDATE());\n    \n    -- Delete the product\n    DELETE FROM Products \n    WHERE ProductId = @ProductId;\n    \n    -- Update product statistics\n    UPDATE ProductStats\n    SET \n        TotalProducts = TotalProducts - 1,\n        AveragePrice = CASE \n            WHEN TotalProducts > 1 \n            THEN (AveragePrice * TotalProducts - @OldPrice) / (TotalProducts - 1)\n            ELSE 0\n        END,\n        LastUpdated = GETDATE()\n    WHERE StatId = 1;\nCOMMIT;"
+    },
+    {
+      "statement_id": "STMT_006",
+      "method_name": "GetProductsByPriceRangeAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "line_start": 248,
+      "line_end": 274,
+      "statement_type": "CTE_QUERY_WITH_RANKING_FUNCTIONS",
+      "construction_method": "DIRECT_STRING_CONSTANT",
+      "has_parameters": true,
+      "parameters": [
+        {
+          "name": "@MinPrice",
+          "type": "decimal",
+          "nullable": false
+        },
+        {
+          "name": "@MaxPrice",
+          "type": "decimal",
+          "nullable": false
+        }
+      ],
+      "tables_referenced": [
+        "Products"
+      ],
+      "sql_features": [
+        "CTE",
+        "RANK() OVER()",
+        "PERCENT_RANK() OVER()",
+        "WHERE CLAUSE",
+        "BETWEEN",
+        "CASE EXPRESSION",
+        "ORDER BY"
+      ],
+      "transaction_scope": false,
+      "description": "Retrieves products within a price range with ranking and percentile calculations for price segmentation",
+      "original_sql": "WITH RankedProducts AS (\n    SELECT \n        p.*,\n        RANK() OVER (ORDER BY p.Price) as PriceRank,\n        PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile\n    FROM Products p\n    WHERE p.Price BETWEEN @MinPrice AND @MaxPrice\n)\nSELECT \n    rp.*,\n    CASE \n        WHEN rp.PricePercentile <= 0.25 THEN 'Budget'\n        WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range'\n        ELSE 'Premium'\n    END as PriceSegment\nFROM RankedProducts rp\nORDER BY rp.PriceRank"
+    },
+    {
+      "statement_id": "STMT_007",
+      "method_name": "GetLowStockProductsAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "line_start": 287,
+      "line_end": 315,
+      "statement_type": "CTE_QUERY_WITH_AGGREGATES",
+      "construction_method": "DIRECT_STRING_CONSTANT",
+      "has_parameters": true,
+      "parameters": [
+        {
+          "name": "@Threshold",
+          "type": "int",
+          "nullable": false
+        }
+      ],
+      "tables_referenced": [
+        "Products"
+      ],
+      "sql_features": [
+        "CTE",
+        "AVG() OVER()",
+        "MIN() OVER()",
+        "MAX() OVER()",
+        "WHERE CLAUSE",
+        "CASE EXPRESSION",
+        "ROUND FUNCTION",
+        "ORDER BY"
+      ],
+      "transaction_scope": false,
+      "description": "Retrieves low stock products with stock analysis including average, minimum, and maximum stock calculations",
+      "original_sql": "WITH StockAnalysis AS (\n    SELECT \n        p.*,\n        AVG(StockQuantity) OVER() as AvgStock,\n        MIN(StockQuantity) OVER() as MinStock,\n        MAX(StockQuantity) OVER() as MaxStock\n    FROM Products p\n)\nSELECT \n    sa.*,\n    CASE \n        WHEN StockQuantity <= @Threshold THEN 'Critical'\n        WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low'\n        ELSE 'Adequate'\n    END as StockStatus,\n    ROUND((StockQuantity / AvgStock) * 100, 2) as StockPercentageOfAverage\nFROM StockAnalysis sa\nWHERE StockQuantity <= @Threshold\nORDER BY StockQuantity"
+    }
+  ],
+  "sql_server_specific_notes": {
+    "functions_requiring_conversion": [
+      {
+        "function": "SCOPE_IDENTITY()",
+        "occurrences": 1,
+        "statements": ["STMT_003"],
+        "postgresql_equivalent": "RETURNING clause"
+      },
+      {
+        "function": "GETDATE()",
+        "occurrences": 7,
+        "statements": ["STMT_003", "STMT_004", "STMT_005"],
+        "postgresql_equivalent": "NOW() or CURRENT_TIMESTAMP"
+      },
+      {
+        "syntax": "BEGIN TRANSACTION",
+        "occurrences": 3,
+        "statements": ["STMT_003", "STMT_004", "STMT_005"],
+        "postgresql_equivalent": "BEGIN"
+      }
+    ]
+  }
+}
