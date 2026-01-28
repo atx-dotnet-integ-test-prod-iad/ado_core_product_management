@@ -15,6 +15,7 @@ namespace AdoCore
             var configuration = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: false)
+                .AddEnvironmentVariables()
                 .Build();
 
             var services = new ServiceCollection();
