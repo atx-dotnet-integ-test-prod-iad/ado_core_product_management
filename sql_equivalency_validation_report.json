@@ -1,0 +1,78 @@
+{
+  "number_of_statements_processed": 7,
+  "number_of_statements_equivalent": 0,
+  "number_of_statements_non_equivalent": 0,
+  "number_of_statements_with_equivalency_error": 7,
+  "statement_details": [
+    {
+      "statement_number": 1,
+      "source_method": "GetAllProductsAsync",
+      "original_statement": "WITH ProductStats AS (\n    SELECT \n        ProductId,\n        AVG(Price) OVER() as AvgPrice,\n        COUNT(*) OVER() as TotalProducts\n    FROM Products\n)\nSELECT \n    p.ProductId,\n    p.Name,\n    p.Description,\n    p.Price,\n    p.StockQuantity,\n    p.CreatedDate,\n    p.ModifiedDate,\n    CASE \n        WHEN p.Price > ps.AvgPrice THEN 'Above Average'\n        WHEN p.Price < ps.AvgPrice THEN 'Below Average'\n        ELSE 'Average'\n    END as PriceCategory,\n    ROUND((p.Price / ps.AvgPrice) * 100, 2) as PricePercentageOfAverage\nFROM Products p\nINNER JOIN ProductStats ps ON p.ProductId = ps.ProductId\nORDER BY \n    CASE \n        WHEN p.Price > ps.AvgPrice THEN 1\n        ELSE 2\n    END,\n    p.Name",
+      "converted_statement": "WITH ProductStats AS (\n    SELECT \n        ProductId,\n        AVG(Price) OVER() as AvgPrice,\n        COUNT(*) OVER() as TotalProducts\n    FROM Products\n)\nSELECT \n    p.ProductId,\n    p.Name,\n    p.Description,\n    p.Price,\n    p.StockQuantity,\n    p.CreatedDate,\n    p.ModifiedDate,\n    CASE \n        WHEN p.Price > ps.AvgPrice THEN 'Above Average'\n        WHEN p.Price < ps.AvgPrice THEN 'Below Average'\n        ELSE 'Average'\n    END as PriceCategory,\n    ROUND((p.Price / ps.AvgPrice) * 100, 2) as PricePercentageOfAverage\nFROM Products p\nINNER JOIN ProductStats ps ON p.ProductId = ps.ProductId\nORDER BY \n    CASE \n        WHEN p.Price > ps.AvgPrice THEN 1\n        ELSE 2\n    END,\n    p.Name",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\n  \"equivalence_status\": \"UNKNOWN\",\n  \"result_details\": \"Z3SqlSolverVerifier stage in formal methods could not prove equivalancy/non-equivalency\",\n  \"validation_method\": \"formal_verification\",\n  \"timestamp\": \"2026-01-30T03:54:19.852575\"\n}"
+    },
+    {
+      "statement_number": 2,
+      "source_method": "GetProductByIdAsync",
+      "original_statement": "WITH ProductHistory AS (\n    SELECT \n        ProductId,\n        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,\n        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock\n    FROM Products\n    WHERE ProductId = @ProductId\n)\nSELECT \n    p.ProductId,\n    p.Name,\n    p.Description,\n    p.Price,\n    p.StockQuantity,\n    p.CreatedDate,\n    p.ModifiedDate,\n    ph.PreviousPrice,\n    ph.PreviousStock,\n    CASE \n        WHEN ph.PreviousPrice IS NOT NULL THEN \n            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)\n        ELSE NULL\n    END as PriceChangePercentage\nFROM Products p\nLEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId\nWHERE p.ProductId = @ProductId",
+      "converted_statement": "WITH ProductHistory AS (\n    SELECT \n        ProductId,\n        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,\n        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock\n    FROM Products\n    WHERE ProductId = $1\n)\nSELECT \n    p.ProductId,\n    p.Name,\n    p.Description,\n    p.Price,\n    p.StockQuantity,\n    p.CreatedDate,\n    p.ModifiedDate,\n    ph.PreviousPrice,\n    ph.PreviousStock,\n    CASE \n        WHEN ph.PreviousPrice IS NOT NULL THEN \n            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)\n        ELSE NULL\n    END as PriceChangePercentage\nFROM Products p\nLEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId\nWHERE p.ProductId = $1",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\n  \"equivalence_status\": \"UNKNOWN\",\n  \"result_details\": \"Z3SqlSolverVerifier stage in formal methods could not prove equivalancy/non-equivalency\",\n  \"validation_method\": \"formal_verification\",\n  \"timestamp\": \"2026-01-30T03:54:38.502277\"\n}"
+    },
+    {
+      "statement_number": 3,
+      "source_method": "InsertProductAsync",
+      "original_statement": "INSERT INTO Products (Name, Description, Price, StockQuantity)\nVALUES (@Name, @Description, @Price, @StockQuantity);\nSELECT SCOPE_IDENTITY() AS ProductId;",
+      "converted_statement": "INSERT INTO Products (Name, Description, Price, StockQuantity, CreatedDate)\nVALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)\nRETURNING ProductId;",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\n  \"equivalence_status\": \"UNKNOWN\",\n  \"result_details\": \"Z3SqlSolverVerifier stage in formal methods could not prove equivalancy/non-equivalency\",\n  \"validation_method\": \"formal_verification\",\n  \"timestamp\": \"2026-01-30T03:54:50.425313\"\n}"
+    },
+    {
+      "statement_number": 4,
+      "source_method": "UpdateProductAsync",
+      "original_statement": "UPDATE Products\nSET \n    Name = @Name,\n    Description = @Description,\n    Price = @Price,\n    StockQuantity = @StockQuantity,\n    ModifiedDate = GETDATE()\nWHERE ProductId = @ProductId",
+      "converted_statement": "UPDATE Products\nSET \n    Name = $2,\n    Description = $3,\n    Price = $4,\n    StockQuantity = $5,\n    ModifiedDate = CURRENT_TIMESTAMP\nWHERE ProductId = $1",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\n  \"equivalence_status\": \"UNKNOWN\",\n  \"result_details\": \"Z3SqlSolverVerifier stage in formal methods could not prove equivalancy/non-equivalency\",\n  \"validation_method\": \"formal_verification\",\n  \"timestamp\": \"2026-01-30T03:55:02.201139\"\n}"
+    },
+    {
+      "statement_number": 5,
+      "source_method": "DeleteProductAsync",
+      "original_statement": "DELETE FROM Products \nWHERE ProductId = @ProductId",
+      "converted_statement": "DELETE FROM Products \nWHERE ProductId = $1",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\n  \"equivalence_status\": \"UNKNOWN\",\n  \"result_details\": \"Z3SqlSolverVerifier stage in formal methods could not prove equivalancy/non-equivalency\",\n  \"validation_method\": \"formal_verification\",\n  \"timestamp\": \"2026-01-30T03:55:13.924958\"\n}"
+    },
+    {
+      "statement_number": 6,
+      "source_method": "GetProductsByPriceRangeAsync",
+      "original_statement": "WITH RankedProducts AS (\n    SELECT \n        p.*,\n        RANK() OVER (ORDER BY p.Price) as PriceRank,\n        PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile\n    FROM Products p\n    WHERE p.Price BETWEEN @MinPrice AND @MaxPrice\n)\nSELECT \n    rp.*,\n    CASE \n        WHEN rp.PricePercentile <= 0.25 THEN 'Budget'\n        WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range'\n        ELSE 'Premium'\n    END as PriceSegment\nFROM RankedProducts rp\nORDER BY rp.PriceRank",
+      "converted_statement": "WITH RankedProducts AS (\n    SELECT \n        p.*,\n        RANK() OVER (ORDER BY p.Price) as PriceRank,\n        PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile\n    FROM Products p\n    WHERE p.Price BETWEEN $1 AND $2\n)\nSELECT \n    rp.*,\n    CASE \n        WHEN rp.PricePercentile <= 0.25 THEN 'Budget'\n        WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range'\n        ELSE 'Premium'\n    END as PriceSegment\nFROM RankedProducts rp\nORDER BY rp.PriceRank",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\n  \"equivalence_status\": \"UNKNOWN\",\n  \"result_details\": \"Z3SqlSolverVerifier stage in formal methods could not prove equivalancy/non-equivalency\",\n  \"validation_method\": \"formal_verification\",\n  \"timestamp\": \"2026-01-30T03:55:27.852489\"\n}"
+    },
+    {
+      "statement_number": 7,
+      "source_method": "GetLowStockProductsAsync",
+      "original_statement": "WITH StockAnalysis AS (\n    SELECT \n        p.*,\n        AVG(StockQuantity) OVER() as AvgStock,\n        MIN(StockQuantity) OVER() as MinStock,\n        MAX(StockQuantity) OVER() as MaxStock\n    FROM Products p\n)\nSELECT \n    sa.*,\n    CASE \n        WHEN StockQuantity <= @Threshold THEN 'Critical'\n        WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low'\n        ELSE 'Adequate'\n    END as StockStatus,\n    ROUND((StockQuantity / AvgStock) * 100, 2) as StockPercentageOfAverage\nFROM StockAnalysis sa\nWHERE StockQuantity <= @Threshold\nORDER BY StockQuantity",
+      "converted_statement": "WITH StockAnalysis AS (\n    SELECT \n        p.*,\n        AVG(StockQuantity) OVER() as AvgStock,\n        MIN(StockQuantity) OVER() as MinStock,\n        MAX(StockQuantity) OVER() as MaxStock\n    FROM Products p\n)\nSELECT \n    sa.*,\n    CASE \n        WHEN StockQuantity <= $1 THEN 'Critical'\n        WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low'\n        ELSE 'Adequate'\n    END as StockStatus,\n    ROUND((StockQuantity / AvgStock) * 100, 2) as StockPercentageOfAverage\nFROM StockAnalysis sa\nWHERE StockQuantity <= $1\nORDER BY StockQuantity",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\n  \"equivalence_status\": \"UNKNOWN\",\n  \"result_details\": \"Z3SqlSolverVerifier stage in formal methods could not prove equivalancy/non-equivalency\",\n  \"validation_method\": \"formal_verification\",\n  \"timestamp\": \"2026-01-30T03:55:42.611472\"\n}"
+    }
+  ],
+  "summary": {
+    "validation_timestamp": "2026-01-30T03:55:42",
+    "total_validations_attempted": 7,
+    "tool_returned_unknown_count": 7,
+    "note": "Per transformation definition, UNKNOWN equivalency status is treated as ERROR. All 7 statement pairs were processed through the SQL Equivalency MCP tool (sql-equivalency___validate_sql_equivalence). The tool returned UNKNOWN status for all pairs indicating the Z3SqlSolverVerifier could not formally prove equivalency or non-equivalency. No agent judgment was used to determine equivalency status - all statuses are directly from the tool output.",
+    "conversion_context": "All SQL statements were manually converted from SQL Server to PostgreSQL after DMS MCP tool failures. Manual conversions followed PostgreSQL best practices including parameter syntax changes (@Param to $N), function replacements (GETDATE() to CURRENT_TIMESTAMP, SCOPE_IDENTITY() to RETURNING), and transaction handling adjustments."
+  }
+}
