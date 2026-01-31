@@ -1,0 +1,150 @@
+================================================================================
+DMS CONVERSION LOG
+================================================================================
+Conversion Date: 2026-01-31
+DMS Tool: dms-mcp____statement_conversion_tool
+Total Statements: 7
+DMS Successful Conversions: 0
+DMS Failed Conversions: 7
+Manual Conversions Required: 7
+================================================================================
+
+================================================================================
+STATEMENT 1: GetAllProductsAsync - DMS CONVERSION FAILED
+================================================================================
+Original SQL Server Statement:
+WITH ProductStats AS (
+    SELECT 
+        ProductId,
+        AVG(Price) OVER() as AvgPrice,
+        COUNT(*) OVER() as TotalProducts
+    FROM Products
+)
+SELECT 
+    p.ProductId,
+    p.Name,
+    p.Description,
+    p.Price,
+    p.StockQuantity,
+    p.CreatedDate,
+    p.ModifiedDate,
+    CASE 
+        WHEN p.Price > ps.AvgPrice THEN 'Above Average'
+        WHEN p.Price < ps.AvgPrice THEN 'Below Average'
+        ELSE 'Average'
+    END as PriceCategory,
+    ROUND((p.Price / ps.AvgPrice) * 100, 2) as PricePercentageOfAverage
+FROM Products p
+INNER JOIN ProductStats ps ON p.ProductId = ps.ProductId
+ORDER BY 
+    CASE 
+        WHEN p.Price > ps.AvgPrice THEN 1
+        ELSE 2
+    END,
+    p.Name
+
+DMS Error Details:
+- Status: error
+- Error: Metadata model conversion failed: {'error': 'Metadata model conversion did not complete after 15 attempts'}
+- Timestamp: 2026-01-31T15:18:41.682426
+- Request Identifier: 3cbcae36-68c1-442c-8775-56fe68ceccd4
+
+Manual Conversion: Required due to DMS failure
+
+================================================================================
+STATEMENT 2: GetProductByIdAsync - DMS CONVERSION FAILED
+================================================================================
+Original SQL Server Statement:
+WITH ProductHistory AS (
+    SELECT 
+        ProductId,
+        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,
+        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock
+    FROM Products
+    WHERE ProductId = @ProductId
+)
+SELECT 
+    p.ProductId,
+    p.Name,
+    p.Description,
+    p.Price,
+    p.StockQuantity,
+    p.CreatedDate,
+    p.ModifiedDate,
+    ph.PreviousPrice,
+    ph.PreviousStock,
+    CASE 
+        WHEN ph.PreviousPrice IS NOT NULL THEN 
+            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)
+        ELSE NULL
+    END as PriceChangePercentage
+FROM Products p
+LEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId
+WHERE p.ProductId = @ProductId
+
+DMS Error Details:
+- Status: Timeout
+- Error: Failed to execute tool: Command execution timed out after 300 seconds
+- Timestamp: 2026-01-31T15:19:41 (approximate)
+
+Manual Conversion: Required due to DMS failure
+
+================================================================================
+STATEMENT 3: InsertProductAsync - DMS CONVERSION FAILED
+================================================================================
+Original SQL Server Statement:
+DECLARE @NewProductId INT;
+BEGIN TRANSACTION;
+INSERT INTO Products (Name, Description, Price, StockQuantity) VALUES (@Name, @Description, @Price, @StockQuantity);
+SET @NewProductId = SCOPE_IDENTITY();
+INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate) VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, GETDATE());
+UPDATE ProductStats SET TotalProducts = TotalProducts + 1, AveragePrice = (AveragePrice * TotalProducts + @Price) / (TotalProducts + 1), LastUpdated = GETDATE() WHERE StatId = 1;
+COMMIT;
+SELECT @NewProductId;
+
+DMS Error Details:
+- Status: error
+- Error: Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}
+- Timestamp: 2026-01-31T15:26:33.518964
+
+Manual Conversion: Required due to DMS failure
+
+================================================================================
+STATEMENT 4: UpdateProductAsync - DMS CONVERSION NOT ATTEMPTED
+================================================================================
+Reason: Previous DMS calls consistently failed, continuing with manual conversion
+
+================================================================================
+STATEMENT 5: DeleteProductAsync - DMS CONVERSION NOT ATTEMPTED
+================================================================================
+Reason: Previous DMS calls consistently failed, continuing with manual conversion
+
+================================================================================
+STATEMENT 6: GetProductsByPriceRangeAsync - DMS CONVERSION NOT ATTEMPTED
+================================================================================
+Reason: Previous DMS calls consistently failed, continuing with manual conversion
+
+================================================================================
+STATEMENT 7: GetLowStockProductsAsync - DMS CONVERSION NOT ATTEMPTED
+================================================================================
+Reason: Previous DMS calls consistently failed, continuing with manual conversion
+
+================================================================================
+SUMMARY
+================================================================================
+DMS Tool Status: NOT OPERATIONAL
+- All attempts to convert statements through DMS tool failed with timeouts or metadata model creation/conversion failures
+- DMS service appears to be experiencing issues or is misconfigured
+- Proceeding with manual conversion based on PostgreSQL best practices
+- All conversions will be marked as "MANUAL_AFTER_DMS_FAILURE" in equivalency report
+- All manually converted statements will still be validated through SQL Equivalency tool
+
+Conversion Strategy:
+1. CTEs and window functions: PostgreSQL supports these natively with same syntax
+2. SCOPE_IDENTITY(): Convert to RETURNING clause in INSERT statements
+3. GETDATE(): Convert to CURRENT_TIMESTAMP or NOW()
+4. BEGIN TRANSACTION/COMMIT: Convert to BEGIN/COMMIT (PostgreSQL syntax)
+5. DECLARE @variable: Convert to DO $$ DECLARE variable or restructure queries
+6. Parameter names: Keep @parameter syntax (Npgsql supports this)
+
+================================================================================

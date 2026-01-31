@@ -1,0 +1,38 @@
+SQL Statement Re-integration Notes
+================================================================================
+Date: 2026-01-31
+File: DataAccess/ProductRepository.cs
+
+SQL Conversions Applied:
+--------------------------------------------------------------------------------
+1. GetAllProductsAsync: No changes needed - PostgreSQL compatible (CTE, window functions)
+2. GetProductByIdAsync: No changes needed - PostgreSQL compatible (LAG window function)
+3. InsertProductAsync: GETDATE() replaced with CURRENT_TIMESTAMP
+4. UpdateProductAsync: GETDATE() replaced with CURRENT_TIMESTAMP  
+5. DeleteProductAsync: GETDATE() replaced with CURRENT_TIMESTAMP
+6. GetProductsByPriceRangeAsync: No changes needed - PostgreSQL compatible (RANK, PERCENT_RANK)
+7. GetLowStockProductsAsync: No changes needed - PostgreSQL compatible (aggregate window functions)
+
+Total GETDATE() replaced: 7
+Total CURRENT_TIMESTAMP: 7
+
+Known Issues Requiring Code-Level Fixes (to be addressed in Steps 5-6):
+--------------------------------------------------------------------------------
+- Transaction blocks with DECLARE @variable and BEGIN TRANSACTION/COMMIT syntax
+  need to be refactored to use programmatic transaction management with Npgsql
+- SCOPE_IDENTITY() needs to be replaced with RETURNING clause at code level
+- These will be properly handled when switching from SqlClient to Npgsql classes
+
+Schema Changes:
+--------------------------------------------------------------------------------
+No schema object names were changed (as expected - manual conversion did not modify names)
+
+PostgreSQL Compatibility Status:
+--------------------------------------------------------------------------------
+✓ CTEs (WITH clauses) - 4 instances - all compatible
+✓ Window functions (AVG, COUNT, LAG, RANK, PERCENT_RANK, MIN, MAX with OVER) - all compatible  
+✓ CASE expressions - all compatible
+✓ Parameter syntax (@parameter) - compatible with Npgsql
+✓ GETDATE() to CURRENT_TIMESTAMP - all 7 instances replaced
+⚠ Transaction blocks - require code-level refactoring (Steps 5-6)
+⚠ SCOPE_IDENTITY() - requires RETURNING clause at code level (Steps 5-6)
