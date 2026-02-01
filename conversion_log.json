@@ -1,0 +1,136 @@
+{
+  "conversion_summary": {
+    "total_statements": 7,
+    "dms_successful_conversions": 0,
+    "dms_failed_conversions": 7,
+    "manual_conversions_after_dms_failure": 7,
+    "conversion_date": "2026-02-01",
+    "dms_tool": "dms-mcp____statement_conversion_tool",
+    "schema_name": "dbo",
+    "database_name": "ProductManagement",
+    "region": "us-east-1"
+  },
+  "statement_conversions": [
+    {
+      "statement_number": 1,
+      "method_name": "GetAllProductsAsync",
+      "dms_status": "ERROR",
+      "dms_error": "Metadata model conversion failed: {'error': 'Metadata model conversion did not complete after 15 attempts'}",
+      "dms_error_timestamp": "2026-02-01T19:41:16.513287",
+      "dms_input": "WITH ProductStats AS (\n    SELECT \n        ProductId,\n        AVG(Price) OVER() as AvgPrice,\n        COUNT(*) OVER() as TotalProducts\n    FROM Products\n)\nSELECT \n    p.ProductId,\n    p.Name,\n    p.Description,\n    p.Price,\n    p.StockQuantity,\n    p.CreatedDate,\n    p.ModifiedDate,\n    CASE \n        WHEN p.Price > ps.AvgPrice THEN 'Above Average'\n        WHEN p.Price < ps.AvgPrice THEN 'Below Average'\n        ELSE 'Average'\n    END as PriceCategory,\n    ROUND((p.Price / ps.AvgPrice) * 100, 2) as PricePercentageOfAverage\nFROM Products p\nINNER JOIN ProductStats ps ON p.ProductId = ps.ProductId\nORDER BY \n    CASE \n        WHEN p.Price > ps.AvgPrice THEN 1\n        ELSE 2\n    END,\n    p.Name",
+      "manual_conversion_applied": true,
+      "manual_conversion_notes": "PostgreSQL supports CTE, window functions, CASE expressions, and ROUND natively. Minimal changes needed. Statement is already mostly PostgreSQL compatible.",
+      "key_changes": [
+        "No major changes required",
+        "PostgreSQL natively supports all features used in this query"
+      ]
+    },
+    {
+      "statement_number": 2,
+      "method_name": "GetProductByIdAsync",
+      "dms_status": "ERROR",
+      "dms_error": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}",
+      "dms_error_timestamp": "2026-02-01T19:44:02.732161",
+      "dms_input": "WITH ProductHistory AS (\n    SELECT \n        ProductId,\n        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,\n        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock\n    FROM Products\n    WHERE ProductId = @ProductId\n)\nSELECT \n    p.ProductId,\n    p.Name,\n    p.Description,\n    p.Price,\n    p.StockQuantity,\n    p.CreatedDate,\n    p.ModifiedDate,\n    ph.PreviousPrice,\n    ph.PreviousStock,\n    CASE \n        WHEN ph.PreviousPrice IS NOT NULL THEN \n            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)\n        ELSE NULL\n    END as PriceChangePercentage\nFROM Products p\nLEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId\nWHERE p.ProductId = @ProductId",
+      "manual_conversion_applied": true,
+      "manual_conversion_notes": "PostgreSQL supports LAG window function and all other features. Changed parameter syntax from @ProductId to $1.",
+      "key_changes": [
+        "@ProductId → $1",
+        "PostgreSQL uses numbered parameters ($1, $2, etc.) instead of named parameters"
+      ]
+    },
+    {
+      "statement_number": 3,
+      "method_name": "InsertProductAsync",
+      "dms_status": "ERROR",
+      "dms_error": "Metadata model creation failed: {'error': \"Metadata model creation failed: {'default_error_details': {'message': 'Statement definition is not valid.'}}\"}",
+      "dms_error_timestamp": "2026-02-01T19:45:32.927743",
+      "dms_input": "DECLARE @NewProductId INT;\n\nBEGIN TRANSACTION;\n    -- Insert the new product\n    INSERT INTO Products (Name, Description, Price, StockQuantity)\n    VALUES (@Name, @Description, @Price, @StockQuantity);\n    \n    SET @NewProductId = SCOPE_IDENTITY();\n    \n    -- Log the insertion\n    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)\n    VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, GETDATE());\n    \n    -- Update product statistics\n    UPDATE ProductStats\n    SET \n        TotalProducts = TotalProducts + 1,\n        AveragePrice = (AveragePrice * TotalProducts + @Price) / (TotalProducts + 1),\n        LastUpdated = GETDATE()\n    WHERE StatId = 1;\nCOMMIT;\n\nSELECT @NewProductId;",
+      "manual_conversion_applied": true,
+      "manual_conversion_notes": "Replaced SQL Server transaction with PostgreSQL CTE approach. SCOPE_IDENTITY() replaced with RETURNING clause. GETDATE() replaced with CURRENT_TIMESTAMP. Parameters changed to numbered format.",
+      "key_changes": [
+        "SCOPE_IDENTITY() → RETURNING clause",
+        "GETDATE() → CURRENT_TIMESTAMP",
+        "@Name → $1, @Description → $2, @Price → $3, @StockQuantity → $4",
+        "Used CTE to chain operations atomically",
+        "Removed DECLARE and variable handling"
+      ]
+    },
+    {
+      "statement_number": 4,
+      "method_name": "UpdateProductAsync",
+      "dms_status": "ERROR",
+      "dms_error": "Metadata model conversion failed: {'error': 'Metadata model conversion did not complete after 15 attempts'}",
+      "dms_error_timestamp": "2026-02-01T19:49:35.761918",
+      "dms_input": "BEGIN TRANSACTION;\n    -- Store old values for history\n    DECLARE @OldPrice DECIMAL(18,2);\n    DECLARE @OldStock INT;\n    \n    SELECT @OldPrice = Price, @OldStock = StockQuantity\n    FROM Products\n    WHERE ProductId = @ProductId;\n    \n    -- Update the product\n    UPDATE Products\n    SET \n        Name = @Name,\n        Description = @Description,\n        Price = @Price,\n        StockQuantity = @StockQuantity,\n        ModifiedDate = GETDATE()\n    WHERE ProductId = @ProductId;\n    \n    -- Log the changes\n    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)\n    VALUES (@ProductId, 'UPDATE', @OldPrice, @Price, @OldStock, @StockQuantity, GETDATE());\n    \n    -- Update product statistics\n    UPDATE ProductStats\n    SET \n        AveragePrice = (AveragePrice * TotalProducts - @OldPrice + @Price) / TotalProducts,\n        LastUpdated = GETDATE()\n    WHERE StatId = 1;\nCOMMIT;",
+      "manual_conversion_applied": true,
+      "manual_conversion_notes": "Replaced SQL Server transaction with PostgreSQL CTE approach. Removed variable declarations. GETDATE() replaced with CURRENT_TIMESTAMP. Parameters changed to numbered format.",
+      "key_changes": [
+        "Replaced DECLARE variables with CTE approach",
+        "GETDATE() → CURRENT_TIMESTAMP",
+        "@ProductId → $1, @Name → $2, @Description → $3, @Price → $4, @StockQuantity → $5",
+        "Used CTE to chain operations"
+      ]
+    },
+    {
+      "statement_number": 5,
+      "method_name": "DeleteProductAsync",
+      "dms_status": "ERROR",
+      "dms_error": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}",
+      "dms_error_timestamp": "2026-02-01T19:52:20.662363",
+      "dms_input": "BEGIN TRANSACTION;\n    -- Store product info for history\n    DECLARE @OldPrice DECIMAL(18,2);\n    DECLARE @OldStock INT;\n    \n    SELECT @OldPrice = Price, @OldStock = StockQuantity\n    FROM Products\n    WHERE ProductId = @ProductId;\n    \n    -- Log the deletion\n    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)\n    VALUES (@ProductId, 'DELETE', @OldPrice, NULL, @OldStock, NULL, GETDATE());\n    \n    -- Delete the product\n    DELETE FROM Products \n    WHERE ProductId = @ProductId;\n    \n    -- Update product statistics\n    UPDATE ProductStats\n    SET \n        TotalProducts = TotalProducts - 1,\n        AveragePrice = CASE \n            WHEN TotalProducts > 1 \n            THEN (AveragePrice * TotalProducts - @OldPrice) / (TotalProducts - 1)\n            ELSE 0\n        END,\n        LastUpdated = GETDATE()\n    WHERE StatId = 1;\nCOMMIT;",
+      "manual_conversion_applied": true,
+      "manual_conversion_notes": "Replaced SQL Server transaction with PostgreSQL CTE approach. Removed variable declarations. GETDATE() replaced with CURRENT_TIMESTAMP. Parameters changed to numbered format.",
+      "key_changes": [
+        "Replaced DECLARE variables with CTE approach",
+        "GETDATE() → CURRENT_TIMESTAMP",
+        "@ProductId → $1",
+        "Used CTE to chain operations",
+        "Maintained CASE expression for conditional logic"
+      ]
+    },
+    {
+      "statement_number": 6,
+      "method_name": "GetProductsByPriceRangeAsync",
+      "dms_status": "ERROR",
+      "dms_error": "Metadata model conversion failed: {'error': 'Metadata model conversion did not complete after 15 attempts'}",
+      "dms_error_timestamp": "2026-02-01T19:56:32.596636",
+      "dms_input": "WITH RankedProducts AS (\n    SELECT \n        p.*,\n        RANK() OVER (ORDER BY p.Price) as PriceRank,\n        PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile\n    FROM Products p\n    WHERE p.Price BETWEEN @MinPrice AND @MaxPrice\n)\nSELECT \n    rp.*,\n    CASE \n        WHEN rp.PricePercentile <= 0.25 THEN 'Budget'\n        WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range'\n        ELSE 'Premium'\n    END as PriceSegment\nFROM RankedProducts rp\nORDER BY rp.PriceRank",
+      "manual_conversion_applied": true,
+      "manual_conversion_notes": "PostgreSQL supports RANK() and PERCENT_RANK() window functions. Only parameter syntax changed.",
+      "key_changes": [
+        "@MinPrice → $1, @MaxPrice → $2",
+        "No other changes required - PostgreSQL fully supports these window functions"
+      ]
+    },
+    {
+      "statement_number": 7,
+      "method_name": "GetLowStockProductsAsync",
+      "dms_status": "ERROR",
+      "dms_error": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}",
+      "dms_error_timestamp": "2026-02-01T19:59:17.399797",
+      "dms_input": "WITH StockAnalysis AS (\n    SELECT \n        p.*,\n        AVG(StockQuantity) OVER() as AvgStock,\n        MIN(StockQuantity) OVER() as MinStock,\n        MAX(StockQuantity) OVER() as MaxStock\n    FROM Products p\n)\nSELECT \n    sa.*,\n    CASE \n        WHEN StockQuantity <= @Threshold THEN 'Critical'\n        WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low'\n        ELSE 'Adequate'\n    END as StockStatus,\n    ROUND((StockQuantity / AvgStock) * 100, 2) as StockPercentageOfAverage\nFROM StockAnalysis sa\nWHERE StockQuantity <= @Threshold\nORDER BY StockQuantity",
+      "manual_conversion_applied": true,
+      "manual_conversion_notes": "PostgreSQL supports all window functions used. Only parameter syntax changed.",
+      "key_changes": [
+        "@Threshold → $1",
+        "No other changes required - PostgreSQL fully supports these window functions"
+      ]
+    }
+  ],
+  "common_conversions_applied": {
+    "parameter_syntax": "@param → $n (numbered parameters)",
+    "date_functions": "GETDATE() → CURRENT_TIMESTAMP",
+    "identity_functions": "SCOPE_IDENTITY() → RETURNING clause",
+    "transaction_handling": "Used CTE approach for multi-statement transactions",
+    "variable_declarations": "Replaced DECLARE with CTE approach where needed"
+  },
+  "notes": [
+    "All 7 statements were processed through the DMS MCP tool as required",
+    "All 7 statements failed DMS conversion due to metadata model creation/conversion timeouts",
+    "Manual conversions were applied after documenting DMS failures",
+    "PostgreSQL natively supports most SQL Server features used (CTEs, window functions, CASE)",
+    "Primary conversions needed: parameter syntax, date functions, and identity handling",
+    "Transaction blocks were restructured using CTEs for PostgreSQL compatibility"
+  ]
+}

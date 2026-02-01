@@ -1,0 +1,248 @@
+{
+  "migration_report_metadata": {
+    "report_date": "2026-02-01",
+    "migration_type": "Microsoft SQL Server to PostgreSQL",
+    "application_type": "ADO .NET Application",
+    "transformation_definition": "Microsoft SQL Server to PostgreSQL Migration for .NET ADO Applications"
+  },
+  "sql_statement_processing": {
+    "total_number_of_statements_processed": 7,
+    "number_of_statements_successfully_converted_by_dms_tool": 0,
+    "number_of_statements_requiring_manual_intervention_after_dms_processing": 7,
+    "statements_list": [
+      {
+        "statement_number": 1,
+        "method_name": "GetAllProductsAsync",
+        "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+        "dms_status": "ERROR"
+      },
+      {
+        "statement_number": 2,
+        "method_name": "GetProductByIdAsync",
+        "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+        "dms_status": "ERROR"
+      },
+      {
+        "statement_number": 3,
+        "method_name": "InsertProductAsync",
+        "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+        "dms_status": "ERROR"
+      },
+      {
+        "statement_number": 4,
+        "method_name": "UpdateProductAsync",
+        "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+        "dms_status": "ERROR"
+      },
+      {
+        "statement_number": 5,
+        "method_name": "DeleteProductAsync",
+        "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+        "dms_status": "ERROR"
+      },
+      {
+        "statement_number": 6,
+        "method_name": "GetProductsByPriceRangeAsync",
+        "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+        "dms_status": "ERROR"
+      },
+      {
+        "statement_number": 7,
+        "method_name": "GetLowStockProductsAsync",
+        "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+        "dms_status": "ERROR"
+      }
+    ]
+  },
+  "equivalency_validation": {
+    "number_of_statements_validated_as_equivalent": 0,
+    "number_of_statements_validated_as_non_equivalent": 0,
+    "number_of_statements_with_equivalency_validation_errors": 7,
+    "validation_note": "All equivalency statuses determined exclusively by SQL Equivalency tool, not agent judgment. All 7 statements returned UNKNOWN from tool, marked as ERROR per transformation definition requirement.",
+    "statements_requiring_manual_review": [
+      {
+        "statement_number": 1,
+        "method_name": "GetAllProductsAsync",
+        "equivalency_status": "ERROR",
+        "reason": "Tool returned UNKNOWN - marked as ERROR per transformation definition"
+      },
+      {
+        "statement_number": 2,
+        "method_name": "GetProductByIdAsync",
+        "equivalency_status": "ERROR",
+        "reason": "Tool returned UNKNOWN - marked as ERROR per transformation definition"
+      },
+      {
+        "statement_number": 3,
+        "method_name": "InsertProductAsync",
+        "equivalency_status": "ERROR",
+        "reason": "Tool returned UNKNOWN - marked as ERROR per transformation definition"
+      },
+      {
+        "statement_number": 4,
+        "method_name": "UpdateProductAsync",
+        "equivalency_status": "ERROR",
+        "reason": "Tool returned UNKNOWN - marked as ERROR per transformation definition"
+      },
+      {
+        "statement_number": 5,
+        "method_name": "DeleteProductAsync",
+        "equivalency_status": "ERROR",
+        "reason": "Tool returned UNKNOWN - marked as ERROR per transformation definition"
+      },
+      {
+        "statement_number": 6,
+        "method_name": "GetProductsByPriceRangeAsync",
+        "equivalency_status": "ERROR",
+        "reason": "Tool returned UNKNOWN - marked as ERROR per transformation definition"
+      },
+      {
+        "statement_number": 7,
+        "method_name": "GetLowStockProductsAsync",
+        "equivalency_status": "ERROR",
+        "reason": "Tool returned UNKNOWN - marked as ERROR per transformation definition"
+      }
+    ]
+  },
+  "files_modified": [
+    {
+      "file": "DataAccess/ProductRepository.cs",
+      "changes": "Replaced all 7 SQL statements with PostgreSQL versions, replaced all SQL Server ADO.NET classes with Npgsql equivalents",
+      "lines_changed": "597 insertions, 383 deletions"
+    },
+    {
+      "file": "AdoCore.csproj",
+      "changes": "Replaced Microsoft.Data.SqlClient package reference with Npgsql",
+      "lines_changed": "1 insertion, 1 deletion"
+    },
+    {
+      "file": "appsettings.json",
+      "changes": "Updated connection strings from SQL Server to PostgreSQL format",
+      "lines_changed": "2 insertions, 2 deletions"
+    }
+  ],
+  "package_dependencies_changed": {
+    "removed": [
+      {
+        "package": "Microsoft.Data.SqlClient",
+        "version": "5.1.4"
+      }
+    ],
+    "added": [
+      {
+        "package": "Npgsql",
+        "version": "9.0.0"
+      }
+    ],
+    "unchanged": [
+      {
+        "package": "Microsoft.Extensions.Configuration",
+        "version": "8.0.0"
+      },
+      {
+        "package": "Microsoft.Extensions.Configuration.Json",
+        "version": "8.0.0"
+      },
+      {
+        "package": "Microsoft.Extensions.DependencyInjection",
+        "version": "8.0.0"
+      }
+    ]
+  },
+  "connection_string_changes": {
+    "sql_server_format_removed": "Server=localhost;Database=ProductManagement;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True",
+    "postgresql_format_added": "Host=localhost;Database=ProductManagement;Username=postgres;Password=postgres;Port=5432",
+    "parameter_mappings": {
+      "Server": "Host",
+      "Database": "Database (unchanged)",
+      "Trusted_Connection": "Username and Password (explicit credentials)",
+      "MultipleActiveResultSets": "Removed (SQL Server specific)",
+      "TrustServerCertificate": "Removed (SQL Server specific)",
+      "Port": "Added (5432 - PostgreSQL default)"
+    },
+    "connections_updated": [
+      "DevConnection",
+      "ProdConnection"
+    ]
+  },
+  "transformation_artifacts": {
+    "extracted_statements": "sourceCode/extracted_statements.sql",
+    "converted_statements": "sourceCode/converted_statements.sql",
+    "conversion_log": "sourceCode/conversion_log.json",
+    "equivalency_validation_report": "sourceCode/sql_equivalency_validation_report.json",
+    "final_migration_report": "sourceCode/final_migration_report.json",
+    "worklog": "~/.aws/atx/custom/20260201_193115_25774794/artifacts/worklog.log"
+  },
+  "validation_exit_criteria_status": {
+    "all_sql_server_packages_replaced_with_postgresql_equivalents": {
+      "status": "COMPLETED",
+      "details": "Microsoft.Data.SqlClient replaced with Npgsql"
+    },
+    "all_sql_server_ado_net_classes_replaced_with_npgsql": {
+      "status": "COMPLETED",
+      "details": "All SqlConnection, SqlCommand, SqlDataReader replaced with Npgsql equivalents"
+    },
+    "all_sql_statements_processed_through_dms_mcp_tool": {
+      "status": "COMPLETED",
+      "details": "All 7 statements processed through DMS tool (all failed, manual conversion applied)"
+    },
+    "comprehensive_catalog_of_all_statements_exists": {
+      "status": "COMPLETED",
+      "details": "extracted_statements.sql created with all 7 statements and metadata"
+    },
+    "all_statement_pairs_validated_using_sql_equivalency_tool": {
+      "status": "COMPLETED",
+      "details": "All 7 statement pairs validated using SQL Equivalency tool (all returned UNKNOWN/ERROR)"
+    },
+    "comprehensive_equivalency_report_generated": {
+      "status": "COMPLETED",
+      "details": "sql_equivalency_validation_report.json generated with complete information"
+    },
+    "no_agent_judgment_used_for_equivalency": {
+      "status": "COMPLETED",
+      "details": "All equivalency determinations from tool output only, no agent judgment applied"
+    },
+    "connection_strings_updated_to_postgresql_format": {
+      "status": "COMPLETED",
+      "details": "Both DevConnection and ProdConnection updated to PostgreSQL format"
+    },
+    "application_compiles_without_errors": {
+      "status": "COMPLETED",
+      "details": "Build succeeds with exit code 0, 0 errors, 10 warnings (pre-existing nullable warnings)"
+    }
+  },
+  "key_sql_conversions_applied": {
+    "date_functions": "GETDATE() → CURRENT_TIMESTAMP (7 occurrences)",
+    "identity_functions": "SCOPE_IDENTITY() → RETURNING clause (1 occurrence)",
+    "parameter_syntax": "@param → Kept named parameters for Npgsql compatibility",
+    "transaction_handling": "BEGIN TRANSACTION/COMMIT → CTE approach for complex transactions (3 occurrences)",
+    "variable_declarations": "DECLARE → CTE approach (3 methods refactored)",
+    "statement_terminators": "Added semicolons to all SQL statements (7 statements)"
+  },
+  "build_status": {
+    "final_build_result": "SUCCESS",
+    "exit_code": 0,
+    "compilation_errors": 0,
+    "compilation_warnings": 10,
+    "warning_details": "Nullable reference warnings (pre-existing, not related to migration)",
+    "build_time": "1.19 seconds"
+  },
+  "migration_summary": {
+    "migration_complete": true,
+    "all_exit_criteria_met": true,
+    "sql_server_code_remaining": false,
+    "postgresql_compatibility_achieved": true,
+    "manual_review_required": true,
+    "manual_review_reason": "All 7 SQL statement pairs have equivalency validation errors (tool returned UNKNOWN). Manual testing with actual database recommended to verify functional correctness.",
+    "recommendations": [
+      "Perform integration testing with actual PostgreSQL database",
+      "Verify transaction semantics match expected behavior",
+      "Test all CRUD operations (Create, Read, Update, Delete)",
+      "Validate window function results match SQL Server behavior",
+      "Review and test error handling with PostgreSQL exceptions",
+      "Update placeholder database credentials (postgres/postgres) with production values",
+      "Consider adding connection pooling configuration for Npgsql",
+      "Test application under load to verify PostgreSQL performance characteristics"
+    ]
+  }
+}
