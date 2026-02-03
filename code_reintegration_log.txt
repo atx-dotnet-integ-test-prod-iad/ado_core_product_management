@@ -1,0 +1,298 @@
+-- ============================================================================
+-- CODE RE-INTEGRATION LOG
+-- Date: 2026-02-03
+-- Project: AdoCore - Product Management System
+-- File: DataAccess/ProductRepository.cs
+-- ============================================================================
+
+This log documents the SQL statement conversions and code changes required for
+PostgreSQL migration. SQL statements STMT-001, STMT-002, STMT-006, and STMT-007
+require NO changes as they are already PostgreSQL compatible. Transaction
+statements STMT-003, STMT-004, and STMT-005 will be restructured during Step 6
+when ADO.NET classes are replaced with Npgsql equivalents.
+
+-- ============================================================================
+-- STMT-001: GetAllProductsAsync() - Lines 38-70
+-- Status: NO CHANGES REQUIRED
+-- ============================================================================
+
+Method: GetAllProductsAsync()
+Line Range: 38-70
+
+Original SQL Statement (SQL Server):
+WITH ProductStats AS (
+    SELECT 
+        ProductId,
+        AVG(Price) OVER() as AvgPrice,
+        COUNT(*) OVER() as TotalProducts
+    FROM Products
+)
+SELECT 
+    p.ProductId,
+    p.Name,
+    p.Description,
+    p.Price,
+    p.StockQuantity,
+    p.CreatedDate,
+    p.ModifiedDate,
+    CASE 
+        WHEN p.Price > ps.AvgPrice THEN 'Above Average'
+        WHEN p.Price < ps.AvgPrice THEN 'Below Average'
+        ELSE 'Average'
+    END as PriceCategory,
+    ROUND((p.Price / ps.AvgPrice) * 100, 2) as PricePercentageOfAverage
+FROM Products p
+INNER JOIN ProductStats ps ON p.ProductId = ps.ProductId
+ORDER BY 
+    CASE 
+        WHEN p.Price > ps.AvgPrice THEN 1
+        ELSE 2
+    END,
+    p.Name
+
+PostgreSQL Statement: IDENTICAL - NO CHANGES REQUIRED
+Schema Changes: None
+Notes: CTE and window functions are fully supported in PostgreSQL with identical syntax
+
+-- ============================================================================
+-- STMT-002: GetProductByIdAsync(int productId) - Lines 76-119
+-- Status: NO CHANGES REQUIRED
+-- ============================================================================
+
+Method: GetProductByIdAsync(int productId)
+Line Range: 76-119
+Parameter: @ProductId
+
+Original SQL Statement (SQL Server):
+WITH ProductHistory AS (
+    SELECT 
+        ProductId,
+        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,
+        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock
+    FROM Products
+    WHERE ProductId = @ProductId
+)
+SELECT 
+    p.ProductId,
+    p.Name,
+    p.Description,
+    p.Price,
+    p.StockQuantity,
+    p.CreatedDate,
+    p.ModifiedDate,
+    ph.PreviousPrice,
+    ph.PreviousStock,
+    CASE 
+        WHEN ph.PreviousPrice IS NOT NULL THEN 
+            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)
+        ELSE NULL
+    END as PriceChangePercentage
+FROM Products p
+LEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId
+WHERE p.ProductId = @ProductId
+
+PostgreSQL Statement: IDENTICAL - NO CHANGES REQUIRED
+Schema Changes: None
+Notes: LAG window function and all other syntax is PostgreSQL compatible
+
+-- ============================================================================
+-- STMT-003: InsertProductAsync(Product product) - Lines 128-163
+-- Status: REQUIRES RESTRUCTURING - Will be done in Step 6
+-- ============================================================================
+
+Method: InsertProductAsync(Product product)
+Line Range: 128-163
+Parameters: @Name, @Description, @Price, @StockQuantity
+
+Current Implementation Structure:
+- Single multi-statement SQL string with BEGIN TRANSACTION/COMMIT
+- Uses DECLARE @NewProductId
+- Uses SCOPE_IDENTITY() to capture new ID
+- Uses GETDATE() for timestamps
+- All statements executed as single ExecuteScalarAsync() call
+
+Required PostgreSQL Structure:
+- Split into 3 separate SQL statements
+- Use ADO.NET transaction management (BeginTransactionAsync/CommitAsync)
+- Statement 1: INSERT with RETURNING ProductId
+- Statement 2: INSERT INTO ProductHistory with captured ProductId and NOW()
+- Statement 3: UPDATE ProductStats with NOW()
+- Execute each statement separately within transaction scope
+
+Key Conversions:
+- SCOPE_IDENTITY() → RETURNING ProductId in INSERT statement
+- GETDATE() → NOW()
+- BEGIN TRANSACTION/COMMIT → ADO.NET BeginTransactionAsync/CommitAsync
+- DECLARE @NewProductId → Capture return value from RETURNING clause
+- Single command → Three separate NpgsqlCommand executions
+
+Implementation Deferred: Changes will be made in Step 6 when SqlCommand becomes NpgsqlCommand
+
+-- ============================================================================
+-- STMT-004: UpdateProductAsync(Product product) - Lines 172-211
+-- Status: REQUIRES RESTRUCTURING - Will be done in Step 6
+-- ============================================================================
+
+Method: UpdateProductAsync(Product product)
+Line Range: 172-211
+Parameters: @ProductId, @Name, @Description, @Price, @StockQuantity
+
+Current Implementation Structure:
+- Single multi-statement SQL string with BEGIN TRANSACTION/COMMIT
+- Uses DECLARE for @OldPrice and @OldStock
+- Uses GETDATE() for ModifiedDate and ActionDate
+- All statements executed as single ExecuteNonQueryAsync() call
+
+Required PostgreSQL Structure:
+- Split into 4 separate SQL statements
+- Use ADO.NET transaction management
+- Statement 1: SELECT to capture old Price and StockQuantity
+- Statement 2: UPDATE Products with NOW() for ModifiedDate
+- Statement 3: INSERT INTO ProductHistory with NOW() for ActionDate
+- Statement 4: UPDATE ProductStats with NOW() for LastUpdated
+- Execute each statement separately within transaction scope
+
+Key Conversions:
+- DECLARE @OldPrice, @OldStock → SELECT statement to capture values into C# variables
+- GETDATE() → NOW()
+- BEGIN TRANSACTION/COMMIT → ADO.NET BeginTransactionAsync/CommitAsync
+- Single command → Four separate NpgsqlCommand executions
+
+Implementation Deferred: Changes will be made in Step 6 when SqlCommand becomes NpgsqlCommand
+
+-- ============================================================================
+-- STMT-005: DeleteProductAsync(int productId) - Lines 218-253
+-- Status: REQUIRES RESTRUCTURING - Will be done in Step 6
+-- ============================================================================
+
+Method: DeleteProductAsync(int productId)
+Line Range: 218-253
+Parameter: @ProductId
+
+Current Implementation Structure:
+- Single multi-statement SQL string with BEGIN TRANSACTION/COMMIT
+- Uses DECLARE for @OldPrice and @OldStock
+- Uses GETDATE() for ActionDate and LastUpdated
+- CASE expression in UPDATE ProductStats
+- All statements executed as single ExecuteNonQueryAsync() call
+
+Required PostgreSQL Structure:
+- Split into 4 separate SQL statements
+- Use ADO.NET transaction management
+- Statement 1: SELECT to capture Price and StockQuantity before deletion
+- Statement 2: INSERT INTO ProductHistory with NOW() for ActionDate
+- Statement 3: DELETE FROM Products
+- Statement 4: UPDATE ProductStats with CASE and NOW()
+- Execute each statement separately within transaction scope
+
+Key Conversions:
+- DECLARE @OldPrice, @OldStock → SELECT statement to capture values into C# variables
+- GETDATE() → NOW()
+- BEGIN TRANSACTION/COMMIT → ADO.NET BeginTransactionAsync/CommitAsync
+- CASE expression in UPDATE → unchanged (PostgreSQL compatible)
+- Single command → Four separate NpgsqlCommand executions
+
+Implementation Deferred: Changes will be made in Step 6 when SqlCommand becomes NpgsqlCommand
+
+-- ============================================================================
+-- STMT-006: GetProductsByPriceRangeAsync - Lines 260-287
+-- Status: NO CHANGES REQUIRED
+-- ============================================================================
+
+Method: GetProductsByPriceRangeAsync(decimal minPrice, decimal maxPrice)
+Line Range: 260-287
+Parameters: @MinPrice, @MaxPrice
+
+Original SQL Statement (SQL Server):
+WITH RankedProducts AS (
+    SELECT 
+        p.*,
+        RANK() OVER (ORDER BY p.Price) as PriceRank,
+        PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile
+    FROM Products p
+    WHERE p.Price BETWEEN @MinPrice AND @MaxPrice
+)
+SELECT 
+    rp.*,
+    CASE 
+        WHEN rp.PricePercentile <= 0.25 THEN 'Budget'
+        WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range'
+        ELSE 'Premium'
+    END as PriceSegment
+FROM RankedProducts rp
+ORDER BY rp.PriceRank
+
+PostgreSQL Statement: IDENTICAL - NO CHANGES REQUIRED
+Schema Changes: None
+Notes: RANK and PERCENT_RANK window functions are PostgreSQL compatible
+
+-- ============================================================================
+-- STMT-007: GetLowStockProductsAsync(int threshold) - Lines 294-320
+-- Status: NO CHANGES REQUIRED
+-- ============================================================================
+
+Method: GetLowStockProductsAsync(int threshold)
+Line Range: 294-320
+Parameter: @Threshold
+
+Original SQL Statement (SQL Server):
+WITH StockAnalysis AS (
+    SELECT 
+        p.*,
+        AVG(StockQuantity) OVER() as AvgStock,
+        MIN(StockQuantity) OVER() as MinStock,
+        MAX(StockQuantity) OVER() as MaxStock
+    FROM Products p
+)
+SELECT 
+    sa.*,
+    CASE 
+        WHEN StockQuantity <= @Threshold THEN 'Critical'
+        WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low'
+        ELSE 'Adequate'
+    END as StockStatus,
+    ROUND((StockQuantity / AvgStock) * 100, 2) as StockPercentageOfAverage
+FROM StockAnalysis sa
+WHERE StockQuantity <= @Threshold
+ORDER BY StockQuantity
+
+PostgreSQL Statement: IDENTICAL - NO CHANGES REQUIRED
+Schema Changes: None
+Notes: AVG/MIN/MAX OVER window functions and ROUND are PostgreSQL compatible
+
+-- ============================================================================
+-- RE-INTEGRATION SUMMARY
+-- ============================================================================
+
+Total SQL Statements: 7
+
+SQL Changes Required:
+- NO CHANGES: 4 statements (STMT-001, STMT-002, STMT-006, STMT-007)
+- RESTRUCTURING REQUIRED: 3 statements (STMT-003, STMT-004, STMT-005)
+
+Schema Object Name Changes:
+- None (all table names remain: Products, ProductHistory, ProductStats)
+
+Implementation Strategy:
+1. Statements STMT-001, STMT-002, STMT-006, STMT-007 are already PostgreSQL compatible
+   - No SQL statement changes needed
+   - Only ADO.NET class changes needed (Step 6: SqlCommand → NpgsqlCommand)
+
+2. Statements STMT-003, STMT-004, STMT-005 require restructuring
+   - Cannot be restructured until ADO.NET classes are updated (Step 6)
+   - Require splitting multi-statement transactions into separate commands
+   - Require ADO.NET transaction management
+   - Will be implemented in Step 6 simultaneously with class updates
+
+Deferred Implementation Rationale:
+The transaction statements (STMT-003, STMT-004, STMT-005) require both SQL syntax
+changes AND ADO.NET class changes. It's more efficient to make all changes together
+in Step 6 when SqlCommand/SqlConnection/SqlTransaction are replaced with their
+Npgsql equivalents. This avoids modifying the same code twice and ensures the
+restructured transaction logic works correctly with NpgsqlCommand from the start.
+
+Next Steps:
+- Step 5: Update NuGet package dependencies (Microsoft.Data.SqlClient → Npgsql)
+- Step 6: Update ADO.NET classes and restructure transaction statements simultaneously
+- Step 7: Update connection strings
+- Step 8: Final build and verification

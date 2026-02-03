@@ -1,0 +1,111 @@
+{
+  "report_metadata": {
+    "project_name": "AdoCore - Product Management System",
+    "migration_type": "Microsoft SQL Server to PostgreSQL",
+    "report_date": "2026-02-03",
+    "validation_tool": "sql-equivalency___validate_sql_equivalence",
+    "validation_method": "formal_verification"
+  },
+  "summary": {
+    "number_of_statements_processed": 7,
+    "number_of_statements_equivalent": 2,
+    "number_of_statements_non_equivalent": 0,
+    "number_of_statements_with_equivalency_error": 5
+  },
+  "statement_details": [
+    {
+      "statement_id": "STMT-001",
+      "method_name": "GetAllProductsAsync",
+      "statement_type": "SELECT with CTE and Window Functions",
+      "original_statement": "WITH ProductStats AS (\n    SELECT \n        ProductId,\n        AVG(Price) OVER() as AvgPrice,\n        COUNT(*) OVER() as TotalProducts\n    FROM Products\n)\nSELECT \n    p.ProductId,\n    p.Name,\n    p.Description,\n    p.Price,\n    p.StockQuantity,\n    p.CreatedDate,\n    p.ModifiedDate,\n    CASE \n        WHEN p.Price > ps.AvgPrice THEN 'Above Average'\n        WHEN p.Price < ps.AvgPrice THEN 'Below Average'\n        ELSE 'Average'\n    END as PriceCategory,\n    ROUND((p.Price / ps.AvgPrice) * 100, 2) as PricePercentageOfAverage\nFROM Products p\nINNER JOIN ProductStats ps ON p.ProductId = ps.ProductId\nORDER BY \n    CASE \n        WHEN p.Price > ps.AvgPrice THEN 1\n        ELSE 2\n    END,\n    p.Name",
+      "converted_statement": "WITH ProductStats AS (\n    SELECT \n        ProductId,\n        AVG(Price) OVER() as AvgPrice,\n        COUNT(*) OVER() as TotalProducts\n    FROM Products\n)\nSELECT \n    p.ProductId,\n    p.Name,\n    p.Description,\n    p.Price,\n    p.StockQuantity,\n    p.CreatedDate,\n    p.ModifiedDate,\n    CASE \n        WHEN p.Price > ps.AvgPrice THEN 'Above Average'\n        WHEN p.Price < ps.AvgPrice THEN 'Below Average'\n        ELSE 'Average'\n    END as PriceCategory,\n    ROUND((p.Price / ps.AvgPrice) * 100, 2) as PricePercentageOfAverage\nFROM Products p\nINNER JOIN ProductStats ps ON p.ProductId = ps.ProductId\nORDER BY \n    CASE \n        WHEN p.Price > ps.AvgPrice THEN 1\n        ELSE 2\n    END,\n    p.Name",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\n  \"equivalence_status\": \"UNKNOWN\",\n  \"result_details\": \"Z3SqlSolverVerifier stage in formal methods could not prove equivalancy/non-equivalency\",\n  \"validation_method\": \"formal_verification\",\n  \"timestamp\": \"2026-02-03T07:43:48.889217\"\n}",
+      "notes": "Tool returned UNKNOWN status. Per transformation definition, UNKNOWN is marked as ERROR. The statement is syntactically identical (no conversion required) but formal verification could not prove equivalency due to complexity of window functions and CTEs."
+    },
+    {
+      "statement_id": "STMT-002",
+      "method_name": "GetProductByIdAsync",
+      "statement_type": "SELECT with CTE and LAG Window Function",
+      "original_statement": "WITH ProductHistory AS (\n    SELECT \n        ProductId,\n        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,\n        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock\n    FROM Products\n    WHERE ProductId = @ProductId\n)\nSELECT \n    p.ProductId,\n    p.Name,\n    p.Description,\n    p.Price,\n    p.StockQuantity,\n    p.CreatedDate,\n    p.ModifiedDate,\n    ph.PreviousPrice,\n    ph.PreviousStock,\n    CASE \n        WHEN ph.PreviousPrice IS NOT NULL THEN \n            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)\n        ELSE NULL\n    END as PriceChangePercentage\nFROM Products p\nLEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId\nWHERE p.ProductId = @ProductId",
+      "converted_statement": "WITH ProductHistory AS (\n    SELECT \n        ProductId,\n        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,\n        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock\n    FROM Products\n    WHERE ProductId = @ProductId\n)\nSELECT \n    p.ProductId,\n    p.Name,\n    p.Description,\n    p.Price,\n    p.StockQuantity,\n    p.CreatedDate,\n    p.ModifiedDate,\n    ph.PreviousPrice,\n    ph.PreviousStock,\n    CASE \n        WHEN ph.PreviousPrice IS NOT NULL THEN \n            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)\n        ELSE NULL\n    END as PriceChangePercentage\nFROM Products p\nLEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId\nWHERE p.ProductId = @ProductId",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\n  \"equivalence_status\": \"UNKNOWN\",\n  \"result_details\": \"Z3SqlSolverVerifier stage in formal methods could not prove equivalancy/non-equivalency\",\n  \"validation_method\": \"formal_verification\",\n  \"timestamp\": \"2026-02-03T07:44:04.641495\"\n}",
+      "notes": "Tool returned UNKNOWN status. Per transformation definition, UNKNOWN is marked as ERROR. The statement is syntactically identical (no conversion required) but formal verification could not prove equivalency due to LAG window function complexity."
+    },
+    {
+      "statement_id": "STMT-003",
+      "method_name": "InsertProductAsync",
+      "statement_type": "INSERT with RETURNING",
+      "original_statement": "INSERT INTO Products (Name, Description, Price, StockQuantity)\nVALUES (@Name, @Description, @Price, @StockQuantity);\nSELECT SCOPE_IDENTITY() AS ProductId;",
+      "converted_statement": "INSERT INTO Products (Name, Description, Price, StockQuantity)\nVALUES (@Name, @Description, @Price, @StockQuantity)\nRETURNING ProductId;",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\n  \"equivalence_status\": \"UNKNOWN\",\n  \"result_details\": \"Z3SqlSolverVerifier stage in formal methods could not prove equivalancy/non-equivalency\",\n  \"validation_method\": \"formal_verification\",\n  \"timestamp\": \"2026-02-03T07:44:46.884942\"\n}",
+      "notes": "Tool returned UNKNOWN status. Per transformation definition, UNKNOWN is marked as ERROR. Converted SCOPE_IDENTITY() to RETURNING clause. Both return the newly inserted ProductId. Full transaction includes additional statements for ProductHistory and ProductStats updates."
+    },
+    {
+      "statement_id": "STMT-004",
+      "method_name": "UpdateProductAsync",
+      "statement_type": "UPDATE",
+      "original_statement": "UPDATE Products\nSET \n    Name = @Name,\n    Description = @Description,\n    Price = @Price,\n    StockQuantity = @StockQuantity,\n    ModifiedDate = GETDATE()\nWHERE ProductId = @ProductId",
+      "converted_statement": "UPDATE Products\nSET \n    Name = @Name,\n    Description = @Description,\n    Price = @Price,\n    StockQuantity = @StockQuantity,\n    ModifiedDate = NOW()\nWHERE ProductId = @ProductId",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "equivalency_status": "EQUIVALENT",
+      "equivalency_tool_output": "{\n  \"equivalence_status\": \"EQUIVALENT\",\n  \"result_details\": \"StructuralEquivalenceVerifier stage in formal methods proved equivalency\",\n  \"validation_method\": \"formal_verification\",\n  \"timestamp\": \"2026-02-03T07:44:56.732054\"\n}",
+      "notes": "Tool successfully verified equivalency. Converted GETDATE() to NOW(). Full transaction includes additional statements for capturing old values and updating ProductHistory and ProductStats."
+    },
+    {
+      "statement_id": "STMT-005",
+      "method_name": "DeleteProductAsync",
+      "statement_type": "DELETE",
+      "original_statement": "DELETE FROM Products \nWHERE ProductId = @ProductId",
+      "converted_statement": "DELETE FROM Products \nWHERE ProductId = @ProductId",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "equivalency_status": "EQUIVALENT",
+      "equivalency_tool_output": "{\n  \"equivalence_status\": \"EQUIVALENT\",\n  \"result_details\": \"StructuralEquivalenceVerifier stage in formal methods proved equivalency\",\n  \"validation_method\": \"formal_verification\",\n  \"timestamp\": \"2026-02-03T07:45:06.438991\"\n}",
+      "notes": "Tool successfully verified equivalency. Statement is identical in both SQL Server and PostgreSQL. Full transaction includes additional statements for capturing product info, logging to ProductHistory, and updating ProductStats."
+    },
+    {
+      "statement_id": "STMT-006",
+      "method_name": "GetProductsByPriceRangeAsync",
+      "statement_type": "SELECT with CTE and Window Functions (RANK, PERCENT_RANK)",
+      "original_statement": "WITH RankedProducts AS (\n    SELECT \n        p.*,\n        RANK() OVER (ORDER BY p.Price) as PriceRank,\n        PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile\n    FROM Products p\n    WHERE p.Price BETWEEN @MinPrice AND @MaxPrice\n)\nSELECT \n    rp.*,\n    CASE \n        WHEN rp.PricePercentile <= 0.25 THEN 'Budget'\n        WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range'\n        ELSE 'Premium'\n    END as PriceSegment\nFROM RankedProducts rp\nORDER BY rp.PriceRank",
+      "converted_statement": "WITH RankedProducts AS (\n    SELECT \n        p.*,\n        RANK() OVER (ORDER BY p.Price) as PriceRank,\n        PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile\n    FROM Products p\n    WHERE p.Price BETWEEN @MinPrice AND @MaxPrice\n)\nSELECT \n    rp.*,\n    CASE \n        WHEN rp.PricePercentile <= 0.25 THEN 'Budget'\n        WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range'\n        ELSE 'Premium'\n    END as PriceSegment\nFROM RankedProducts rp\nORDER BY rp.PriceRank",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\n  \"equivalence_status\": \"UNKNOWN\",\n  \"result_details\": \"Z3SqlSolverVerifier stage in formal methods could not prove equivalancy/non-equivalency\",\n  \"validation_method\": \"formal_verification\",\n  \"timestamp\": \"2026-02-03T07:44:19.287169\"\n}",
+      "notes": "Tool returned UNKNOWN status. Per transformation definition, UNKNOWN is marked as ERROR. The statement is syntactically identical (no conversion required) but formal verification could not prove equivalency due to RANK and PERCENT_RANK window function complexity."
+    },
+    {
+      "statement_id": "STMT-007",
+      "method_name": "GetLowStockProductsAsync",
+      "statement_type": "SELECT with CTE and Multiple Window Functions",
+      "original_statement": "WITH StockAnalysis AS (\n    SELECT \n        p.*,\n        AVG(StockQuantity) OVER() as AvgStock,\n        MIN(StockQuantity) OVER() as MinStock,\n        MAX(StockQuantity) OVER() as MaxStock\n    FROM Products p\n)\nSELECT \n    sa.*,\n    CASE \n        WHEN StockQuantity <= @Threshold THEN 'Critical'\n        WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low'\n        ELSE 'Adequate'\n    END as StockStatus,\n    ROUND((StockQuantity / AvgStock) * 100, 2) as StockPercentageOfAverage\nFROM StockAnalysis sa\nWHERE StockQuantity <= @Threshold\nORDER BY StockQuantity",
+      "converted_statement": "WITH StockAnalysis AS (\n    SELECT \n        p.*,\n        AVG(StockQuantity) OVER() as AvgStock,\n        MIN(StockQuantity) OVER() as MinStock,\n        MAX(StockQuantity) OVER() as MaxStock\n    FROM Products p\n)\nSELECT \n    sa.*,\n    CASE \n        WHEN StockQuantity <= @Threshold THEN 'Critical'\n        WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low'\n        ELSE 'Adequate'\n    END as StockStatus,\n    ROUND((StockQuantity / AvgStock) * 100, 2) as StockPercentageOfAverage\nFROM StockAnalysis sa\nWHERE StockQuantity <= @Threshold\nORDER BY StockQuantity",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\n  \"equivalence_status\": \"UNKNOWN\",\n  \"result_details\": \"Z3SqlSolverVerifier stage in formal methods could not prove equivalancy/non-equivalency\",\n  \"validation_method\": \"formal_verification\",\n  \"timestamp\": \"2026-02-03T07:44:34.323782\"\n}",
+      "notes": "Tool returned UNKNOWN status. Per transformation definition, UNKNOWN is marked as ERROR. The statement is syntactically identical (no conversion required) but formal verification could not prove equivalency due to multiple window function complexity."
+    }
+  ],
+  "validation_notes": {
+    "tool_behavior": "The sql-equivalency___validate_sql_equivalence tool returned UNKNOWN for 5 out of 7 statements, primarily for complex queries with CTEs and window functions. Per transformation definition requirements, UNKNOWN results are marked as ERROR.",
+    "equivalent_statements": [
+      "STMT-004 (UpdateProductAsync) - Simple UPDATE with GETDATE() to NOW() conversion",
+      "STMT-005 (DeleteProductAsync) - Simple DELETE with no changes"
+    ],
+    "error_statements": [
+      "STMT-001 (GetAllProductsAsync) - CTE with AVG/COUNT OVER window functions - UNKNOWN from tool",
+      "STMT-002 (GetProductByIdAsync) - CTE with LAG window function - UNKNOWN from tool",
+      "STMT-003 (InsertProductAsync) - INSERT with RETURNING - UNKNOWN from tool",
+      "STMT-006 (GetProductsByPriceRangeAsync) - CTE with RANK/PERCENT_RANK - UNKNOWN from tool",
+      "STMT-007 (GetLowStockProductsAsync) - CTE with AVG/MIN/MAX OVER - UNKNOWN from tool"
+    ],
+    "compliance": "All 7 statement pairs were validated using the SQL Equivalency tool as required. No agent judgment was used to determine equivalency status. All statuses came directly from the tool output.",
+    "manual_review_required": "The 5 statements marked as ERROR (due to UNKNOWN tool response) require manual testing to verify functional equivalence. These statements are syntactically correct PostgreSQL and use identical or equivalent syntax to SQL Server, but the formal verification tool could not prove equivalency.",
+    "recommendation": "Deploy to test environment and perform functional testing on all CRUD operations to validate equivalency empirically."
+  }
+}

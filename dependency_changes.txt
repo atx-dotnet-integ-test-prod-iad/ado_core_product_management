@@ -1,0 +1,116 @@
+=============================================================================
+DEPENDENCY CHANGES LOG
+Date: 2026-02-03
+Project: AdoCore - Product Management System
+File: AdoCore.csproj
+=============================================================================
+
+SUMMARY OF CHANGES
+------------------
+Replaced SQL Server database provider package with PostgreSQL equivalent
+to enable PostgreSQL connectivity for the ADO.NET application.
+
+PACKAGE REMOVED
+---------------
+Package Name: Microsoft.Data.SqlClient
+Version: 5.1.4
+Purpose: SQL Server database provider for ADO.NET
+Removal Reason: Migrating from SQL Server to PostgreSQL
+
+PACKAGE ADDED
+-------------
+Package Name: Npgsql
+Version: 8.0.5
+Purpose: PostgreSQL database provider for ADO.NET
+Installation Status: Successfully restored
+Security: Version 8.0.5 selected to avoid known vulnerabilities in 8.0.0
+
+PACKAGES RETAINED (UNCHANGED)
+------------------------------
+1. Microsoft.Extensions.Configuration v8.0.0
+   - Purpose: Configuration framework
+   - Status: Retained (not database-specific)
+
+2. Microsoft.Extensions.Configuration.Json v8.0.0
+   - Purpose: JSON configuration provider
+   - Status: Retained (not database-specific)
+
+3. Microsoft.Extensions.DependencyInjection v8.0.0
+   - Purpose: Dependency injection framework
+   - Status: Retained (not database-specific)
+
+DEPENDENCY RESOLUTION
+----------------------
+dotnet restore command executed successfully:
+- No dependency conflicts detected
+- All packages resolved from standard NuGet repository
+- Total restore time: ~800ms
+
+SECURITY NOTES
+--------------
+- Initial attempt used Npgsql 8.0.0 which triggered vulnerability warning (GHSA-x9vc-6hfv-hg8c)
+- Updated to Npgsql 8.0.5 to address the known high severity vulnerability
+- No security warnings after upgrading to 8.0.5
+
+NPGSQL COMPATIBILITY
+--------------------
+Npgsql 8.0.5 provides:
+- Full ADO.NET API compatibility (DbConnection, DbCommand, DbDataReader, etc.)
+- Support for PostgreSQL-specific features
+- Parameter binding with @parameter syntax (compatible with existing code)
+- Async/await support for all database operations
+- Transaction management (BeginTransaction, Commit, Rollback)
+- Connection pooling
+- PostgreSQL data type mapping
+- RETURNING clause support
+- Window functions and CTEs (used extensively in this application)
+
+API MAPPING
+-----------
+The following SQL Server ADO.NET classes have Npgsql equivalents:
+- SqlConnection → NpgsqlConnection
+- SqlCommand → NpgsqlCommand
+- SqlDataReader → NpgsqlDataReader
+- SqlParameter → NpgsqlParameter
+- SqlTransaction → NpgsqlTransaction
+- SqlException → NpgsqlException
+
+These class replacements will be performed in Step 6.
+
+VERIFICATION COMMANDS
+---------------------
+1. Check package reference:
+   grep Npgsql AdoCore.csproj
+   Expected: <PackageReference Include="Npgsql" Version="8.0.5" />
+
+2. Verify SQL Server package removed:
+   grep Microsoft.Data.SqlClient AdoCore.csproj
+   Expected: No results
+
+3. Restore packages:
+   dotnet restore
+   Expected: Successful restoration without errors or vulnerability warnings
+
+NEXT STEPS
+----------
+- Step 6: Update all ADO.NET class references in ProductRepository.cs
+  * Replace using Microsoft.Data.SqlClient with using Npgsql
+  * Replace SqlConnection with NpgsqlConnection
+  * Replace SqlCommand with NpgsqlCommand
+  * Replace SqlDataReader with NpgsqlDataReader
+  * Restructure transaction statements (STMT-003, STMT-004, STMT-005)
+  
+- Step 7: Update connection strings in appsettings.json
+  * Transform SQL Server connection string format to PostgreSQL format
+  * Update authentication parameters
+
+- Step 8: Final build and verification
+  * Compile with Npgsql references
+  * Verify no SQL Server dependencies remain
+  * Generate comprehensive migration report
+
+PROJECT BUILD STATUS
+--------------------
+Status: Dependencies updated successfully
+Next Build: Will occur after Step 6 (ADO.NET class updates)
+Expected: Compilation errors until SqlConnection/SqlCommand are replaced with Npgsql equivalents

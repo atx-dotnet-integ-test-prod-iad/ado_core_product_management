@@ -1,0 +1,231 @@
+=============================================================================
+CONNECTION STRING MIGRATION LOG
+Date: 2026-02-03
+Project: AdoCore - Product Management System
+File: appsettings.json
+=============================================================================
+
+SUMMARY OF CHANGES
+------------------
+Transformed connection strings from SQL Server format to PostgreSQL format,
+updating authentication mechanisms and removing SQL Server-specific parameters.
+
+ORIGINAL SQL SERVER CONNECTION STRINGS
+---------------------------------------
+DevConnection:
+"Server=localhost;Database=ProductManagement;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True"
+
+ProdConnection:
+"Server=localhost;Database=ProductManagement;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True"
+
+CONVERTED POSTGRESQL CONNECTION STRINGS
+----------------------------------------
+DevConnection:
+"Host=localhost;Port=5432;Database=ProductManagement;Username=postgres;Password=postgres;Pooling=true;"
+
+ProdConnection:
+"Host=localhost;Port=5432;Database=ProductManagement;Username=postgres;Password=postgres;Pooling=true;"
+
+PARAMETER MAPPING
+-----------------
+SQL Server Parameter → PostgreSQL Parameter
+
+1. Server=localhost → Host=localhost
+   Explanation: PostgreSQL uses "Host" instead of "Server"
+
+2. Database=ProductManagement → Database=ProductManagement
+   Explanation: Unchanged, both databases use the same parameter name
+
+3. Trusted_Connection=True → Username=postgres;Password=postgres
+   Explanation: PostgreSQL doesn't support Windows integrated authentication
+   Changed to username/password authentication
+
+4. MultipleActiveResultSets=true → REMOVED
+   Explanation: Not applicable to PostgreSQL, which handles multiple result sets differently
+
+5. TrustServerCertificate=True → REMOVED (for development)
+   Explanation: PostgreSQL uses different SSL configuration
+   For production, use "SSL Mode=Require" parameter
+
+6. (NEW) Port=5432
+   Explanation: Explicitly specify PostgreSQL default port
+
+7. (NEW) Pooling=true
+   Explanation: Enable connection pooling for better performance
+
+POSTGRESQL-SPECIFIC ADDITIONS
+------------------------------
+1. Port Parameter:
+   - Value: 5432
+   - Purpose: Default PostgreSQL port
+   - Note: Can be omitted if using default port
+
+2. Pooling Parameter:
+   - Value: true
+   - Purpose: Enable connection pooling
+   - Benefits: Reuses connections, improves performance, reduces connection overhead
+
+3. SSL Mode (Production Only):
+   - Value: Require
+   - Purpose: Enforce SSL/TLS encryption for database connections
+   - Security: Critical for production deployments
+   - Note: Not added to DevConnection to simplify local development
+
+AUTHENTICATION CHANGES
+-----------------------
+From: Windows Integrated Authentication (Trusted_Connection=True)
+To: Username/Password Authentication (Username=postgres;Password=postgres)
+
+Reasoning:
+- PostgreSQL on Linux doesn't support Windows integrated authentication
+- Username/password is the most common PostgreSQL authentication method
+- Alternative methods (peer, md5, scram-sha-256) can be configured in pg_hba.conf
+
+Default Credentials Used:
+- Username: postgres (default PostgreSQL superuser)
+- Password: postgres (placeholder for development)
+
+SECURITY CONSIDERATIONS
+-----------------------
+CRITICAL - ACTION REQUIRED:
+
+1. Development Environment:
+   - Current: Password=postgres (placeholder)
+   - Action: Replace with a development-specific password
+   - Alternative: Use environment variable for password
+
+2. Production Environment:
+   - Current: Password=postgres (INSECURE)
+   - Action: IMMEDIATELY replace with a strong, unique password
+   - Recommendation: Use environment variables or secure configuration management
+   - Example: Password=${POSTGRES_PASSWORD}
+
+3. SSL Configuration:
+   - Development: SSL not enforced (for ease of setup)
+   - Production: SSL Mode=Require should be added
+   - Note: Requires PostgreSQL server to be configured with SSL certificates
+
+4. Connection String Security:
+   - Do NOT commit production passwords to source control
+   - Use Azure Key Vault, AWS Secrets Manager, or similar services
+   - Use environment variables for sensitive configuration
+   - Rotate passwords regularly
+
+5. Least Privilege Principle:
+   - Do NOT use "postgres" superuser account for applications
+   - Create dedicated application user with limited permissions
+   - Example: Username=adocore_app;Password=${APP_PASSWORD}
+   - Grant only required permissions (SELECT, INSERT, UPDATE, DELETE on specific tables)
+
+ENVIRONMENT VARIABLE CONFIGURATION
+-----------------------------------
+Recommended approach for production:
+
+appsettings.json:
+{
+  "ConnectionStrings": {
+    "ProdConnection": "Host=${DB_HOST};Port=${DB_PORT};Database=${DB_NAME};Username=${DB_USER};Password=${DB_PASSWORD};Pooling=true;SSL Mode=Require;"
+  }
+}
+
+Environment Variables:
+- DB_HOST=your-postgres-server.com
+- DB_PORT=5432
+- DB_NAME=ProductManagement
+- DB_USER=adocore_app
+- DB_PASSWORD=<strong-secure-password>
+
+POSTGRESQL pg_hba.conf CONFIGURATION
+-------------------------------------
+Server-side authentication configuration required:
+
+For password authentication:
+host    ProductManagement    postgres    0.0.0.0/0    md5
+
+For SCRAM-SHA-256 (recommended):
+host    ProductManagement    postgres    0.0.0.0/0    scram-sha-256
+
+For SSL-required connections:
+hostssl ProductManagement    postgres    0.0.0.0/0    scram-sha-256
+
+Note: Restart PostgreSQL after modifying pg_hba.conf
+
+CONNECTION POOLING PARAMETERS
+------------------------------
+Additional pooling parameters that can be added:
+
+"Pooling=true;Minimum Pool Size=1;Maximum Pool Size=100;Connection Lifetime=0;Connection Timeout=15;"
+
+Parameters:
+- Pooling: Enable/disable connection pooling (default: true)
+- Minimum Pool Size: Minimum connections in pool (default: 1)
+- Maximum Pool Size: Maximum connections in pool (default: 100)
+- Connection Lifetime: Max lifetime of connection in seconds (0 = unlimited)
+- Connection Timeout: Seconds to wait for connection (default: 15)
+
+Current Configuration:
+- Pooling: Enabled (Pooling=true)
+- Other parameters: Using defaults
+
+OPTIONAL POSTGRESQL PARAMETERS
+-------------------------------
+Additional parameters that can be added to connection string:
+
+1. Timeout=30
+   - Command execution timeout in seconds
+
+2. CommandTimeout=30
+   - Backward compatibility for Timeout
+
+3. Keepalive=30
+   - TCP keepalive interval in seconds
+
+4. ApplicationName=AdoCore
+   - Identifies application in PostgreSQL logs
+
+5. SearchPath=public
+   - Default schema for queries
+
+6. Timezone=UTC
+   - Default timezone for connections
+
+7. Encoding=UTF8
+   - Character encoding (usually auto-detected)
+
+Example Enhanced Connection String:
+"Host=localhost;Port=5432;Database=ProductManagement;Username=postgres;Password=postgres;Pooling=true;Application Name=AdoCore;Timeout=30;Keepalive=30;"
+
+VERIFICATION COMMANDS
+---------------------
+1. Check connection string format:
+   cat appsettings.json | jq '.ConnectionStrings'
+
+2. Test connection (requires psql client):
+   psql -h localhost -p 5432 -U postgres -d ProductManagement
+
+3. Verify in application (after deployment):
+   - Application should connect successfully
+   - Check logs for connection pool statistics
+   - Monitor connection count in PostgreSQL
+
+NEXT STEPS
+----------
+1. Replace placeholder passwords with secure passwords
+2. Test database connectivity with new connection strings
+3. Verify connection pooling behavior
+4. Configure PostgreSQL server pg_hba.conf for authentication
+5. Set up SSL certificates for production (if using SSL Mode=Require)
+6. Implement environment variable-based configuration for production
+7. Test application CRUD operations against PostgreSQL database
+
+ROLLBACK INFORMATION
+--------------------
+To rollback to SQL Server connection strings:
+
+DevConnection:
+"Server=localhost;Database=ProductManagement;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True"
+
+ProdConnection:
+"Server=localhost;Database=ProductManagement;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True"
+
+Note: Also requires reverting package changes and ADO.NET class changes
