@@ -1,0 +1,12 @@
+{
+  "ConnectionStrings": {
+    "DevConnection": "Host=localhost;Database=ProductManagement;Username=postgres;Password=YOUR_LOCAL_PASSWORD;Port=5432;Pooling=true;Timeout=30"
+  },
+  "Environment": "Development",
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft": "Warning"
+    }
+  }
+}
