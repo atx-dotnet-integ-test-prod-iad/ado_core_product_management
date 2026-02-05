@@ -1,0 +1,140 @@
+{
+  "conversion_summary": {
+    "total_statements": 7,
+    "dms_tool_attempted": 7,
+    "dms_tool_successful": 0,
+    "dms_tool_failed": 7,
+    "manual_conversion_required": 7,
+    "conversion_date": "2026-02-04T23:30:00Z"
+  },
+  "statements": [
+    {
+      "statement_id": 1,
+      "method": "GetAllProductsAsync",
+      "type": "SELECT with CTE and Window Functions",
+      "dms_status": "FAILURE",
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_timestamp": "2026-02-04T23:28:50.313100",
+      "manual_conversion_applied": true,
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "conversion_notes": "DMS tool failed. Manual review shows query is PostgreSQL compatible. No changes required - CTEs, AVG OVER(), COUNT OVER(), CASE expressions, and ROUND() are all supported in PostgreSQL.",
+      "t_sql_syntax_converted": [],
+      "postgresql_differences": "None - fully compatible syntax"
+    },
+    {
+      "statement_id": 2,
+      "method": "GetProductByIdAsync",
+      "type": "SELECT with CTE and LAG Window Function",
+      "dms_status": "FAILURE",
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_timestamp": "2026-02-04T23:29:04.231881",
+      "manual_conversion_applied": true,
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "conversion_notes": "DMS tool failed. Manual review shows LAG() window function is PostgreSQL compatible. @ProductId parameter will be handled by Npgsql ADO.NET driver. No changes required.",
+      "t_sql_syntax_converted": [],
+      "postgresql_differences": "None - LAG function and parameter syntax handled by ADO.NET"
+    },
+    {
+      "statement_id": 3,
+      "method": "InsertProductAsync",
+      "type": "Multi-statement Transaction Block with INSERT",
+      "dms_status": "FAILURE",
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_timestamp": "2026-02-04T23:29:21.445954",
+      "manual_conversion_applied": true,
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "conversion_notes": "DMS tool failed. Manual conversion required significant changes: (1) SCOPE_IDENTITY() converted to RETURNING clause, (2) GETDATE() converted to CURRENT_TIMESTAMP, (3) T-SQL transaction syntax converted to PostgreSQL DO block structure. Recommended approach: split into separate statements with RETURNING clause for ProductId.",
+      "t_sql_syntax_converted": [
+        "SCOPE_IDENTITY() -> RETURNING ProductId",
+        "GETDATE() -> CURRENT_TIMESTAMP",
+        "BEGIN TRANSACTION/COMMIT -> PostgreSQL transaction handling",
+        "DECLARE @NewProductId -> separate statements with RETURNING"
+      ],
+      "postgresql_differences": "Significant - requires restructuring for RETURNING clause and timestamp functions"
+    },
+    {
+      "statement_id": 4,
+      "method": "UpdateProductAsync",
+      "type": "Multi-statement Transaction Block with UPDATE",
+      "dms_status": "FAILURE",
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_timestamp": "2026-02-04T23:29:36.807091",
+      "manual_conversion_applied": true,
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "conversion_notes": "DMS tool failed. Manual conversion applied: (1) DECLARE syntax changed from @variable to v_variable, (2) GETDATE() converted to CURRENT_TIMESTAMP, (3) BEGIN TRANSACTION/COMMIT will be handled at application code level with Npgsql transactions, (4) Converted to PostgreSQL DO block structure.",
+      "t_sql_syntax_converted": [
+        "DECLARE @OldPrice -> DECLARE v_OldPrice",
+        "DECLARE @OldStock -> DECLARE v_OldStock",
+        "GETDATE() -> CURRENT_TIMESTAMP (3 occurrences)",
+        "BEGIN TRANSACTION/COMMIT -> DO block"
+      ],
+      "postgresql_differences": "Moderate - variable naming and timestamp function changes"
+    },
+    {
+      "statement_id": 5,
+      "method": "DeleteProductAsync",
+      "type": "Multi-statement Transaction Block with DELETE",
+      "dms_status": "FAILURE",
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_timestamp": "2026-02-04T23:29:50.644927",
+      "manual_conversion_applied": true,
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "conversion_notes": "DMS tool failed. Manual conversion applied: (1) DECLARE syntax changed from @variable to v_variable, (2) GETDATE() converted to CURRENT_TIMESTAMP, (3) BEGIN TRANSACTION/COMMIT will be handled at application code level, (4) Converted to PostgreSQL DO block structure. CASE expression for AveragePrice calculation is PostgreSQL compatible.",
+      "t_sql_syntax_converted": [
+        "DECLARE @OldPrice -> DECLARE v_OldPrice",
+        "DECLARE @OldStock -> DECLARE v_OldStock",
+        "GETDATE() -> CURRENT_TIMESTAMP (3 occurrences)",
+        "BEGIN TRANSACTION/COMMIT -> DO block"
+      ],
+      "postgresql_differences": "Moderate - variable naming and timestamp function changes"
+    },
+    {
+      "statement_id": 6,
+      "method": "GetProductsByPriceRangeAsync",
+      "type": "SELECT with CTE, RANK and PERCENT_RANK Window Functions",
+      "dms_status": "FAILURE",
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_timestamp": "2026-02-04T23:30:04.215839",
+      "manual_conversion_applied": true,
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "conversion_notes": "DMS tool failed. Manual review shows query is PostgreSQL compatible. RANK() and PERCENT_RANK() window functions are standard SQL and fully supported in PostgreSQL. @MinPrice and @MaxPrice parameters handled by Npgsql. No changes required.",
+      "t_sql_syntax_converted": [],
+      "postgresql_differences": "None - fully compatible syntax"
+    },
+    {
+      "statement_id": 7,
+      "method": "GetLowStockProductsAsync",
+      "type": "SELECT with CTE and Aggregate Window Functions",
+      "dms_status": "FAILURE",
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_timestamp": "2026-02-04T23:30:21.810177",
+      "manual_conversion_applied": true,
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "conversion_notes": "DMS tool failed. Manual review shows query is PostgreSQL compatible. AVG(), MIN(), MAX() window functions with OVER() clause are fully supported. CASE expression and ROUND() function are compatible. @Threshold parameter handled by Npgsql. No changes required.",
+      "t_sql_syntax_converted": [],
+      "postgresql_differences": "None - fully compatible syntax"
+    }
+  ],
+  "dms_tool_details": {
+    "migration_project_identifier": "arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU",
+    "database_name": "ProductManagement",
+    "schema_name": "dbo",
+    "region": "us-east-1",
+    "server_name": "172.31.94.132",
+    "common_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+    "error_analysis": "All 7 statements encountered the same metadata model creation error during DMS tool processing. This appears to be a service-level issue preventing the DMS tool from creating the necessary metadata model to perform conversions. As per the transformation definition guidelines, manual conversion was applied after DMS tool attempts were documented."
+  },
+  "manual_conversion_approach": {
+    "methodology": "PostgreSQL compatibility analysis and T-SQL syntax transformation",
+    "key_conversions": [
+      "SCOPE_IDENTITY() replaced with RETURNING clause pattern",
+      "GETDATE() replaced with CURRENT_TIMESTAMP",
+      "T-SQL variable declarations (@var) converted to PostgreSQL style (v_var) in DO blocks",
+      "BEGIN TRANSACTION/COMMIT blocks converted to PostgreSQL transaction handling or DO blocks",
+      "Verified PostgreSQL compatibility of window functions (LAG, RANK, PERCENT_RANK, AVG OVER, etc.)",
+      "Parameter binding (@param) remains unchanged as Npgsql ADO.NET driver handles conversion"
+    ],
+    "validation_required": true,
+    "equivalency_testing_required": true
+  }
+}
