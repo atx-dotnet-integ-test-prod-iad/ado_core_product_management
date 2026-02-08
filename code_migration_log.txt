@@ -1,0 +1,46 @@
+# Code Migration Log: ADO.NET Classes
+
+## ADO.NET Class Replacements in ProductRepository.cs
+
+### Class Replacements Summary
+1. **SqlConnection → NpgsqlConnection** (3 occurrences)
+   - Field declaration: `private NpgsqlConnection _connection;`
+   - GetConnectionAsync return type: `Task<NpgsqlConnection>`
+   - ExecuteInTransactionAsync usage
+
+2. **SqlCommand → NpgsqlCommand** (7 occurrences)
+   - GetAllProductsAsync: 1 usage
+   - GetProductByIdAsync: 1 usage
+   - InsertProductAsync: 1 usage
+   - UpdateProductAsync: 1 usage
+   - DeleteProductAsync: 1 usage
+   - GetProductsByPriceRangeAsync: 1 usage
+   - GetLowStockProductsAsync: 1 usage
+
+3. **SqlDataReader → NpgsqlDataReader** (1 occurrence)
+   - MapProductFromReader method parameter
+
+4. **SqlParameter → NpgsqlParameter** (0 explicit occurrences)
+   - Parameters added using AddWithValue method (type-agnostic)
+
+### Transaction Handling
+- Transaction handling remains compatible
+- BeginTransactionAsync, CommitAsync, RollbackAsync methods work with Npgsql
+
+### Parameter Binding
+- @ parameter syntax maintained (compatible with Npgsql)
+- AddWithValue method compatible with Npgsql
+
+### Connection Management
+- Connection state checking remains compatible
+- Async methods (OpenAsync, CloseAsync, DisposeAsync) remain compatible
+
+### Verification Results
+- SqlConnection references: 0 (all converted)
+- SqlCommand references: 0 (all converted)
+- SqlDataReader references: 0 (all converted)
+- NpgsqlConnection references: 3 ✓
+- NpgsqlCommand references: 7 ✓
+- NpgsqlDataReader references: 1 ✓
+
+## Date: 2026-02-08
