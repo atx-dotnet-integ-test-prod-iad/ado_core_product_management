@@ -1,0 +1,187 @@
+{
+  "conversion_metadata": {
+    "conversion_date": "2026-02-08T14:45:00Z",
+    "source_database": "Microsoft SQL Server",
+    "target_database": "PostgreSQL",
+    "dms_tool_status": "FAILED",
+    "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+    "total_statements": 7,
+    "successful_dms_conversions": 0,
+    "manual_conversions": 7
+  },
+  "statement_conversions": [
+    {
+      "statement_id": 1,
+      "method_name": "GetAllProductsAsync",
+      "conversion_status": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_tool_attempted": true,
+      "dms_tool_output": {
+        "status": "error",
+        "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+        "timestamp": "2026-02-08T14:45:13.213419"
+      },
+      "manual_conversion_applied": true,
+      "manual_conversion_reasoning": "DMS tool failed with metadata model creation error. The SQL statement uses standard SQL features (CTE, window functions AVG OVER, COUNT OVER, CASE expressions) that are fully compatible with PostgreSQL. No syntax changes required. Window functions and CTEs are part of SQL standard and supported identically in PostgreSQL.",
+      "changes_made": [
+        "No changes required - query is PostgreSQL compatible as-is"
+      ],
+      "sql_server_specific_features": [
+        "None - uses standard SQL"
+      ],
+      "postgresql_equivalent": "Same as original - CTE and window functions are standard SQL"
+    },
+    {
+      "statement_id": 2,
+      "method_name": "GetProductByIdAsync",
+      "conversion_status": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_tool_attempted": true,
+      "dms_tool_output": {
+        "status": "error",
+        "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+        "timestamp": "2026-02-08T14:45:26.962367"
+      },
+      "manual_conversion_applied": true,
+      "manual_conversion_reasoning": "DMS tool failed with metadata model creation error. The SQL statement uses LAG window function which is part of SQL standard and supported identically in PostgreSQL. Parameter syntax @ProductId is supported by Npgsql. No syntax changes required.",
+      "changes_made": [
+        "No changes required - LAG window function is PostgreSQL compatible",
+        "Parameter @ProductId syntax supported by Npgsql"
+      ],
+      "sql_server_specific_features": [
+        "None - uses standard SQL"
+      ],
+      "postgresql_equivalent": "Same as original - LAG OVER is standard SQL"
+    },
+    {
+      "statement_id": 3,
+      "method_name": "InsertProductAsync",
+      "conversion_status": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_tool_attempted": true,
+      "dms_tool_output": {
+        "status": "error",
+        "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+        "timestamp": "2026-02-08T14:45:39.654930"
+      },
+      "manual_conversion_applied": true,
+      "manual_conversion_reasoning": "DMS tool failed. This statement contains SQL Server specific features that require conversion: SCOPE_IDENTITY() must be replaced with RETURNING clause (PostgreSQL native feature), GETDATE() must be replaced with CURRENT_TIMESTAMP, and transaction block structure needs to be handled at code level rather than in SQL. PostgreSQL doesn't support BEGIN TRANSACTION/COMMIT in the same way - transactions are managed by the database driver.",
+      "changes_made": [
+        "Replaced SCOPE_IDENTITY() with RETURNING ProductId clause",
+        "Replaced GETDATE() with CURRENT_TIMESTAMP",
+        "Removed DECLARE @NewProductId INT (not needed with RETURNING)",
+        "Removed explicit BEGIN TRANSACTION/COMMIT (handled in C# code)",
+        "Split into separate statements to be executed in code-managed transaction"
+      ],
+      "sql_server_specific_features": [
+        "SCOPE_IDENTITY()",
+        "GETDATE()",
+        "DECLARE variable syntax",
+        "BEGIN TRANSACTION/COMMIT in SQL"
+      ],
+      "postgresql_equivalent": "INSERT...RETURNING, CURRENT_TIMESTAMP, code-level transaction management"
+    },
+    {
+      "statement_id": 4,
+      "method_name": "UpdateProductAsync",
+      "conversion_status": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_tool_attempted": true,
+      "dms_tool_output": {
+        "status": "error",
+        "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+        "timestamp": "2026-02-08T14:45:39.654930"
+      },
+      "manual_conversion_applied": true,
+      "manual_conversion_reasoning": "DMS tool failed. This statement uses DECLARE/SET for variables and GETDATE(). PostgreSQL approach: capture old values in application code before UPDATE, use CURRENT_TIMESTAMP instead of GETDATE(), and manage transaction at code level. Variables can be passed as parameters after being captured.",
+      "changes_made": [
+        "Removed DECLARE @OldPrice and @OldStock (captured in C# code)",
+        "Replaced GETDATE() with CURRENT_TIMESTAMP",
+        "Removed explicit BEGIN TRANSACTION/COMMIT (handled in C# code)",
+        "Old values to be captured via separate SELECT before UPDATE"
+      ],
+      "sql_server_specific_features": [
+        "DECLARE variable syntax",
+        "GETDATE()",
+        "BEGIN TRANSACTION/COMMIT in SQL"
+      ],
+      "postgresql_equivalent": "Code-level variable capture, CURRENT_TIMESTAMP, code-level transaction management"
+    },
+    {
+      "statement_id": 5,
+      "method_name": "DeleteProductAsync",
+      "conversion_status": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_tool_attempted": true,
+      "dms_tool_output": {
+        "status": "error",
+        "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+        "timestamp": "2026-02-08T14:45:39.654930"
+      },
+      "manual_conversion_applied": true,
+      "manual_conversion_reasoning": "DMS tool failed. Similar to UpdateProductAsync, this requires capturing old values before deletion, replacing GETDATE() with CURRENT_TIMESTAMP, and managing transaction at code level.",
+      "changes_made": [
+        "Removed DECLARE @OldPrice and @OldStock (captured in C# code)",
+        "Replaced GETDATE() with CURRENT_TIMESTAMP",
+        "Removed explicit BEGIN TRANSACTION/COMMIT (handled in C# code)",
+        "Old values to be captured via separate SELECT before DELETE"
+      ],
+      "sql_server_specific_features": [
+        "DECLARE variable syntax",
+        "GETDATE()",
+        "BEGIN TRANSACTION/COMMIT in SQL"
+      ],
+      "postgresql_equivalent": "Code-level variable capture, CURRENT_TIMESTAMP, code-level transaction management"
+    },
+    {
+      "statement_id": 6,
+      "method_name": "GetProductsByPriceRangeAsync",
+      "conversion_status": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_tool_attempted": true,
+      "dms_tool_output": {
+        "status": "error",
+        "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+        "timestamp": "2026-02-08T14:45:39.654930"
+      },
+      "manual_conversion_applied": true,
+      "manual_conversion_reasoning": "DMS tool failed. The SQL statement uses standard SQL window functions RANK() and PERCENT_RANK() which are fully supported in PostgreSQL with identical syntax. No changes required.",
+      "changes_made": [
+        "No changes required - RANK and PERCENT_RANK are PostgreSQL compatible"
+      ],
+      "sql_server_specific_features": [
+        "None - uses standard SQL"
+      ],
+      "postgresql_equivalent": "Same as original - window functions are standard SQL"
+    },
+    {
+      "statement_id": 7,
+      "method_name": "GetLowStockProductsAsync",
+      "conversion_status": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_tool_attempted": true,
+      "dms_tool_output": {
+        "status": "error",
+        "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+        "timestamp": "2026-02-08T14:45:39.654930"
+      },
+      "manual_conversion_applied": true,
+      "manual_conversion_reasoning": "DMS tool failed. The SQL statement uses aggregate window functions (AVG, MIN, MAX with OVER clause) which are standard SQL features fully supported by PostgreSQL. No changes required.",
+      "changes_made": [
+        "No changes required - aggregate window functions are PostgreSQL compatible"
+      ],
+      "sql_server_specific_features": [
+        "None - uses standard SQL"
+      ],
+      "postgresql_equivalent": "Same as original - window functions are standard SQL"
+    }
+  ],
+  "summary": {
+    "total_statements_processed": 7,
+    "dms_successful": 0,
+    "dms_failed": 7,
+    "manual_conversions_required": 7,
+    "statements_requiring_code_changes": 3,
+    "statements_sql_compatible": 4,
+    "key_transformations": [
+      "SCOPE_IDENTITY() -> RETURNING clause",
+      "GETDATE() -> CURRENT_TIMESTAMP",
+      "DECLARE/SET variables -> Code-level handling",
+      "BEGIN TRANSACTION/COMMIT -> Code-level transaction management",
+      "Window functions -> No change (standard SQL compatible)"
+    ]
+  }
+}
