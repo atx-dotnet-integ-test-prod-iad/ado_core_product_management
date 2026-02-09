@@ -1,0 +1,405 @@
+/*******************************************************************************
+ * DMS MCP TOOL CONVERSION LOG
+ * Date: 2026-02-09
+ * Migration: Microsoft SQL Server to PostgreSQL
+ * DMS Tool: dms-mcp____statement_conversion_tool
+ * 
+ * This log documents all DMS MCP tool invocations and their results.
+ ******************************************************************************/
+
+================================================================================
+STATEMENT #1: GetAllProductsAsync - CTE with Window Functions
+================================================================================
+DMS Tool Invocation Timestamp: 2026-02-09T15:27:32.546402
+Schema Name: dbo
+Database Name: ProductManagement
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+
+Original SQL:
+WITH ProductStats AS (
+    SELECT 
+        ProductId,
+        AVG(Price) OVER() as AvgPrice,
+        COUNT(*) OVER() as TotalProducts
+    FROM Products
+)
+SELECT 
+    p.ProductId,
+    p.Name,
+    p.Description,
+    p.Price,
+    p.StockQuantity,
+    p.CreatedDate,
+    p.ModifiedDate,
+    CASE 
+        WHEN p.Price > ps.AvgPrice THEN 'Above Average'
+        WHEN p.Price < ps.AvgPrice THEN 'Below Average'
+        ELSE 'Average'
+    END as PriceCategory,
+    ROUND((p.Price / ps.AvgPrice) * 100, 2) as PricePercentageOfAverage
+FROM Products p
+INNER JOIN ProductStats ps ON p.ProductId = ps.ProductId
+ORDER BY 
+    CASE 
+        WHEN p.Price > ps.AvgPrice THEN 1
+        ELSE 2
+    END,
+    p.Name
+
+DMS Tool Status: ERROR
+DMS Tool Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Error Timestamp: 2026-02-09T15:27:37.124780
+
+Workflow Steps:
+- create_metadata_model: started at 2026-02-09T15:27:35.102061
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Manual Conversion Reasoning:
+- DMS tool failed due to metadata model creation error
+- The query uses standard SQL syntax that is PostgreSQL compatible
+- Window functions (AVG, COUNT) are supported in PostgreSQL
+- CTE syntax is identical between SQL Server and PostgreSQL
+- CASE expressions are compatible
+- Only minor adjustments needed for ROUND function (PostgreSQL uses :: for casting)
+- Parameter syntax remains the same (@param works in Npgsql with AddWithValue)
+
+================================================================================
+STATEMENT #2: GetProductByIdAsync - CTE with LAG Window Function
+================================================================================
+DMS Tool Invocation Timestamp: 2026-02-09T15:27:53.074392
+Schema Name: dbo
+Database Name: ProductManagement
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+
+Original SQL:
+WITH ProductHistory AS (
+    SELECT 
+        ProductId,
+        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,
+        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock
+    FROM Products
+    WHERE ProductId = @ProductId
+)
+SELECT 
+    p.ProductId,
+    p.Name,
+    p.Description,
+    p.Price,
+    p.StockQuantity,
+    p.CreatedDate,
+    p.ModifiedDate,
+    ph.PreviousPrice,
+    ph.PreviousStock,
+    CASE 
+        WHEN ph.PreviousPrice IS NOT NULL THEN 
+            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)
+        ELSE NULL
+    END as PriceChangePercentage
+FROM Products p
+LEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId
+WHERE p.ProductId = @ProductId
+
+DMS Tool Status: ERROR
+DMS Tool Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Error Timestamp: 2026-02-09T15:27:57.475046
+
+Workflow Steps:
+- create_metadata_model: started at 2026-02-09T15:27:55.254427
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Manual Conversion Reasoning:
+- DMS tool failed due to metadata model creation error
+- LAG window function is fully supported in PostgreSQL
+- CTE syntax is identical
+- LEFT JOIN is compatible
+- CASE expressions are compatible
+- Parameter @ProductId is compatible with Npgsql
+- No SQL Server specific syntax in this query
+
+================================================================================
+STATEMENT #3: InsertProductAsync - Multi-Statement Transaction
+================================================================================
+DMS Tool Invocation Timestamp: 2026-02-09T15:28:08.398510
+Schema Name: dbo
+Database Name: ProductManagement
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+
+Original SQL:
+DECLARE @NewProductId INT;
+
+BEGIN TRANSACTION;
+    INSERT INTO Products (Name, Description, Price, StockQuantity)
+    VALUES (@Name, @Description, @Price, @StockQuantity);
+    
+    SET @NewProductId = SCOPE_IDENTITY();
+    
+    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+    VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, GETDATE());
+    
+    UPDATE ProductStats
+    SET 
+        TotalProducts = TotalProducts + 1,
+        AveragePrice = (AveragePrice * TotalProducts + @Price) / (TotalProducts + 1),
+        LastUpdated = GETDATE()
+    WHERE StatId = 1;
+COMMIT;
+
+SELECT @NewProductId;
+
+DMS Tool Status: ERROR
+DMS Tool Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Error Timestamp: 2026-02-09T15:28:12.986311
+
+Workflow Steps:
+- create_metadata_model: started at 2026-02-09T15:28:10.563191
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Manual Conversion Reasoning:
+- DMS tool failed due to metadata model creation error
+- SCOPE_IDENTITY() needs to be replaced with RETURNING clause in PostgreSQL
+- GETDATE() needs to be replaced with NOW() or CURRENT_TIMESTAMP
+- DECLARE and SET variable syntax needs to be removed (use RETURNING instead)
+- BEGIN TRANSACTION/COMMIT is compatible but explicit transaction in code is better
+- Will restructure to use INSERT ... RETURNING for the product ID
+- Transaction handling will be managed by application code (existing ExecuteInTransactionAsync)
+
+================================================================================
+STATEMENT #4: UpdateProductAsync - Transaction with Variables
+================================================================================
+DMS Tool Invocation Timestamp: 2026-02-09T15:59:43.599853
+Schema Name: dbo
+Database Name: ProductManagement
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+
+Original SQL:
+BEGIN TRANSACTION;
+    -- Store old values for history
+    DECLARE @OldPrice DECIMAL(18,2);
+    DECLARE @OldStock INT;
+    
+    SELECT @OldPrice = Price, @OldStock = StockQuantity
+    FROM Products
+    WHERE ProductId = @ProductId;
+    
+    -- Update the product
+    UPDATE Products
+    SET 
+        Name = @Name,
+        Description = @Description,
+        Price = @Price,
+        StockQuantity = @StockQuantity,
+        ModifiedDate = GETDATE()
+    WHERE ProductId = @ProductId;
+    
+    -- Log the changes
+    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+    VALUES (@ProductId, 'UPDATE', @OldPrice, @Price, @OldStock, @StockQuantity, GETDATE());
+    
+    -- Update product statistics
+    UPDATE ProductStats
+    SET 
+        AveragePrice = (AveragePrice * TotalProducts - @OldPrice + @Price) / TotalProducts,
+        LastUpdated = GETDATE()
+    WHERE StatId = 1;
+COMMIT;
+
+DMS Tool Status: ERROR
+DMS Tool Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Error Timestamp: 2026-02-09T15:59:48.049770
+
+Workflow Steps:
+- create_metadata_model: started at 2026-02-09T15:59:45.983449
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Manual Conversion Reasoning:
+- DMS tool failed due to metadata model creation error (same as statements #1-3)
+- Statement uses DECLARE variables, GETDATE(), and transactions
+- Will convert DECLARE/SET to CTE or subqueries where possible
+- GETDATE() will be converted to NOW() or CURRENT_TIMESTAMP
+- Transaction will be managed by application code
+
+================================================================================
+STATEMENT #5: DeleteProductAsync - Transaction with DELETE
+================================================================================
+DMS Tool Invocation Timestamp: 2026-02-09T15:59:48.943617
+Schema Name: dbo
+Database Name: ProductManagement
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+
+Original SQL:
+BEGIN TRANSACTION;
+    -- Store product info for history
+    DECLARE @OldPrice DECIMAL(18,2);
+    DECLARE @OldStock INT;
+    
+    SELECT @OldPrice = Price, @OldStock = StockQuantity
+    FROM Products
+    WHERE ProductId = @ProductId;
+    
+    -- Log the deletion
+    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+    VALUES (@ProductId, 'DELETE', @OldPrice, NULL, @OldStock, NULL, GETDATE());
+    
+    -- Delete the product
+    DELETE FROM Products 
+    WHERE ProductId = @ProductId;
+    
+    -- Update product statistics
+    UPDATE ProductStats
+    SET 
+        TotalProducts = TotalProducts - 1,
+        AveragePrice = CASE 
+            WHEN TotalProducts > 1 
+            THEN (AveragePrice * TotalProducts - @OldPrice) / (TotalProducts - 1)
+            ELSE 0
+        END,
+        LastUpdated = GETDATE()
+    WHERE StatId = 1;
+COMMIT;
+
+DMS Tool Status: ERROR
+DMS Tool Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Error Timestamp: 2026-02-09T15:59:53.111088
+
+Workflow Steps:
+- create_metadata_model: started at 2026-02-09T15:59:51.148219
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Manual Conversion Reasoning:
+- DMS tool failed due to metadata model creation error (same as statements #1-4)
+- Statement uses DECLARE variables, GETDATE(), CASE in UPDATE
+- Will convert to use CTEs or subqueries to capture old values
+- GETDATE() will be converted to NOW() or CURRENT_TIMESTAMP
+- Transaction managed by application code
+
+================================================================================
+STATEMENT #6: GetProductsByPriceRangeAsync - RANK Window Functions
+================================================================================
+DMS Tool Invocation Timestamp: 2026-02-09T15:59:54.011998
+Schema Name: dbo
+Database Name: ProductManagement
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+
+Original SQL:
+WITH RankedProducts AS (
+    SELECT 
+        p.*,
+        RANK() OVER (ORDER BY p.Price) as PriceRank,
+        PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile
+    FROM Products p
+    WHERE p.Price BETWEEN @MinPrice AND @MaxPrice
+)
+SELECT 
+    rp.*,
+    CASE 
+        WHEN rp.PricePercentile <= 0.25 THEN 'Budget'
+        WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range'
+        ELSE 'Premium'
+    END as PriceSegment
+FROM RankedProducts rp
+ORDER BY rp.PriceRank;
+
+DMS Tool Status: ERROR
+DMS Tool Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Error Timestamp: 2026-02-09T15:59:58.196096
+
+Workflow Steps:
+- create_metadata_model: started at 2026-02-09T15:59:56.195948
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Manual Conversion Reasoning:
+- DMS tool failed due to metadata model creation error (same as all previous statements)
+- RANK() and PERCENT_RANK() are standard SQL window functions supported in PostgreSQL
+- CTE syntax is identical
+- BETWEEN clause is compatible
+- CASE expressions are compatible
+- No SQL Server specific syntax
+
+================================================================================
+STATEMENT #7: GetLowStockProductsAsync - Multiple Window Functions
+================================================================================
+DMS Tool Invocation Timestamp: 2026-02-09T15:59:59.093221
+Schema Name: dbo
+Database Name: ProductManagement
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+
+Original SQL:
+WITH StockAnalysis AS (
+    SELECT 
+        p.*,
+        AVG(StockQuantity) OVER() as AvgStock,
+        MIN(StockQuantity) OVER() as MinStock,
+        MAX(StockQuantity) OVER() as MaxStock
+    FROM Products p
+)
+SELECT 
+    sa.*,
+    CASE 
+        WHEN StockQuantity <= @Threshold THEN 'Critical'
+        WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low'
+        ELSE 'Adequate'
+    END as StockStatus,
+    ROUND((StockQuantity / AvgStock) * 100, 2) as StockPercentageOfAverage
+FROM StockAnalysis sa
+WHERE StockQuantity <= @Threshold
+ORDER BY StockQuantity;
+
+DMS Tool Status: ERROR
+DMS Tool Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Error Timestamp: 2026-02-09T16:00:03.270054
+
+Workflow Steps:
+- create_metadata_model: started at 2026-02-09T16:00:01.271857
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Manual Conversion Reasoning:
+- DMS tool failed due to metadata model creation error (same as all previous statements)
+- AVG(), MIN(), MAX() window functions are standard and PostgreSQL compatible
+- CTE syntax is identical
+- CASE expressions are compatible
+- ROUND function is compatible
+- No SQL Server specific syntax
+
+================================================================================
+SUMMARY
+================================================================================
+Total Statements: 7
+DMS Tool Invocations: 7 (all failed with same error)
+DMS Tool Success: 0
+DMS Tool Failures: 7 (All Statements #1-7)
+Manual Conversions Required: 7 (all statements)
+
+Common DMS Error:
+- Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+- This appears to be a systemic issue with the DMS service configuration or availability
+- All invocations failed at the metadata model creation step
+
+DMS Tool Invocation Timestamps:
+- Statement #1: 2026-02-09T15:27:32.546402
+- Statement #2: 2026-02-09T15:27:53.074392
+- Statement #3: 2026-02-09T15:28:08.398510
+- Statement #4: 2026-02-09T15:59:43.599853
+- Statement #5: 2026-02-09T15:59:48.943617
+- Statement #6: 2026-02-09T15:59:54.011998
+- Statement #7: 2026-02-09T15:59:59.093221
+
+COMPLIANCE WITH TRANSFORMATION DEFINITION:
+✓ EVERY SQL statement was passed through the DMS MCP tool (100% - 7/7 statements)
+✓ All DMS errors were documented with original statement and error details
+✓ Manual conversions were applied after DMS failures with reasoning documented
+
+Manual Conversion Approach:
+- SQL Server to PostgreSQL syntax conversion based on standard migration patterns
+- Key transformations:
+  * SCOPE_IDENTITY() → INSERT ... RETURNING clause
+  * GETDATE() → NOW() or CURRENT_TIMESTAMP
+  * DECLARE/SET variables → Use RETURNING, CTEs, or subqueries
+  * BEGIN TRANSACTION/COMMIT → Managed by application code (NpgsqlTransaction)
+  * Window functions → Already compatible (AVG, COUNT, LAG, RANK, PERCENT_RANK, MIN, MAX)
+  * CTEs → Already compatible
+  * CASE expressions → Already compatible
+  * Parameter syntax @param → Compatible with Npgsql
+
+All conversions documented in converted_statements.sql
+
+================================================================================
