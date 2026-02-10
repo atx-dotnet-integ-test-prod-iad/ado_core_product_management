@@ -1,0 +1,203 @@
+-- ============================================================
+-- DMS MCP Tool Conversion Log
+-- ============================================================
+-- Conversion Date: 2026-02-10
+-- Total Statements Processed: 7
+-- Successful DMS Conversions: 0
+-- Failed DMS Conversions: 7
+-- Manual Conversions Required: 7
+-- ============================================================
+
+-- ============================================================
+-- STATEMENT 1: GetAllProductsAsync
+-- ============================================================
+Original SQL Server Statement:
+WITH ProductStats AS (
+    SELECT 
+        ProductId,
+        AVG(Price) OVER() as AvgPrice,
+        COUNT(*) OVER() as TotalProducts
+    FROM Products
+)
+SELECT 
+    p.ProductId,
+    p.Name,
+    p.Description,
+    p.Price,
+    p.StockQuantity,
+    p.CreatedDate,
+    p.ModifiedDate,
+    CASE 
+        WHEN p.Price > ps.AvgPrice THEN 'Above Average'
+        WHEN p.Price < ps.AvgPrice THEN 'Below Average'
+        ELSE 'Average'
+    END as PriceCategory,
+    ROUND((p.Price / ps.AvgPrice) * 100, 2) as PricePercentageOfAverage
+FROM Products p
+INNER JOIN ProductStats ps ON p.ProductId = ps.ProductId
+ORDER BY 
+    CASE 
+        WHEN p.Price > ps.AvgPrice THEN 1
+        ELSE 2
+    END,
+    p.Name
+
+DMS Tool Output:
+{
+  "conversion_timestamp": "2026-02-10T15:30:51.560897",
+  "input": {
+    "sql_text": "WITH ProductStats AS (...)",
+    "migration_project_identifier": "arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU",
+    "database_name": "ProductManagement",
+    "schema_name": "dbo",
+    "region": "us-east-1",
+    "server_name": "172.31.94.132"
+  },
+  "workflow_steps": [
+    {
+      "step": "create_metadata_model",
+      "timestamp": "2026-02-10T15:30:53.946713",
+      "status": "started"
+    }
+  ],
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-10T15:30:55.905572"
+}
+
+Manual Conversion Applied:
+- Statement is largely compatible with PostgreSQL
+- No syntax changes needed for CTEs, window functions, or CASE statements
+- Applied same statement for PostgreSQL
+
+-- ============================================================
+-- STATEMENT 2: GetProductByIdAsync
+-- ============================================================
+Original SQL Server Statement:
+WITH ProductHistory AS (
+    SELECT 
+        ProductId,
+        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,
+        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock
+    FROM Products
+    WHERE ProductId = @ProductId
+)
+SELECT 
+    p.ProductId,
+    p.Name,
+    p.Description,
+    p.Price,
+    p.StockQuantity,
+    p.CreatedDate,
+    p.ModifiedDate,
+    ph.PreviousPrice,
+    ph.PreviousStock,
+    CASE 
+        WHEN ph.PreviousPrice IS NOT NULL THEN 
+            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)
+        ELSE NULL
+    END as PriceChangePercentage
+FROM Products p
+LEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId
+WHERE p.ProductId = @ProductId
+
+DMS Tool Output:
+{
+  "conversion_timestamp": "2026-02-10T15:31:09.308986",
+  "input": {
+    "sql_text": "WITH ProductHistory AS (...)",
+    "migration_project_identifier": "arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU",
+    "database_name": "ProductManagement",
+    "schema_name": "dbo",
+    "region": "us-east-1",
+    "server_name": "172.31.94.132"
+  },
+  "workflow_steps": [
+    {
+      "step": "create_metadata_model",
+      "timestamp": "2026-02-10T15:31:11.318094",
+      "status": "started"
+    }
+  ],
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-10T15:31:13.439668"
+}
+
+Manual Conversion Applied:
+- Changed parameter from @ProductId to $1 (positional parameter for Npgsql)
+- All other syntax compatible with PostgreSQL
+
+-- ============================================================
+-- STATEMENT 3: InsertProductAsync
+-- ============================================================
+Original SQL Server Statement:
+DECLARE @NewProductId INT;
+
+BEGIN TRANSACTION;
+    INSERT INTO Products (Name, Description, Price, StockQuantity)
+    VALUES (@Name, @Description, @Price, @StockQuantity);
+    
+    SET @NewProductId = SCOPE_IDENTITY();
+    
+    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+    VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, GETDATE());
+    
+    UPDATE ProductStats
+    SET 
+        TotalProducts = TotalProducts + 1,
+        AveragePrice = (AveragePrice * TotalProducts + @Price) / (TotalProducts + 1),
+        LastUpdated = GETDATE()
+    WHERE StatId = 1;
+COMMIT;
+
+SELECT @NewProductId;
+
+DMS Tool Output:
+{
+  "conversion_timestamp": "2026-02-10T15:31:24.330126",
+  "input": {
+    "sql_text": "DECLARE @NewProductId INT; BEGIN TRANSACTION; ...",
+    "migration_project_identifier": "arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU",
+    "database_name": "ProductManagement",
+    "schema_name": "dbo",
+    "region": "us-east-1",
+    "server_name": "172.31.94.132"
+  },
+  "workflow_steps": [
+    {
+      "step": "create_metadata_model",
+      "timestamp": "2026-02-10T15:31:26.344550",
+      "status": "started"
+    }
+  ],
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-10T15:31:28.122380"
+}
+
+Manual Conversion Applied:
+- Removed DECLARE and variable usage
+- Transaction handling moved to C# application level with NpgsqlTransaction
+- Replaced SCOPE_IDENTITY() with RETURNING clause
+- Replaced GETDATE() with NOW()
+- Split into multiple statements to be executed within a transaction
+
+-- ============================================================
+-- ALL REMAINING STATEMENTS (4-7) HAD IDENTICAL DMS FAILURES
+-- ============================================================
+All remaining statements (UpdateProductAsync, DeleteProductAsync, 
+GetProductsByPriceRangeAsync, GetLowStockProductsAsync) failed with the 
+same DMS error: "Metadata model creation failed: {'error': 'Unknown metadata 
+model creation status: RECEIVED'}"
+
+Manual conversions applied consistent patterns:
+- GETDATE() -> NOW()
+- BEGIN TRANSACTION/COMMIT removed (handled in C# with NpgsqlTransaction)
+- DECLARE statements removed
+- @ParameterName -> $N (positional parameters)
+- Window functions and CTEs kept as-is (PostgreSQL compatible)
+
+-- ============================================================
+-- END OF DMS CONVERSION LOG
+-- ============================================================
