@@ -1,0 +1,228 @@
+===============================================================================
+SQL Statement Re-integration Log
+Microsoft SQL Server to PostgreSQL Migration
+AdoCore Project - ProductRepository.cs
+===============================================================================
+
+Date: 2026-02-10
+File Modified: DataAccess/ProductRepository.cs
+Total Statements Reintegrated: 7
+Schema Object Name Changes: None (all tables retained original names)
+
+===============================================================================
+STATEMENT 1: GetAllProductsAsync (Lines 41-70)
+===============================================================================
+Method: GetAllProductsAsync
+Statement Type: SELECT with CTE and window functions
+Changes Applied:
+  - Line 65: Modified ROUND function calculation
+    Original: ROUND((p.Price / ps.AvgPrice) * 100, 2)
+    Modified: ROUND((p.Price / ps.AvgPrice)::numeric * 100, 2)
+    Reason: Added ::numeric cast for proper PostgreSQL numeric handling in division
+
+SQL Server-Specific Features Converted:
+  - ROUND with division: Added ::numeric cast
+  
+PostgreSQL Compatibility:
+  - CTE syntax: Fully compatible, no changes needed
+  - Window functions (AVG OVER, COUNT OVER): Fully compatible, no changes needed
+  - CASE expressions: Fully compatible, no changes needed
+  - INNER JOIN: Fully compatible, no changes needed
+
+Schema Changes: None
+Table Names: Products (unchanged)
+
+===============================================================================
+STATEMENT 2: GetProductByIdAsync (Lines 80-115)
+===============================================================================
+Method: GetProductByIdAsync
+Statement Type: SELECT with CTE and LAG window function
+Changes Applied:
+  - Line 107: Modified ROUND function calculation
+    Original: ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)
+    Modified: ROUND((((p.Price - ph.PreviousPrice) / ph.PreviousPrice)::numeric) * 100, 2)
+    Reason: Added ::numeric cast for proper PostgreSQL numeric handling in division
+
+SQL Server-Specific Features Converted:
+  - ROUND with division: Added ::numeric cast
+  
+PostgreSQL Compatibility:
+  - CTE syntax: Fully compatible, no changes needed
+  - LAG window function: Fully compatible, no changes needed
+  - LEFT JOIN: Fully compatible, no changes needed
+  - CASE with NULL handling: Fully compatible, no changes needed
+  - Parameter syntax (@ProductId): Compatible with Npgsql
+
+Schema Changes: None
+Table Names: Products (unchanged)
+
+===============================================================================
+STATEMENT 3: InsertProductAsync (Lines 128-165)
+===============================================================================
+Method: InsertProductAsync
+Statement Type: TRANSACTION BLOCK - Multi-statement INSERT
+Changes Applied:
+  - Line 145: Converted GETDATE() to CURRENT_TIMESTAMP
+    Original: VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, GETDATE());
+    Modified: VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, CURRENT_TIMESTAMP);
+    
+  - Line 152: Converted GETDATE() to CURRENT_TIMESTAMP
+    Original: LastUpdated = GETDATE()
+    Modified: LastUpdated = CURRENT_TIMESTAMP
+
+SQL Server-Specific Features Converted:
+  - GETDATE() → CURRENT_TIMESTAMP (2 occurrences)
+  
+Note: Transaction structure (BEGIN TRANSACTION/COMMIT) and SCOPE_IDENTITY() 
+      remain in SQL statements but will be handled at application level through
+      Npgsql transaction management in future steps. The current step focuses
+      only on SQL syntax conversion within the statements themselves.
+
+PostgreSQL Compatibility:
+  - INSERT syntax: Fully compatible
+  - UPDATE syntax: Fully compatible
+  - Multi-statement blocks: Will be restructured to use Npgsql transactions
+
+Schema Changes: None
+Table Names: Products, ProductHistory, ProductStats (all unchanged)
+
+===============================================================================
+STATEMENT 4: UpdateProductAsync (Lines 169-206)
+===============================================================================
+Method: UpdateProductAsync
+Statement Type: TRANSACTION BLOCK - Multi-statement UPDATE
+Changes Applied:
+  - Line 187: Converted GETDATE() to CURRENT_TIMESTAMP
+    Original: ModifiedDate = GETDATE()
+    Modified: ModifiedDate = CURRENT_TIMESTAMP
+    
+  - Line 192: Converted GETDATE() to CURRENT_TIMESTAMP
+    Original: VALUES (@ProductId, 'UPDATE', @OldPrice, @Price, @OldStock, @StockQuantity, GETDATE());
+    Modified: VALUES (@ProductId, 'UPDATE', @OldPrice, @Price, @OldStock, @StockQuantity, CURRENT_TIMESTAMP);
+    
+  - Line 197: Converted GETDATE() to CURRENT_TIMESTAMP
+    Original: LastUpdated = GETDATE()
+    Modified: LastUpdated = CURRENT_TIMESTAMP
+
+SQL Server-Specific Features Converted:
+  - GETDATE() → CURRENT_TIMESTAMP (3 occurrences)
+  
+Note: DECLARE statements and transaction structure remain but will be handled
+      through Npgsql transaction management in future steps.
+
+PostgreSQL Compatibility:
+  - UPDATE syntax: Fully compatible
+  - INSERT syntax: Fully compatible
+  - SELECT for variable assignment: Will be restructured for Npgsql
+
+Schema Changes: None
+Table Names: Products, ProductHistory, ProductStats (all unchanged)
+
+===============================================================================
+STATEMENT 5: DeleteProductAsync (Lines 210-245)
+===============================================================================
+Method: DeleteProductAsync
+Statement Type: TRANSACTION BLOCK - Multi-statement DELETE
+Changes Applied:
+  - Line 226: Converted GETDATE() to CURRENT_TIMESTAMP
+    Original: VALUES (@ProductId, 'DELETE', @OldPrice, NULL, @OldStock, NULL, GETDATE());
+    Modified: VALUES (@ProductId, 'DELETE', @OldPrice, NULL, @OldStock, NULL, CURRENT_TIMESTAMP);
+    
+  - Line 241: Converted GETDATE() to CURRENT_TIMESTAMP
+    Original: LastUpdated = GETDATE()
+    Modified: LastUpdated = CURRENT_TIMESTAMP
+
+SQL Server-Specific Features Converted:
+  - GETDATE() → CURRENT_TIMESTAMP (2 occurrences)
+  
+PostgreSQL Compatibility:
+  - DELETE syntax: Fully compatible
+  - CASE expression in UPDATE: Fully compatible
+  - INSERT syntax: Fully compatible
+
+Schema Changes: None
+Table Names: Products, ProductHistory, ProductStats (all unchanged)
+
+===============================================================================
+STATEMENT 6: GetProductsByPriceRangeAsync (Lines 249-276)
+===============================================================================
+Method: GetProductsByPriceRangeAsync
+Statement Type: SELECT with CTE and ranking window functions
+Changes Applied:
+  - None required
+
+SQL Server-Specific Features:
+  - CTE syntax: Fully compatible, no conversion needed
+  - RANK() window function: Fully compatible, no conversion needed
+  - PERCENT_RANK() window function: Fully compatible, no conversion needed
+  - BETWEEN operator: Fully compatible, no conversion needed
+  - CASE expression: Fully compatible, no conversion needed
+
+PostgreSQL Compatibility:
+  - Statement is identical between SQL Server and PostgreSQL
+  - No syntax changes required
+
+Schema Changes: None
+Table Names: Products (unchanged)
+
+===============================================================================
+STATEMENT 7: GetLowStockProductsAsync (Lines 280-309)
+===============================================================================
+Method: GetLowStockProductsAsync
+Statement Type: SELECT with CTE and aggregate window functions
+Changes Applied:
+  - Line 303: Modified ROUND function calculation
+    Original: ROUND((StockQuantity / AvgStock) * 100, 2)
+    Modified: ROUND(((StockQuantity::numeric / AvgStock) * 100), 2)
+    Reason: Added ::numeric cast for proper PostgreSQL numeric handling in division
+
+SQL Server-Specific Features Converted:
+  - ROUND with division: Added ::numeric cast
+  
+PostgreSQL Compatibility:
+  - CTE syntax: Fully compatible, no changes needed
+  - Aggregate window functions (AVG, MIN, MAX OVER): Fully compatible, no changes needed
+  - CASE expression: Fully compatible, no changes needed
+
+Schema Changes: None
+Table Names: Products (unchanged)
+
+===============================================================================
+CONVERSION SUMMARY
+===============================================================================
+
+Total SQL Statements Modified: 7
+Files Modified: 1 (DataAccess/ProductRepository.cs)
+
+Conversion Patterns Applied:
+1. GETDATE() → CURRENT_TIMESTAMP: 7 occurrences across 3 transaction methods
+2. ROUND with division → Added ::numeric cast: 3 occurrences
+3. CTE syntax: No changes (fully compatible)
+4. Window functions: No changes (fully compatible)
+5. CASE expressions: No changes (fully compatible)
+6. Parameter syntax (@param): Retained (compatible with Npgsql)
+
+Schema Object Name Changes:
+- None: All table names (Products, ProductHistory, ProductStats) remain unchanged
+- All column names remain unchanged
+- No schema prefixing required
+
+Deferred to Future Steps:
+1. Transaction block restructuring (BEGIN TRANSACTION/COMMIT → Npgsql transaction handling)
+2. SCOPE_IDENTITY() → RETURNING clause implementation
+3. DECLARE statements → Application-level variable handling
+4. ADO.NET class updates (SqlConnection → NpgsqlConnection, etc.)
+5. Connection string updates
+
+Notes:
+- All SQL syntax changes preserve original functionality
+- Transaction semantics will be maintained through Npgsql transaction management
+- Parameter binding remains compatible with Npgsql
+- No breaking changes to method signatures or return types
+
+Verification Status: SQL statements updated but not yet tested
+Next Step: Update package dependencies (Microsoft.Data.SqlClient → Npgsql)
+
+===============================================================================
+END OF SQL STATEMENT RE-INTEGRATION LOG
+===============================================================================

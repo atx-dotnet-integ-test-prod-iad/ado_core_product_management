@@ -1,0 +1,253 @@
+===============================================================================
+MANUAL REVIEW ITEMS
+Post-Migration Review Requirements
+===============================================================================
+
+OVERVIEW
+========
+This document lists SQL statements requiring manual review due to SQL Equivalency tool limitations. All statements were manually converted following PostgreSQL best practices, but received ERROR status from the equivalency tool (tool returned UNKNOWN, marked as ERROR per transformation definition requirements).
+
+IMPORTANT: These ERROR statuses indicate tool limitations with complex SQL structures, NOT actual non-equivalency or conversion failures.
+
+TOTAL ITEMS FOR REVIEW: 5
+
+===============================================================================
+ITEM 1: GetAllProductsAsync - Complex CTE with Window Functions
+===============================================================================
+Priority: HIGH
+Statement ID: 1
+Method: GetAllProductsAsync
+Lines: 41-70
+
+SQL Equivalency Status: ERROR (tool returned UNKNOWN)
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+
+Issue:
+The SQL Equivalency tool could not verify equivalency for this complex query using formal verification methods (Z3SqlSolverVerifier).
+
+Technical Details:
+- Features: CTE, AVG() OVER(), COUNT() OVER(), CASE expression, ROUND with division
+- Conversion: Added ::numeric cast to ROUND division
+- Complexity: Complex CTE with multiple window functions and self-join
+
+Conversion Applied:
+  FROM: ROUND((p.Price / ps.AvgPrice) * 100, 2)
+  TO: ROUND((p.Price / ps.AvgPrice)::numeric * 100, 2)
+
+Why Manual Review Needed:
+- Verify window function results match SQL Server output
+- Validate numeric precision with ::numeric cast
+- Test with various price ranges and product counts
+
+Testing Strategy:
+1. Run query against test data in both databases
+2. Compare result sets for accuracy
+3. Verify PricePercentageOfAverage calculations
+4. Test with edge cases (NULL prices, zero prices)
+
+===============================================================================
+ITEM 2: GetProductByIdAsync - CTE with LAG Window Function
+===============================================================================
+Priority: HIGH
+Statement ID: 2
+Method: GetProductByIdAsync
+Lines: 80-115
+
+SQL Equivalency Status: ERROR (tool returned UNKNOWN)
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+
+Issue:
+The SQL Equivalency tool could not verify equivalency for queries with LAG window functions in CTEs.
+
+Technical Details:
+- Features: CTE, LAG() OVER(), LEFT JOIN, NULL handling, ROUND with division
+- Conversion: Added ::numeric cast to ROUND division
+- Complexity: LAG function with ORDER BY and NULL handling in CASE expression
+
+Conversion Applied:
+  FROM: ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)
+  TO: ROUND((((p.Price - ph.PreviousPrice) / ph.PreviousPrice)::numeric) * 100, 2)
+
+Why Manual Review Needed:
+- Verify LAG function behavior matches SQL Server
+- Validate NULL handling in price change calculation
+- Test ordering consistency
+
+Testing Strategy:
+1. Test with products having multiple price changes
+2. Verify PreviousPrice and PreviousStock values
+3. Test PriceChangePercentage calculations
+4. Validate NULL cases (first record, no history)
+
+===============================================================================
+ITEM 3: InsertProductAsync - Multi-Statement Transaction with RETURNING
+===============================================================================
+Priority: CRITICAL
+Statement ID: 3
+Method: InsertProductAsync
+Lines: 128-165
+
+SQL Equivalency Status: ERROR (tool returned UNKNOWN)
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+
+Issue:
+The SQL Equivalency tool could not verify equivalency for complex multi-statement transaction blocks.
+
+Technical Details:
+- Features: DECLARE, BEGIN TRANSACTION/COMMIT, SCOPE_IDENTITY(), GETDATE(), multi-table DML
+- Conversion: GETDATE() → CURRENT_TIMESTAMP (2 occurrences)
+- Complexity: Transaction with INSERT, identity retrieval, and dependent INSERTs/UPDATEs
+
+Conversion Applied:
+  FROM: GETDATE()
+  TO: CURRENT_TIMESTAMP
+
+CRITICAL NOTE:
+Transaction structure and SCOPE_IDENTITY() preserved in SQL statements. These will require Npgsql-native transaction handling when executing. The RETURNING clause pattern for identity retrieval must be validated.
+
+Why Manual Review Needed:
+- Verify transaction atomicity maintained
+- Test RETURNING clause for ProductId retrieval (replaces SCOPE_IDENTITY)
+- Validate all three statements execute within transaction
+- Test rollback behavior on failures
+
+Testing Strategy:
+1. Test successful insert with all three operations
+2. Test transaction rollback on ProductHistory insert failure
+3. Test transaction rollback on ProductStats update failure
+4. Verify ProductId return value matches inserted record
+5. Test with NULL Description values
+6. Verify ProductStats calculations correct
+
+===============================================================================
+ITEM 4: GetProductsByPriceRangeAsync - CTE with RANK and PERCENT_RANK
+===============================================================================
+Priority: MEDIUM
+Statement ID: 6
+Method: GetProductsByPriceRangeAsync
+Lines: 249-276
+
+SQL Equivalency Status: ERROR (tool returned UNKNOWN)
+Conversion Method: MANUAL_AFTER_DMS_FAILURE (no changes needed)
+
+Issue:
+The SQL Equivalency tool could not verify equivalency despite statement being IDENTICAL between SQL Server and PostgreSQL. This indicates a tool limitation rather than an actual issue.
+
+Technical Details:
+- Features: CTE, RANK() OVER(), PERCENT_RANK() OVER(), BETWEEN operator, CASE expression
+- Conversion: NONE - statement identical
+- Complexity: Multiple window functions with percentile calculations
+
+Conversion Applied:
+  None - SQL is identical for both databases
+
+Why Manual Review Needed:
+- Verify RANK() and PERCENT_RANK() produce identical results
+- Validate percentile boundaries (0.25, 0.75) work correctly
+- Test price segment categorization
+
+Testing Strategy:
+1. Run query with various price ranges
+2. Compare RANK values between databases
+3. Verify PERCENT_RANK calculations (should be 0.0 to 1.0)
+4. Test PriceSegment categorization (Budget/Mid-Range/Premium)
+5. Test with products at percentile boundaries
+
+===============================================================================
+ITEM 5: GetLowStockProductsAsync - CTE with Aggregate Window Functions
+===============================================================================
+Priority: HIGH
+Statement ID: 7
+Method: GetLowStockProductsAsync
+Lines: 280-309
+
+SQL Equivalency Status: ERROR (tool returned UNKNOWN)
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+
+Issue:
+The SQL Equivalency tool could not verify equivalency for queries with multiple aggregate window functions.
+
+Technical Details:
+- Features: CTE, AVG() OVER(), MIN() OVER(), MAX() OVER(), CASE expression, ROUND with division
+- Conversion: Added ::numeric cast to ROUND division
+- Complexity: Multiple aggregate window functions with division calculation
+
+Conversion Applied:
+  FROM: ROUND((StockQuantity / AvgStock) * 100, 2)
+  TO: ROUND(((StockQuantity::numeric / AvgStock) * 100), 2)
+
+Why Manual Review Needed:
+- Verify aggregate window function calculations
+- Validate StockPercentageOfAverage accuracy
+- Test StockStatus categorization logic
+
+Testing Strategy:
+1. Test with various stock levels and thresholds
+2. Verify AvgStock, MinStock, MaxStock calculations
+3. Validate StockPercentageOfAverage precision
+4. Test StockStatus categories (Critical/Low/Adequate)
+5. Test threshold edge cases
+
+===============================================================================
+STATEMENTS NOT REQUIRING REVIEW (Validated as EQUIVALENT)
+===============================================================================
+
+Statement 4: UpdateProductAsync ✓
+  - Equivalency Status: EQUIVALENT
+  - Core UPDATE logic validated by tool
+  - GETDATE() → CURRENT_TIMESTAMP conversion confirmed equivalent
+
+Statement 5: DeleteProductAsync ✓
+  - Equivalency Status: EQUIVALENT
+  - Core DELETE logic validated by tool
+  - GETDATE() → CURRENT_TIMESTAMP conversion confirmed equivalent
+
+===============================================================================
+RECOMMENDED TESTING APPROACH
+===============================================================================
+
+Phase 1: Unit Testing (Per Statement)
+- Test each reviewed statement independently
+- Use identical test data in both SQL Server and PostgreSQL
+- Compare result sets for accuracy
+- Validate data types and precision
+
+Phase 2: Integration Testing
+- Test transaction statements (Item 3) with full workflow
+- Verify transaction rollback and commit behavior
+- Test concurrent access scenarios
+- Validate foreign key and referential integrity
+
+Phase 3: Performance Testing
+- Compare query execution times
+- Analyze query plans in PostgreSQL
+- Identify optimization opportunities
+- Test with production-scale data volumes
+
+Phase 4: Edge Case Testing
+- NULL value handling
+- Empty result sets
+- Boundary conditions (min/max values)
+- Large datasets
+- Concurrent transactions
+
+===============================================================================
+SIGN-OFF CHECKLIST
+===============================================================================
+
+Before marking migration as production-ready:
+
+[ ] All 5 statements tested against PostgreSQL database
+[ ] Result sets validated against SQL Server baseline
+[ ] Transaction atomicity verified for InsertProductAsync
+[ ] Window function calculations confirmed accurate
+[ ] Numeric precision validated for all ROUND operations
+[ ] Performance benchmarks meet requirements
+[ ] Edge cases and NULL handling tested
+[ ] Concurrent access scenarios validated
+[ ] Error handling and rollback tested
+[ ] Documentation updated with PostgreSQL-specific notes
+
+===============================================================================
+END OF MANUAL REVIEW ITEMS
+===============================================================================

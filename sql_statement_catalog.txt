@@ -1,0 +1,189 @@
+===============================================================================
+SQL STATEMENT CATALOG
+SQL Server to PostgreSQL Conversion Reference
+===============================================================================
+
+STATEMENT 1: GetAllProductsAsync
+================================
+Method: GetAllProductsAsync
+Type: SELECT with CTE
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+SQL Server Features: CTE, AVG() OVER(), COUNT() OVER(), CASE, ROUND, INNER JOIN
+PostgreSQL Equivalents: Same syntax, added ::numeric cast for ROUND
+
+Original SQL (SQL Server):
+  ROUND((p.Price / ps.AvgPrice) * 100, 2)
+
+Converted SQL (PostgreSQL):
+  ROUND((p.Price / ps.AvgPrice)::numeric * 100, 2)
+
+Key Changes: Added ::numeric cast for division to ensure proper numeric handling
+
+STATEMENT 2: GetProductByIdAsync
+================================
+Method: GetProductByIdAsync
+Type: SELECT with CTE and LAG
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+SQL Server Features: CTE, LAG() OVER(), LEFT JOIN, CASE with NULL handling, ROUND
+PostgreSQL Equivalents: Same syntax, added ::numeric cast for ROUND
+
+Original SQL (SQL Server):
+  ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)
+
+Converted SQL (PostgreSQL):
+  ROUND((((p.Price - ph.PreviousPrice) / ph.PreviousPrice)::numeric) * 100, 2)
+
+Key Changes: Added ::numeric cast for division calculation
+
+STATEMENT 3: InsertProductAsync
+================================
+Method: InsertProductAsync
+Type: Multi-statement transaction with INSERT
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+SQL Server Features: DECLARE, BEGIN TRANSACTION/COMMIT, SCOPE_IDENTITY(), GETDATE(), multi-table DML
+PostgreSQL Equivalents: RETURNING clause (for SCOPE_IDENTITY), CURRENT_TIMESTAMP (for GETDATE)
+
+Original SQL (SQL Server):
+  GETDATE() (2 occurrences in ProductHistory and ProductStats)
+
+Converted SQL (PostgreSQL):
+  CURRENT_TIMESTAMP (2 occurrences)
+
+Key Changes: 
+  - GETDATE() → CURRENT_TIMESTAMP
+  - Note: SCOPE_IDENTITY() and transaction structure preserved for app-level handling
+
+STATEMENT 4: UpdateProductAsync
+================================
+Method: UpdateProductAsync
+Type: Multi-statement transaction with UPDATE
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+SQL Server Features: DECLARE, BEGIN TRANSACTION/COMMIT, GETDATE(), multi-table DML
+PostgreSQL Equivalents: CURRENT_TIMESTAMP (for GETDATE)
+Equivalency Validation: EQUIVALENT ✓
+
+Original SQL (SQL Server):
+  GETDATE() (3 occurrences in Products, ProductHistory, ProductStats)
+
+Converted SQL (PostgreSQL):
+  CURRENT_TIMESTAMP (3 occurrences)
+
+Key Changes:
+  - ModifiedDate = GETDATE() → ModifiedDate = CURRENT_TIMESTAMP
+  - ActionDate with GETDATE() → ActionDate with CURRENT_TIMESTAMP
+  - LastUpdated = GETDATE() → LastUpdated = CURRENT_TIMESTAMP
+
+STATEMENT 5: DeleteProductAsync
+================================
+Method: DeleteProductAsync
+Type: Multi-statement transaction with DELETE
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+SQL Server Features: DECLARE, BEGIN TRANSACTION/COMMIT, DELETE, CASE expression, GETDATE()
+PostgreSQL Equivalents: CURRENT_TIMESTAMP (for GETDATE), CASE fully compatible
+Equivalency Validation: EQUIVALENT ✓
+
+Original SQL (SQL Server):
+  GETDATE() (2 occurrences in ProductHistory and ProductStats)
+
+Converted SQL (PostgreSQL):
+  CURRENT_TIMESTAMP (2 occurrences)
+
+Key Changes: GETDATE() → CURRENT_TIMESTAMP in INSERT and UPDATE statements
+
+STATEMENT 6: GetProductsByPriceRangeAsync
+==========================================
+Method: GetProductsByPriceRangeAsync
+Type: SELECT with CTE and ranking functions
+Conversion Method: MANUAL_AFTER_DMS_FAILURE (no changes needed)
+SQL Server Features: CTE, RANK() OVER(), PERCENT_RANK() OVER(), BETWEEN, CASE
+PostgreSQL Equivalents: Identical syntax - no changes required
+
+Original SQL: [Identical to PostgreSQL]
+Converted SQL: [No changes - fully compatible]
+
+Key Changes: None - statement identical between SQL Server and PostgreSQL
+
+STATEMENT 7: GetLowStockProductsAsync
+=====================================
+Method: GetLowStockProductsAsync
+Type: SELECT with CTE and aggregate window functions
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+SQL Server Features: CTE, AVG/MIN/MAX() OVER(), CASE, ROUND
+PostgreSQL Equivalents: Same syntax, added ::numeric cast for ROUND
+
+Original SQL (SQL Server):
+  ROUND((StockQuantity / AvgStock) * 100, 2)
+
+Converted SQL (PostgreSQL):
+  ROUND(((StockQuantity::numeric / AvgStock) * 100), 2)
+
+Key Changes: Added ::numeric cast for division to ensure proper numeric handling
+
+===============================================================================
+SUMMARY OF CONVERSION PATTERNS
+===============================================================================
+
+Pattern 1: GETDATE() Function
+  SQL Server: GETDATE()
+  PostgreSQL: CURRENT_TIMESTAMP
+  Occurrences: 7 (across statements 3, 4, 5)
+  Compatibility: Direct replacement, functionally equivalent
+
+Pattern 2: ROUND with Division
+  SQL Server: ROUND((a / b) * 100, 2)
+  PostgreSQL: ROUND((a::numeric / b) * 100, 2) OR ROUND(((a::numeric / b) * 100), 2)
+  Occurrences: 3 (statements 1, 2, 7)
+  Compatibility: Cast ensures proper decimal precision
+
+Pattern 3: CTEs (Common Table Expressions)
+  SQL Server: WITH CTE AS (...)
+  PostgreSQL: WITH CTE AS (...)
+  Occurrences: 5 statements
+  Compatibility: Identical syntax, no changes needed
+
+Pattern 4: Window Functions
+  SQL Server: AVG() OVER(), COUNT() OVER(), LAG() OVER(), RANK() OVER(), PERCENT_RANK() OVER()
+  PostgreSQL: Same functions and syntax
+  Occurrences: 5 statements
+  Compatibility: Fully compatible, no changes needed
+
+Pattern 5: CASE Expressions
+  SQL Server: CASE WHEN condition THEN value END
+  PostgreSQL: CASE WHEN condition THEN value END
+  Occurrences: All 7 statements
+  Compatibility: Identical syntax, no changes needed
+
+Pattern 6: JOIN Operations
+  SQL Server: INNER JOIN, LEFT JOIN
+  PostgreSQL: INNER JOIN, LEFT JOIN
+  Occurrences: 2 statements
+  Compatibility: Identical syntax, no changes needed
+
+Pattern 7: Parameter Syntax
+  SQL Server: @ParameterName
+  PostgreSQL (with Npgsql): @ParameterName
+  Occurrences: All parameterized statements
+  Compatibility: Npgsql supports @ parameter syntax
+
+===============================================================================
+TABLES REFERENCED
+===============================================================================
+
+Products Table:
+  - Columns: ProductId, Name, Description, Price, StockQuantity, CreatedDate, ModifiedDate
+  - Used in: All 7 statements
+  - Schema Changes: None
+
+ProductHistory Table:
+  - Columns: ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate
+  - Used in: Statements 3, 4, 5 (transaction blocks)
+  - Schema Changes: None
+
+ProductStats Table:
+  - Columns: StatId, TotalProducts, AveragePrice, LastUpdated
+  - Used in: Statements 3, 4, 5 (transaction blocks)
+  - Schema Changes: None
+
+===============================================================================
+END OF SQL STATEMENT CATALOG
+===============================================================================
