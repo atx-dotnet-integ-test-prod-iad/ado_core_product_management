@@ -1,0 +1,174 @@
+================================================================
+TRANSFORMATION ARTIFACTS CATALOG
+Microsoft SQL Server to PostgreSQL Migration
+================================================================
+Date: 2026-02-10
+Project: ADO.NET Core Application
+================================================================
+
+SQL STATEMENT CATALOGS
+================================================================
+
+1. extracted_statements.sql
+   - Description: Original SQL Server statements extracted from source code
+   - Total Statements: 7
+   - Size: 281 lines
+   - Content: All SQL statements with source location, method names, and SQL Server syntax
+   - Location: /sourceCode/extracted_statements.sql
+
+2. converted_statements.sql
+   - Description: PostgreSQL converted statements
+   - Total Statements: 7
+   - Size: 13,707 bytes
+   - Content: PostgreSQL equivalents with conversion notes and DMS failure documentation
+   - Conversion Method: All MANUAL_AFTER_DMS_FAILURE
+   - Location: /sourceCode/converted_statements.sql
+
+================================================================
+CONVERSION AND VALIDATION LOGS
+================================================================
+
+3. dms_conversion_log.txt
+   - Description: Detailed DMS MCP tool execution log
+   - Size: 8,927 bytes
+   - Content: DMS tool outputs, errors, and manual conversion documentation
+   - DMS Attempts: 7 (all failed)
+   - Manual Conversions: 7
+   - Location: /sourceCode/dms_conversion_log.txt
+
+4. sql_equivalency_validation_report.json
+   - Description: Complete SQL equivalency validation results
+   - Format: JSON
+   - Size: 138 lines
+   - Content: All 7 statement pairs with tool-based equivalency status
+   - Equivalent: 2, Non-Equivalent: 0, Errors: 5
+   - Tool: sql-equivalency___validate_sql_equivalence
+   - Location: /sourceCode/sql_equivalency_validation_report.json
+
+5. sql_reintegration_log.txt
+   - Description: SQL statement reintegration documentation
+   - Content: Changes applied to ProductRepository.cs with detailed notes
+   - Statements Updated: 3 (GETDATE conversions)
+   - Statements Unchanged: 4 (PostgreSQL compatible)
+   - Location: /sourceCode/sql_reintegration_log.txt
+
+6. detailed_migration_log.txt
+   - Description: Comprehensive migration details for all statements
+   - Content: Every SQL statement with file locations, line numbers, conversions, and tool outputs
+   - Statements Documented: 7
+   - Location: /sourceCode/detailed_migration_log.txt
+
+7. final_migration_report.txt
+   - Description: Executive summary and migration statistics
+   - Content: Complete migration overview, statistics, and recommendations
+   - Sections: 14 (Executive Summary through Completion Status)
+   - Location: /sourceCode/final_migration_report.txt
+
+8. transformation_artifacts_catalog.txt
+   - Description: This file - complete listing of all migration artifacts
+   - Content: Catalog of all generated files with descriptions
+   - Location: /sourceCode/transformation_artifacts_catalog.txt
+
+================================================================
+BUILD AND VERIFICATION LOGS
+================================================================
+
+9. build.log
+   - Description: Step 5 build log - Package dependency update
+   - Build Result: Compilation errors (expected - SqlConnection classes not yet updated)
+   - Package Restore: Npgsql 8.0.5 successfully restored
+   - Location: /sourceCode/build.log
+
+10. build_step6.log
+    - Description: Step 6 build log - ADO.NET class replacement
+    - Build Result: SUCCESS (10 warnings, 0 errors)
+    - Warnings: Nullable reference warnings (not migration-related)
+    - Location: /sourceCode/build_step6.log
+
+11. build_step7.log
+    - Description: Step 7 build log - Connection string update
+    - Build Result: SUCCESS (0 errors)
+    - Verification: PostgreSQL connection strings confirmed
+    - Location: /sourceCode/build_step7.log
+
+================================================================
+MODIFIED SOURCE FILES (Not Artifacts, Part of Codebase)
+================================================================
+
+Core Application Files (Modified):
+- AdoCore.csproj - Package dependencies updated
+- DataAccess/ProductRepository.cs - SQL statements and ADO.NET classes updated
+- appsettings.json - Connection strings converted
+
+Backup Files:
+- DataAccess/ProductRepository.cs.backup - Original file backup (before changes)
+
+================================================================
+ARTIFACT SUMMARY
+================================================================
+
+Total Artifacts Generated: 11
+├── SQL Catalogs: 2
+├── Conversion Logs: 3
+├── Migration Reports: 3
+├── Build Logs: 3
+└── Artifact Catalog: 1 (this file)
+
+Total Documentation Size: ~25KB (text files) + JSON report
+
+All artifacts are located in: /sourceCode/
+
+================================================================
+ARTIFACT VERIFICATION CHECKLIST
+================================================================
+
+✓ extracted_statements.sql - Contains all 7 SQL Server statements
+✓ converted_statements.sql - Contains all 7 PostgreSQL statements
+✓ dms_conversion_log.txt - Documents all DMS attempts and failures
+✓ sql_equivalency_validation_report.json - Contains all 7 validated pairs
+✓ sql_reintegration_log.txt - Documents code integration changes
+✓ detailed_migration_log.txt - Complete statement-by-statement documentation
+✓ final_migration_report.txt - Executive summary with statistics
+✓ transformation_artifacts_catalog.txt - This comprehensive catalog
+✓ build.log - Package update verification
+✓ build_step6.log - ADO.NET class update verification
+✓ build_step7.log - Connection string update verification
+
+All required artifacts per transformation definition have been generated.
+
+================================================================
+ARTIFACT USAGE GUIDE
+================================================================
+
+For Statement-Level Details:
+→ See: extracted_statements.sql (original SQL Server syntax)
+→ See: converted_statements.sql (PostgreSQL syntax with notes)
+→ See: detailed_migration_log.txt (complete statement documentation)
+
+For Tool Execution Details:
+→ See: dms_conversion_log.txt (DMS tool failures and manual conversions)
+→ See: sql_equivalency_validation_report.json (equivalency validation results)
+
+For Migration Overview:
+→ See: final_migration_report.txt (executive summary and statistics)
+→ See: sql_reintegration_log.txt (code changes summary)
+
+For Build Verification:
+→ See: build_step6.log (final successful build with Npgsql)
+→ See: build_step7.log (connection string verification build)
+
+================================================================
+CRITICAL NOTES
+================================================================
+
+1. All SQL statement pairs are documented in sql_equivalency_validation_report.json
+2. Equivalency status determined solely by tool output, never agent judgment
+3. UNKNOWN results from equivalency tool marked as ERROR per requirements
+4. Every SQL statement accounted for across all artifacts (no exceptions)
+5. DMS tool was attempted for all 7 statements (all failed, documented)
+6. Manual conversions applied only after DMS failures (as required)
+7. Schema object names unchanged (no DMS transformations applied)
+
+================================================================
+END OF TRANSFORMATION ARTIFACTS CATALOG
+================================================================

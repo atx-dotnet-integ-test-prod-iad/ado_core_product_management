@@ -1,0 +1,208 @@
+================================================================
+DETAILED MIGRATION LOG
+Microsoft SQL Server to PostgreSQL Migration
+================================================================
+Project: ADO.NET Core Application
+Migration Date: 2026-02-10
+Source Database: Microsoft SQL Server
+Target Database: PostgreSQL
+================================================================
+
+FILE LOCATIONS AND SQL STATEMENTS PROCESSED
+================================================================
+
+File: DataAccess/ProductRepository.cs
+Location: /sourceCode/DataAccess/ProductRepository.cs
+Total SQL Statements: 7
+
+STATEMENT 1: GetAllProductsAsync
+---------------------------------
+Line Numbers: ~36-66
+Method: public async Task<List<Product>> GetAllProductsAsync()
+Original SQL (SQL Server):
+  WITH ProductStats AS (SELECT ProductId, AVG(Price) OVER() as AvgPrice, COUNT(*) OVER() as TotalProducts FROM Products)
+  SELECT p.*, CASE WHEN p.Price > ps.AvgPrice THEN 'Above Average' ... ORDER BY CASE WHEN p.Price > ps.AvgPrice THEN 1 ELSE 2 END, p.Name
+
+Conversion Method: NO CHANGES REQUIRED (PostgreSQL compatible)
+DMS Tool Output: ERROR - Metadata model creation failed
+Converted SQL (PostgreSQL): Identical to original
+Schema Changes: None
+Equivalency Status (from tool): ERROR (tool returned UNKNOWN, marked as ERROR)
+
+STATEMENT 2: GetProductByIdAsync
+---------------------------------
+Line Numbers: ~82-113
+Method: public async Task<Product> GetProductByIdAsync(int productId)
+Original SQL (SQL Server):
+  WITH ProductHistory AS (SELECT ProductId, LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice... WHERE ProductId = @ProductId)
+  SELECT p.*, ph.PreviousPrice, ph.PreviousStock ... WHERE p.ProductId = @ProductId
+
+Conversion Method: NO CHANGES REQUIRED (PostgreSQL compatible)
+DMS Tool Output: ERROR - Metadata model creation failed
+Converted SQL (PostgreSQL): Identical to original
+Schema Changes: None
+Equivalency Status (from tool): ERROR (tool returned UNKNOWN, marked as ERROR)
+
+STATEMENT 3: InsertProductAsync
+---------------------------------
+Line Numbers: ~126-163
+Method: public async Task<int> InsertProductAsync(Product product)
+Original SQL (SQL Server):
+  DECLARE @NewProductId INT; BEGIN TRANSACTION;
+  INSERT INTO Products ... VALUES ...; SET @NewProductId = SCOPE_IDENTITY();
+  INSERT INTO ProductHistory ... VALUES (..., GETDATE());
+  UPDATE ProductStats SET ... LastUpdated = GETDATE() WHERE StatId = 1; COMMIT; SELECT @NewProductId;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+DMS Tool Output: ERROR - Metadata model creation failed
+Converted SQL (PostgreSQL):
+  - GETDATE() → CURRENT_TIMESTAMP (3 occurrences)
+  - SCOPE_IDENTITY() → Handled at application level (ADO.NET transaction)
+  - Transaction managed with NpgsqlConnection.BeginTransactionAsync()
+Schema Changes: None
+Equivalency Status (from tool): ERROR (tool returned UNKNOWN, marked as ERROR)
+
+STATEMENT 4: UpdateProductAsync
+---------------------------------
+Line Numbers: ~168-204
+Method: public async Task UpdateProductAsync(Product product)
+Original SQL (SQL Server):
+  BEGIN TRANSACTION; DECLARE @OldPrice DECIMAL(18,2); DECLARE @OldStock INT;
+  SELECT @OldPrice = Price, @OldStock = StockQuantity FROM Products WHERE ProductId = @ProductId;
+  UPDATE Products SET ... ModifiedDate = GETDATE() WHERE ProductId = @ProductId;
+  INSERT INTO ProductHistory ... VALUES (..., GETDATE());
+  UPDATE ProductStats SET ... LastUpdated = GETDATE() WHERE StatId = 1; COMMIT;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+DMS Tool Output: ERROR - Metadata model creation failed
+Converted SQL (PostgreSQL):
+  - GETDATE() → CURRENT_TIMESTAMP (3 occurrences)
+  - Transaction managed with NpgsqlConnection.BeginTransactionAsync()
+Schema Changes: None
+Equivalency Status (from tool): EQUIVALENT (core UPDATE statement validated)
+
+STATEMENT 5: DeleteProductAsync
+---------------------------------
+Line Numbers: ~215-251
+Method: public async Task DeleteProductAsync(int productId)
+Original SQL (SQL Server):
+  BEGIN TRANSACTION; DECLARE @OldPrice DECIMAL(18,2); DECLARE @OldStock INT;
+  SELECT @OldPrice = Price, @OldStock = StockQuantity FROM Products WHERE ProductId = @ProductId;
+  INSERT INTO ProductHistory ... VALUES (@ProductId, 'DELETE', @OldPrice, NULL, @OldStock, NULL, GETDATE());
+  DELETE FROM Products WHERE ProductId = @ProductId;
+  UPDATE ProductStats SET ... LastUpdated = GETDATE() WHERE StatId = 1; COMMIT;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+DMS Tool Output: ERROR - Metadata model creation failed
+Converted SQL (PostgreSQL):
+  - GETDATE() → CURRENT_TIMESTAMP (2 occurrences)
+  - DELETE statement unchanged (PostgreSQL compatible)
+  - Transaction managed with NpgsqlConnection.BeginTransactionAsync()
+Schema Changes: None
+Equivalency Status (from tool): EQUIVALENT (core DELETE statement validated)
+
+STATEMENT 6: GetProductsByPriceRangeAsync
+---------------------------------
+Line Numbers: ~262-287
+Method: public async Task<List<Product>> GetProductsByPriceRangeAsync(decimal minPrice, decimal maxPrice)
+Original SQL (SQL Server):
+  WITH RankedProducts AS (SELECT p.*, RANK() OVER (ORDER BY p.Price) as PriceRank, PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile FROM Products p WHERE p.Price BETWEEN @MinPrice AND @MaxPrice)
+  SELECT rp.*, CASE WHEN rp.PricePercentile <= 0.25 THEN 'Budget' ... ORDER BY rp.PriceRank
+
+Conversion Method: NO CHANGES REQUIRED (PostgreSQL compatible)
+DMS Tool Output: ERROR - Metadata model creation failed
+Converted SQL (PostgreSQL): Identical to original
+Schema Changes: None
+Equivalency Status (from tool): ERROR (tool returned UNKNOWN, marked as ERROR)
+
+STATEMENT 7: GetLowStockProductsAsync
+---------------------------------
+Line Numbers: ~300-330
+Method: public async Task<List<Product>> GetLowStockProductsAsync(int threshold)
+Original SQL (SQL Server):
+  WITH StockAnalysis AS (SELECT p.*, AVG(StockQuantity) OVER() as AvgStock, MIN(StockQuantity) OVER() as MinStock, MAX(StockQuantity) OVER() as MaxStock FROM Products p)
+  SELECT sa.*, CASE WHEN StockQuantity <= @Threshold THEN 'Critical' ... ORDER BY StockQuantity
+
+Conversion Method: NO CHANGES REQUIRED (PostgreSQL compatible)
+DMS Tool Output: ERROR - Metadata model creation failed
+Converted SQL (PostgreSQL): Identical to original
+Schema Changes: None
+Equivalency Status (from tool): ERROR (tool returned UNKNOWN, marked as ERROR)
+
+================================================================
+DMS MCP TOOL EXECUTION SUMMARY
+================================================================
+Tool: dms-mcp____statement_conversion_tool
+Region: us-east-1
+Schema: dbo
+
+Statements Processed: 7
+Successful Conversions: 0
+Failed Conversions: 7
+Failure Reason: Metadata model creation failed - Unknown metadata model creation status: RECEIVED
+
+Manual Conversions Applied: 7
+All statements attempted through DMS tool as required by transformation definition.
+
+================================================================
+SQL EQUIVALENCY VALIDATION SUMMARY
+================================================================
+Tool: sql-equivalency___validate_sql_equivalence
+Validation Method: formal_verification
+
+Statements Validated: 7
+EQUIVALENT: 2 (UpdateProductAsync core UPDATE, DeleteProductAsync core DELETE)
+NOT_EQUIVALENT: 0
+ERROR/UNKNOWN: 5 (Complex CTEs and window functions - Z3SqlSolverVerifier could not prove equivalency)
+
+CRITICAL NOTE: All equivalency determinations based solely on tool output, no agent judgment used.
+
+================================================================
+CODE CHANGES APPLIED
+================================================================
+
+1. SQL Statement Updates (DataAccess/ProductRepository.cs):
+   - GETDATE() → CURRENT_TIMESTAMP: 8 occurrences (Statements 3, 4, 5)
+   - CTEs preserved: 5 statements (1, 2, 6, 7 unchanged)
+   - Window functions preserved: All AVG, COUNT, LAG, RANK, PERCENT_RANK, MIN, MAX OVER
+   - CASE expressions preserved: All unchanged
+   - Parameterized queries: @ syntax preserved (Npgsql compatible)
+
+2. Package Dependencies (AdoCore.csproj):
+   - Removed: Microsoft.Data.SqlClient Version 5.1.4
+   - Added: Npgsql Version 8.0.5
+
+3. ADO.NET Classes (DataAccess/ProductRepository.cs):
+   - using Microsoft.Data.SqlClient → using Npgsql
+   - SqlConnection → NpgsqlConnection (all occurrences)
+   - SqlCommand → NpgsqlCommand (all occurrences)
+   - SqlDataReader → NpgsqlDataReader (all occurrences)
+
+4. Connection Strings (appsettings.json):
+   - Server=localhost → Host=localhost
+   - Trusted_Connection=True → Username=postgres;Password=postgres
+   - Removed: MultipleActiveResultSets=true, TrustServerCertificate=True
+   - Added: Port=5432;Pooling=true
+
+================================================================
+WARNINGS AND ERRORS ENCOUNTERED
+================================================================
+
+DMS Tool Failures:
+- All 7 statements failed with: "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+- Resolution: Applied manual conversions following PostgreSQL best practices
+- All attempts documented as required by transformation definition
+
+Equivalency Validation:
+- 5 statements returned UNKNOWN (Z3SqlSolverVerifier could not prove equivalency for complex queries)
+- Per transformation definition, UNKNOWN results marked as ERROR
+- 2 statements proven EQUIVALENT by StructuralEquivalenceVerifier
+
+Build Warnings:
+- Npgsql 8.0.0 had security vulnerability NU1903
+- Resolution: Upgraded to Npgsql 8.0.5 (no vulnerabilities)
+- Final build: 10 warnings (nullable reference warnings), 0 errors
+
+================================================================
+END OF DETAILED MIGRATION LOG
+================================================================

@@ -1,0 +1,218 @@
+================================================================
+DMS MCP TOOL CONVERSION LOG
+================================================================
+Date: 2026-02-10
+Migration: Microsoft SQL Server to PostgreSQL
+Application: ADO.NET Core Application
+================================================================
+
+CRITICAL: All 7 SQL statements failed DMS conversion with the same error.
+Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+
+As per transformation definition requirements:
+"Whenever the DMS tool is unable to convert and returns info or actions, 
+use your best judgement to convert the transformation, but document the 
+statement + DMS output + your conversion to a summary file."
+
+All statements have been manually converted after attempting DMS conversion.
+
+================================================================
+STATEMENT 1: GetAllProductsAsync
+================================================================
+DMS Attempt Status: FAILED
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+DMS Full Output:
+{
+  "conversion_timestamp": "2026-02-10T11:15:23.456736",
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-10T11:15:27.837936"
+}
+
+Manual Conversion Applied: YES
+Conversion Notes:
+- Window functions (AVG, COUNT OVER) are fully compatible with PostgreSQL
+- CASE expressions are compatible
+- CTEs are compatible
+- No schema name changes needed
+- Statement kept as-is (PostgreSQL compatible)
+
+================================================================
+STATEMENT 2: GetProductByIdAsync
+================================================================
+DMS Attempt Status: FAILED
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+DMS Full Output:
+{
+  "conversion_timestamp": "2026-02-10T11:15:38.693658",
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-10T11:15:42.775779"
+}
+
+Manual Conversion Applied: YES
+Conversion Notes:
+- LAG window function is fully compatible with PostgreSQL
+- CTE syntax is compatible
+- Parameter syntax @ProductId works with Npgsql
+- No schema name changes needed
+- Statement kept as-is (PostgreSQL compatible)
+
+================================================================
+STATEMENT 3: InsertProductAsync
+================================================================
+DMS Attempt Status: FAILED
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+DMS Full Output:
+{
+  "conversion_timestamp": "2026-02-10T11:15:53.564558",
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-10T11:15:57.699992"
+}
+
+Manual Conversion Applied: YES
+Conversion Notes:
+- SCOPE_IDENTITY() converted to RETURNING clause
+- GETDATE() converted to CURRENT_TIMESTAMP
+- DECLARE @NewProductId removed (not needed with RETURNING)
+- Transaction block split into separate statements for application-level handling
+- No schema name changes needed
+
+Key Changes:
+1. INSERT ... RETURNING ProductId (replaces SCOPE_IDENTITY())
+2. CURRENT_TIMESTAMP replaces GETDATE() (3 occurrences)
+3. Multi-statement transaction needs application-level orchestration
+
+================================================================
+STATEMENT 4: UpdateProductAsync
+================================================================
+DMS Attempt Status: FAILED
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+DMS Full Output:
+{
+  "conversion_timestamp": "2026-02-10T11:16:07.062245",
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-10T11:16:11.009779"
+}
+
+Manual Conversion Applied: YES
+Conversion Notes:
+- DECLARE variables removed (handled in application code)
+- GETDATE() converted to CURRENT_TIMESTAMP
+- Variable assignment from SELECT moved to separate query in application
+- Transaction block split for application-level handling
+- No schema name changes needed
+
+Key Changes:
+1. CURRENT_TIMESTAMP replaces GETDATE() (3 occurrences)
+2. Old values retrieved via separate SELECT in application code
+3. Multi-statement transaction managed at application level
+
+================================================================
+STATEMENT 5: DeleteProductAsync
+================================================================
+DMS Attempt Status: FAILED
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+DMS Full Output:
+{
+  "conversion_timestamp": "2026-02-10T11:16:20.637289",
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-10T11:16:24.504661"
+}
+
+Manual Conversion Applied: YES
+Conversion Notes:
+- DECLARE variables removed (handled in application code)
+- GETDATE() converted to CURRENT_TIMESTAMP
+- Variable assignment from SELECT moved to separate query
+- CASE expression in UPDATE is compatible with PostgreSQL
+- Transaction block split for application-level handling
+- No schema name changes needed
+
+Key Changes:
+1. CURRENT_TIMESTAMP replaces GETDATE() (2 occurrences)
+2. Old values retrieved via separate SELECT in application code
+3. Multi-statement transaction managed at application level
+
+================================================================
+STATEMENT 6: GetProductsByPriceRangeAsync
+================================================================
+DMS Attempt Status: FAILED
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+DMS Full Output:
+{
+  "conversion_timestamp": "2026-02-10T11:16:34.413669",
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-10T11:16:38.632181"
+}
+
+Manual Conversion Applied: YES
+Conversion Notes:
+- RANK() window function is fully compatible with PostgreSQL
+- PERCENT_RANK() window function is fully compatible with PostgreSQL
+- CTE syntax is compatible
+- BETWEEN operator is compatible
+- No schema name changes needed
+- Statement kept as-is (PostgreSQL compatible)
+
+================================================================
+STATEMENT 7: GetLowStockProductsAsync
+================================================================
+DMS Attempt Status: FAILED
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+DMS Full Output:
+{
+  "conversion_timestamp": "2026-02-10T11:16:51.488989",
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-10T11:16:55.392825"
+}
+
+Manual Conversion Applied: YES
+Conversion Notes:
+- Window functions (AVG, MIN, MAX OVER) are fully compatible with PostgreSQL
+- CTE syntax is compatible
+- ROUND function is compatible
+- CASE expressions are compatible
+- No schema name changes needed
+- Statement kept as-is (PostgreSQL compatible)
+
+================================================================
+SUMMARY
+================================================================
+Total Statements Processed: 7
+DMS Successful Conversions: 0
+DMS Failed Conversions: 7
+Manual Conversions After DMS Failure: 7
+
+Common DMS Error: 
+"Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+
+This error indicates the DMS MCP tool was unable to create the metadata model
+required for SQL conversion, likely due to service configuration or connectivity
+issues. All statements were attempted through the tool as required by the 
+transformation definition.
+
+Manual Conversion Approach:
+1. Identified SQL Server specific syntax (SCOPE_IDENTITY, GETDATE, transactions)
+2. Applied PostgreSQL equivalents following best practices
+3. Maintained schema object names (no changes from DMS)
+4. Preserved query semantics and business logic
+5. Documented all changes for code integration
+
+Key PostgreSQL Conversions Applied:
+- SCOPE_IDENTITY() → RETURNING clause
+- GETDATE() → CURRENT_TIMESTAMP
+- T-SQL variables → Application-level handling
+- BEGIN TRANSACTION/COMMIT → Application-level Npgsql transaction management
+- Window functions → No changes (fully compatible)
+- CTEs → No changes (fully compatible)
+- CASE expressions → No changes (fully compatible)
+
+================================================================
+END OF DMS CONVERSION LOG
+================================================================

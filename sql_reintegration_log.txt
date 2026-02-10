@@ -1,0 +1,145 @@
+================================================================
+SQL STATEMENT RE-INTEGRATION LOG
+================================================================
+Date: 2026-02-10
+Migration: Microsoft SQL Server to PostgreSQL  
+File: DataAccess/ProductRepository.cs
+================================================================
+
+SUMMARY OF SQL STATEMENT UPDATES:
+==================================
+
+Statement 1: GetAllProductsAsync
+---------------------------------
+Status: NO CHANGES REQUIRED
+Reason: CTE with window functions (AVG, COUNT OVER) is PostgreSQL compatible
+Original SQL: Uses WITH ProductStats AS + window functions
+PostgreSQL SQL: Identical - no changes needed
+Schema Changes: None
+
+Statement 2: GetProductByIdAsync
+---------------------------------
+Status: NO CHANGES REQUIRED
+Reason: CTE with LAG window function is PostgreSQL compatible
+Original SQL: Uses WITH ProductHistory AS + LAG OVER
+PostgreSQL SQL: Identical - no changes needed
+Schema Changes: None
+
+Statement 3: InsertProductAsync
+---------------------------------
+Status: PARTIALLY UPDATED
+Changes Applied:
+  ✅ GETDATE() → CURRENT_TIMESTAMP (3 occurrences)
+  
+Remaining Conversions Needed (requires Npgsql):
+  ⚠️  SCOPE_IDENTITY() → RETURNING ProductId
+  ⚠️  T-SQL transaction block → ADO.NET transaction handling
+  
+Notes:
+- GETDATE() to CURRENT_TIMESTAMP conversion completed
+- SCOPE_IDENTITY() conversion requires RETURNING clause which works with Npgsql
+- Transaction refactoring will be completed in Step 6 when switching to Npgsql
+- Current implementation maintains T-SQL transaction syntax for compatibility
+
+Statement 4: UpdateProductAsync
+---------------------------------
+Status: UPDATED
+Changes Applied:
+  ✅ GETDATE() → CURRENT_TIMESTAMP (3 occurrences in UPDATE, INSERT history, UPDATE stats)
+  
+Remaining Conversions Needed (requires Npgsql):
+  ⚠️  T-SQL transaction block with DECLARE variables → ADO.NET transaction handling
+  
+Notes:
+- All GETDATE() occurrences converted to CURRENT_TIMESTAMP
+- T-SQL variable declarations in transaction will be handled at application level with Npgsql
+- Current implementation maintains T-SQL transaction syntax for compatibility
+
+Statement 5: DeleteProductAsync
+---------------------------------
+Status: UPDATED
+Changes Applied:
+  ✅ GETDATE() → CURRENT_TIMESTAMP (2 occurrences in INSERT history, UPDATE stats)
+  
+Remaining Conversions Needed (requires Npgsql):
+  ⚠️  T-SQL transaction block with DECLARE variables → ADO.NET transaction handling
+  
+Notes:
+- All GETDATE() occurrences converted to CURRENT_TIMESTAMP
+- T-SQL variable declarations in transaction will be handled at application level with Npgsql
+- Current implementation maintains T-SQL transaction syntax for compatibility
+- CASE expression in UPDATE is PostgreSQL compatible
+
+Statement 6: GetProductsByPriceRangeAsync
+---------------------------------
+Status: NO CHANGES REQUIRED
+Reason: CTE with RANK and PERCENT_RANK window functions is PostgreSQL compatible
+Original SQL: Uses WITH RankedProducts AS + RANK/PERCENT_RANK OVER
+PostgreSQL SQL: Identical - no changes needed
+Schema Changes: None
+
+Statement 7: GetLowStockProductsAsync
+---------------------------------
+Status: NO CHANGES REQUIRED
+Reason: CTE with multiple window functions (AVG, MIN, MAX OVER) is PostgreSQL compatible
+Original SQL: Uses WITH StockAnalysis AS + window functions
+PostgreSQL SQL: Identical - no changes needed
+Schema Changes: None
+
+================================================================
+SCHEMA OBJECT NAME CHANGES
+================================================================
+DMS Tool Schema Transformations: NONE
+
+All table names preserved as-is:
+- Products (unchanged)
+- ProductHistory (unchanged)
+- ProductStats (unchanged)
+
+================================================================
+SUMMARY STATISTICS
+================================================================
+Total Statements: 7
+Fully Migrated (no changes needed): 4 (Statements 1, 2, 6, 7)
+Partially Updated: 3 (Statements 3, 4, 5)
+GETDATE() Replacements: 8 occurrences across 3 statements
+SCOPE_IDENTITY() Replacements: 1 occurrence (pending Npgsql)
+Transaction Refactorings: 3 (pending Npgsql in Step 6)
+
+================================================================
+SQL SERVER SPECIFIC SYNTAX REMAINING
+================================================================
+The following SQL Server specific syntax remains in the code:
+1. SCOPE_IDENTITY() in InsertProductAsync (line ~140)
+2. BEGIN TRANSACTION/COMMIT blocks (T-SQL style)
+3. DECLARE @variable statements (T-SQL style)
+
+Note: These will be addressed in Step 6 when switching to Npgsql, as they
+require ADO.NET transaction handling at the application level rather than
+T-SQL transaction blocks.
+
+================================================================
+VERIFICATION STATUS
+================================================================
+✅ All CTE statements preserved (PostgreSQL compatible)
+✅ All window functions preserved (PostgreSQL compatible)
+✅ All CASE expressions preserved (PostgreSQL compatible)
+✅ All GETDATE() converted to CURRENT_TIMESTAMP
+✅ Schema object names unchanged (no DMS transformations)
+✅ Parameterized queries preserved with @ syntax (Npgsql compatible)
+⚠️  SCOPE_IDENTITY() conversion pending Npgsql (Step 6)
+⚠️  Transaction refactoring pending Npgsql (Step 6)
+
+================================================================
+NEXT STEPS
+================================================================
+Step 5: Update NuGet Package Dependencies (Microsoft.Data.SqlClient → Npgsql)
+Step 6: Update ADO.NET Classes and complete transaction refactoring
+  - Convert SqlConnection → NpgsqlConnection
+  - Convert SqlCommand → NpgsqlCommand
+  - Refactor InsertProductAsync to use RETURNING instead of SCOPE_IDENTITY()
+  - Refactor transaction methods to use ADO.NET transaction handling
+
+================================================================
+END OF RE-INTEGRATION LOG
+================================================================
