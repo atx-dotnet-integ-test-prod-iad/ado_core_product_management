@@ -1,0 +1,30 @@
+================================================================================
+SCHEMA MAPPING DOCUMENTATION
+Migration: Microsoft SQL Server to PostgreSQL
+Date: 2026-02-11
+================================================================================
+
+This file documents any schema object name changes that occurred during the
+SQL statement conversion process from Microsoft SQL Server to PostgreSQL.
+
+SCHEMA NAME CHANGES:
+- No schema name changes were required during the conversion
+- All table names remain unchanged: Products, ProductHistory, ProductStats
+- DMS tool did not convert any schema object names
+- All tables will use PostgreSQL's default schema (public)
+
+TABLE MAPPING:
+SQL Server                      PostgreSQL
+----------------------------------------------
+dbo.Products                 -> public.Products (or just Products)
+dbo.ProductHistory           -> public.ProductHistory (or just ProductHistory)
+dbo.ProductStats             -> public.ProductStats (or just ProductStats)
+
+NOTES:
+- The converted SQL statements in ProductRepository.cs use the same table names
+- No code changes required for schema object references
+- PostgreSQL will resolve unqualified table names to the public schema by default
+- If a different schema is needed in PostgreSQL, update the connection string
+  search_path parameter or qualify table names in queries
+
+================================================================================

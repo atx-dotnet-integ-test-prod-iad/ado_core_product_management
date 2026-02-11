@@ -1,0 +1,1461 @@
+================================================================================
+STATEMENT 2: Get Product By ID with CTE and LAG Window Function
+================================================================================
+Method: GetProductByIdAsync(int productId)
+
+DMS CONVERSION ATTEMPT:
+Timestamp: 2026-02-11T19:29:30.255707
+Status: ERROR
+Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. Replace @ProductId with $1 for parameter placeholders (or keep @ProductId as Npgsql supports it)
+2. LAG() window function - fully compatible
+3. CTE syntax - fully compatible
+4. All other SQL syntax - compatible
+
+WITH ProductHistory AS (
+    SELECT 
+        ProductId,
+        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,
+        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock
+    FROM Products
+    WHERE ProductId = @ProductId
+)
+SELECT 
+    p.ProductId,
+    p.Name,
+    p.Description,
+    p.Price,
+    p.StockQuantity,
+    p.CreatedDate,
+    p.ModifiedDate,
+    ph.PreviousPrice,
+    ph.PreviousStock,
+    CASE 
+        WHEN ph.PreviousPrice IS NOT NULL THEN 
+            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)
+        ELSE NULL
+    END as PriceChangePercentage
+FROM Products p
+LEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId
+WHERE p.ProductId = @ProductId;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: Npgsql supports @parameter syntax, so no parameter changes needed.
+
+================================================================================
+STATEMENT 3: Insert Product with Transaction
+================================================================================
+Method: InsertProductAsync(Product product)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. Remove DECLARE statements at transaction level (PostgreSQL handles differently)
+2. Replace SCOPE_IDENTITY() with RETURNING clause
+3. Replace GETDATE() with CURRENT_TIMESTAMP or NOW()
+4. Transaction syntax: BEGIN/COMMIT compatible but restructure for PostgreSQL
+
+BEGIN;
+    -- Insert the new product and return the ID
+    INSERT INTO Products (Name, Description, Price, StockQuantity)
+    VALUES (@Name, @Description, @Price, @StockQuantity)
+    RETURNING ProductId;
+    
+    -- Note: In PostgreSQL with Npgsql, we'll need to restructure this to use
+    -- the RETURNING clause properly, which may require code changes
+    -- For now, showing the SQL conversion:
+    
+    -- Log the insertion (using the returned ProductId in application code)
+    -- INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+    -- VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, CURRENT_TIMESTAMP);
+    
+    -- Update product statistics
+    -- UPDATE ProductStats
+    -- SET 
+    --     TotalProducts = TotalProducts + 1,
+    --     AveragePrice = (AveragePrice * TotalProducts + @Price) / (TotalProducts + 1),
+    --     LastUpdated = CURRENT_TIMESTAMP
+    -- WHERE StatId = 1;
+COMMIT;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: This transaction will need to be broken into separate commands in application code
+due to RETURNING clause usage. PostgreSQL doesn't support variables like SQL Server's
+DECLARE/SET pattern in simple statements. The application will need to capture the
+returned ID and execute subsequent statements separately.
+
+================================================================================
+STATEMENT 4: Update Product with Transaction
+================================================================================
+Method: UpdateProductAsync(Product product)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. Remove BEGIN TRANSACTION/COMMIT syntax (use BEGIN/COMMIT)
+2. Remove DECLARE statements (use WITH clauses or separate queries)
+3. Replace GETDATE() with CURRENT_TIMESTAMP
+4. Restructure to avoid T-SQL variable usage
+
+-- Option 1: Single CTE-based query (preferred for PostgreSQL)
+WITH OldValues AS (
+    SELECT Price as OldPrice, StockQuantity as OldStock
+    FROM Products
+    WHERE ProductId = @ProductId
+)
+UPDATE Products
+SET 
+    Name = @Name,
+    Description = @Description,
+    Price = @Price,
+    StockQuantity = @StockQuantity,
+    ModifiedDate = CURRENT_TIMESTAMP
+WHERE ProductId = @ProductId;
+
+-- Log changes (separate statement after update)
+INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+SELECT @ProductId, 'UPDATE', OldPrice, @Price, OldStock, @StockQuantity, CURRENT_TIMESTAMP
+FROM (SELECT Price as OldPrice, StockQuantity as OldStock FROM Products WHERE ProductId = @ProductId) AS old;
+
+-- Update statistics (separate statement)
+UPDATE ProductStats
+SET 
+    AveragePrice = (AveragePrice * TotalProducts - @OldPrice + @Price) / TotalProducts,
+    LastUpdated = CURRENT_TIMESTAMP
+WHERE StatId = 1;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: Transaction will need to be managed at application level with explicit
+BEGIN/COMMIT and multiple ExecuteNonQueryAsync calls.
+
+================================================================================
+STATEMENT 5: Delete Product with Transaction
+================================================================================
+Method: DeleteProductAsync(int productId)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. Remove BEGIN TRANSACTION/COMMIT syntax (use BEGIN/COMMIT)
+2. Remove DECLARE statements (fetch values in CTE)
+3. Replace GETDATE() with CURRENT_TIMESTAMP
+4. Restructure without T-SQL variables
+
+-- Store values before delete (using CTE or separate query)
+WITH OldValues AS (
+    SELECT Price as OldPrice, StockQuantity as OldStock
+    FROM Products
+    WHERE ProductId = @ProductId
+)
+-- First: Log the deletion
+INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+SELECT @ProductId, 'DELETE', OldPrice, NULL, OldStock, NULL, CURRENT_TIMESTAMP
+FROM OldValues;
+
+-- Then: Delete the product
+DELETE FROM Products 
+WHERE ProductId = @ProductId;
+
+-- Finally: Update product statistics
+UPDATE ProductStats
+SET 
+    TotalProducts = TotalProducts - 1,
+    AveragePrice = CASE 
+        WHEN TotalProducts > 1 
+        THEN (AveragePrice * TotalProducts - @OldPrice) / (TotalProducts - 1)
+        ELSE 0
+    END,
+    LastUpdated = CURRENT_TIMESTAMP
+WHERE StatId = 1;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: Must be executed within an explicit transaction in application code.
+Will require separate queries and proper transaction management.
+
+================================================================================
+STATEMENT 6: Get Products By Price Range with CTE and Window Functions
+================================================================================
+Method: GetProductsByPriceRangeAsync(decimal minPrice, decimal maxPrice)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. RANK() and PERCENT_RANK() - fully compatible
+2. CTE syntax - fully compatible
+3. All other syntax - fully compatible
+
+WITH RankedProducts AS (
+    SELECT 
+        p.*,
+        RANK() OVER (ORDER BY p.Price) as PriceRank,
+        PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile
+    FROM Products p
+    WHERE p.Price BETWEEN @MinPrice AND @MaxPrice
+)
+SELECT 
+    rp.*,
+    CASE 
+        WHEN rp.PricePercentile <= 0.25 THEN 'Budget'
+        WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range'
+        ELSE 'Premium'
+    END as PriceSegment
+FROM RankedProducts rp
+ORDER BY rp.PriceRank;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: This query is highly compatible and requires no changes.
+
+================================================================================
+STATEMENT 7: Get Low Stock Products with CTE and Window Functions
+================================================================================
+Method: GetLowStockProductsAsync(int threshold)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. AVG/MIN/MAX window functions - fully compatible
+2. CTE syntax - fully compatible
+3. All other syntax - fully compatible
+
+WITH StockAnalysis AS (
+    SELECT 
+        p.*,
+        AVG(StockQuantity) OVER() as AvgStock,
+        MIN(StockQuantity) OVER() as MinStock,
+        MAX(StockQuantity) OVER() as MaxStock
+    FROM Products p
+)
+SELECT 
+    sa.*,
+    CASE 
+        WHEN StockQuantity <= @Threshold THEN 'Critical'
+        WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low'
+        ELSE 'Adequate'
+    END as StockStatus,
+    ROUND((StockQuantity / AvgStock) * 100, 2) as StockPercentageOfAverage
+FROM StockAnalysis sa
+WHERE StockQuantity <= @Threshold
+ORDER BY StockQuantity;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: This query is highly compatible and requires no changes.
+
+================================================================================
+SUMMARY
+================================================================================
+Total Statements: 7
+DMS Attempts: 2 (Statements 1-2)
+DMS Successes: 0
+DMS Failures: 2
+Skipped Due to Failures: 5 (Statements 3-7)
+Manual Conversions: 7
+
+All statements manually converted to PostgreSQL syntax after DMS tool failures.
+Key finding: Most SELECT queries are highly compatible between SQL Server and
+PostgreSQL. Main differences in transaction handling and T-SQL variables.
+
+================================================================================
+DMS CONVERSION LOG
+Microsoft SQL Server to PostgreSQL Migration
+Date: 2026-02-11
+================================================================================
+STATEMENT 2: Get Product By ID with CTE and LAG Window Function
+================================================================================
+Method: GetProductByIdAsync(int productId)
+
+DMS CONVERSION ATTEMPT:
+Timestamp: 2026-02-11T19:29:30.255707
+Status: ERROR
+Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. Replace @ProductId with $1 for parameter placeholders (or keep @ProductId as Npgsql supports it)
+2. LAG() window function - fully compatible
+3. CTE syntax - fully compatible
+4. All other SQL syntax - compatible
+
+WITH ProductHistory AS (
+    SELECT 
+        ProductId,
+        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,
+        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock
+    FROM Products
+    WHERE ProductId = @ProductId
+)
+SELECT 
+    p.ProductId,
+    p.Name,
+    p.Description,
+    p.Price,
+    p.StockQuantity,
+    p.CreatedDate,
+    p.ModifiedDate,
+    ph.PreviousPrice,
+    ph.PreviousStock,
+    CASE 
+        WHEN ph.PreviousPrice IS NOT NULL THEN 
+            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)
+        ELSE NULL
+    END as PriceChangePercentage
+FROM Products p
+LEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId
+WHERE p.ProductId = @ProductId;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: Npgsql supports @parameter syntax, so no parameter changes needed.
+
+================================================================================
+STATEMENT 3: Insert Product with Transaction
+================================================================================
+Method: InsertProductAsync(Product product)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. Remove DECLARE statements at transaction level (PostgreSQL handles differently)
+2. Replace SCOPE_IDENTITY() with RETURNING clause
+3. Replace GETDATE() with CURRENT_TIMESTAMP or NOW()
+4. Transaction syntax: BEGIN/COMMIT compatible but restructure for PostgreSQL
+
+BEGIN;
+    -- Insert the new product and return the ID
+    INSERT INTO Products (Name, Description, Price, StockQuantity)
+    VALUES (@Name, @Description, @Price, @StockQuantity)
+    RETURNING ProductId;
+    
+    -- Note: In PostgreSQL with Npgsql, we'll need to restructure this to use
+    -- the RETURNING clause properly, which may require code changes
+    -- For now, showing the SQL conversion:
+    
+    -- Log the insertion (using the returned ProductId in application code)
+    -- INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+    -- VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, CURRENT_TIMESTAMP);
+    
+    -- Update product statistics
+    -- UPDATE ProductStats
+    -- SET 
+    --     TotalProducts = TotalProducts + 1,
+    --     AveragePrice = (AveragePrice * TotalProducts + @Price) / (TotalProducts + 1),
+    --     LastUpdated = CURRENT_TIMESTAMP
+    -- WHERE StatId = 1;
+COMMIT;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: This transaction will need to be broken into separate commands in application code
+due to RETURNING clause usage. PostgreSQL doesn't support variables like SQL Server's
+DECLARE/SET pattern in simple statements. The application will need to capture the
+returned ID and execute subsequent statements separately.
+
+================================================================================
+STATEMENT 4: Update Product with Transaction
+================================================================================
+Method: UpdateProductAsync(Product product)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. Remove BEGIN TRANSACTION/COMMIT syntax (use BEGIN/COMMIT)
+2. Remove DECLARE statements (use WITH clauses or separate queries)
+3. Replace GETDATE() with CURRENT_TIMESTAMP
+4. Restructure to avoid T-SQL variable usage
+
+-- Option 1: Single CTE-based query (preferred for PostgreSQL)
+WITH OldValues AS (
+    SELECT Price as OldPrice, StockQuantity as OldStock
+    FROM Products
+    WHERE ProductId = @ProductId
+)
+UPDATE Products
+SET 
+    Name = @Name,
+    Description = @Description,
+    Price = @Price,
+    StockQuantity = @StockQuantity,
+    ModifiedDate = CURRENT_TIMESTAMP
+WHERE ProductId = @ProductId;
+
+-- Log changes (separate statement after update)
+INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+SELECT @ProductId, 'UPDATE', OldPrice, @Price, OldStock, @StockQuantity, CURRENT_TIMESTAMP
+FROM (SELECT Price as OldPrice, StockQuantity as OldStock FROM Products WHERE ProductId = @ProductId) AS old;
+
+-- Update statistics (separate statement)
+UPDATE ProductStats
+SET 
+    AveragePrice = (AveragePrice * TotalProducts - @OldPrice + @Price) / TotalProducts,
+    LastUpdated = CURRENT_TIMESTAMP
+WHERE StatId = 1;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: Transaction will need to be managed at application level with explicit
+BEGIN/COMMIT and multiple ExecuteNonQueryAsync calls.
+
+================================================================================
+STATEMENT 5: Delete Product with Transaction
+================================================================================
+Method: DeleteProductAsync(int productId)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. Remove BEGIN TRANSACTION/COMMIT syntax (use BEGIN/COMMIT)
+2. Remove DECLARE statements (fetch values in CTE)
+3. Replace GETDATE() with CURRENT_TIMESTAMP
+4. Restructure without T-SQL variables
+
+-- Store values before delete (using CTE or separate query)
+WITH OldValues AS (
+    SELECT Price as OldPrice, StockQuantity as OldStock
+    FROM Products
+    WHERE ProductId = @ProductId
+)
+-- First: Log the deletion
+INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+SELECT @ProductId, 'DELETE', OldPrice, NULL, OldStock, NULL, CURRENT_TIMESTAMP
+FROM OldValues;
+
+-- Then: Delete the product
+DELETE FROM Products 
+WHERE ProductId = @ProductId;
+
+-- Finally: Update product statistics
+UPDATE ProductStats
+SET 
+    TotalProducts = TotalProducts - 1,
+    AveragePrice = CASE 
+        WHEN TotalProducts > 1 
+        THEN (AveragePrice * TotalProducts - @OldPrice) / (TotalProducts - 1)
+        ELSE 0
+    END,
+    LastUpdated = CURRENT_TIMESTAMP
+WHERE StatId = 1;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: Must be executed within an explicit transaction in application code.
+Will require separate queries and proper transaction management.
+
+================================================================================
+STATEMENT 6: Get Products By Price Range with CTE and Window Functions
+================================================================================
+Method: GetProductsByPriceRangeAsync(decimal minPrice, decimal maxPrice)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. RANK() and PERCENT_RANK() - fully compatible
+2. CTE syntax - fully compatible
+3. All other syntax - fully compatible
+
+WITH RankedProducts AS (
+    SELECT 
+        p.*,
+        RANK() OVER (ORDER BY p.Price) as PriceRank,
+        PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile
+    FROM Products p
+    WHERE p.Price BETWEEN @MinPrice AND @MaxPrice
+)
+SELECT 
+    rp.*,
+    CASE 
+        WHEN rp.PricePercentile <= 0.25 THEN 'Budget'
+        WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range'
+        ELSE 'Premium'
+    END as PriceSegment
+FROM RankedProducts rp
+ORDER BY rp.PriceRank;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: This query is highly compatible and requires no changes.
+
+================================================================================
+STATEMENT 7: Get Low Stock Products with CTE and Window Functions
+================================================================================
+Method: GetLowStockProductsAsync(int threshold)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. AVG/MIN/MAX window functions - fully compatible
+2. CTE syntax - fully compatible
+3. All other syntax - fully compatible
+
+WITH StockAnalysis AS (
+    SELECT 
+        p.*,
+        AVG(StockQuantity) OVER() as AvgStock,
+        MIN(StockQuantity) OVER() as MinStock,
+        MAX(StockQuantity) OVER() as MaxStock
+    FROM Products p
+)
+SELECT 
+    sa.*,
+    CASE 
+        WHEN StockQuantity <= @Threshold THEN 'Critical'
+        WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low'
+        ELSE 'Adequate'
+    END as StockStatus,
+    ROUND((StockQuantity / AvgStock) * 100, 2) as StockPercentageOfAverage
+FROM StockAnalysis sa
+WHERE StockQuantity <= @Threshold
+ORDER BY StockQuantity;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: This query is highly compatible and requires no changes.
+
+================================================================================
+SUMMARY
+================================================================================
+Total Statements: 7
+DMS Attempts: 2 (Statements 1-2)
+DMS Successes: 0
+DMS Failures: 2
+Skipped Due to Failures: 5 (Statements 3-7)
+Manual Conversions: 7
+
+All statements manually converted to PostgreSQL syntax after DMS tool failures.
+Key finding: Most SELECT queries are highly compatible between SQL Server and
+PostgreSQL. Main differences in transaction handling and T-SQL variables.
+
+================================================================================
+
+This log documents all attempts to convert SQL statements using the DMS MCP tool
+(dms-mcp____statement_conversion_tool), including any failures and the manual
+conversions applied when DMS conversion was unsuccessful.
+
+================================================================================
+STATEMENT 2: Get Product By ID with CTE and LAG Window Function
+================================================================================
+Method: GetProductByIdAsync(int productId)
+
+DMS CONVERSION ATTEMPT:
+Timestamp: 2026-02-11T19:29:30.255707
+Status: ERROR
+Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. Replace @ProductId with $1 for parameter placeholders (or keep @ProductId as Npgsql supports it)
+2. LAG() window function - fully compatible
+3. CTE syntax - fully compatible
+4. All other SQL syntax - compatible
+
+WITH ProductHistory AS (
+    SELECT 
+        ProductId,
+        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,
+        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock
+    FROM Products
+    WHERE ProductId = @ProductId
+)
+SELECT 
+    p.ProductId,
+    p.Name,
+    p.Description,
+    p.Price,
+    p.StockQuantity,
+    p.CreatedDate,
+    p.ModifiedDate,
+    ph.PreviousPrice,
+    ph.PreviousStock,
+    CASE 
+        WHEN ph.PreviousPrice IS NOT NULL THEN 
+            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)
+        ELSE NULL
+    END as PriceChangePercentage
+FROM Products p
+LEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId
+WHERE p.ProductId = @ProductId;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: Npgsql supports @parameter syntax, so no parameter changes needed.
+
+================================================================================
+STATEMENT 3: Insert Product with Transaction
+================================================================================
+Method: InsertProductAsync(Product product)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. Remove DECLARE statements at transaction level (PostgreSQL handles differently)
+2. Replace SCOPE_IDENTITY() with RETURNING clause
+3. Replace GETDATE() with CURRENT_TIMESTAMP or NOW()
+4. Transaction syntax: BEGIN/COMMIT compatible but restructure for PostgreSQL
+
+BEGIN;
+    -- Insert the new product and return the ID
+    INSERT INTO Products (Name, Description, Price, StockQuantity)
+    VALUES (@Name, @Description, @Price, @StockQuantity)
+    RETURNING ProductId;
+    
+    -- Note: In PostgreSQL with Npgsql, we'll need to restructure this to use
+    -- the RETURNING clause properly, which may require code changes
+    -- For now, showing the SQL conversion:
+    
+    -- Log the insertion (using the returned ProductId in application code)
+    -- INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+    -- VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, CURRENT_TIMESTAMP);
+    
+    -- Update product statistics
+    -- UPDATE ProductStats
+    -- SET 
+    --     TotalProducts = TotalProducts + 1,
+    --     AveragePrice = (AveragePrice * TotalProducts + @Price) / (TotalProducts + 1),
+    --     LastUpdated = CURRENT_TIMESTAMP
+    -- WHERE StatId = 1;
+COMMIT;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: This transaction will need to be broken into separate commands in application code
+due to RETURNING clause usage. PostgreSQL doesn't support variables like SQL Server's
+DECLARE/SET pattern in simple statements. The application will need to capture the
+returned ID and execute subsequent statements separately.
+
+================================================================================
+STATEMENT 4: Update Product with Transaction
+================================================================================
+Method: UpdateProductAsync(Product product)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. Remove BEGIN TRANSACTION/COMMIT syntax (use BEGIN/COMMIT)
+2. Remove DECLARE statements (use WITH clauses or separate queries)
+3. Replace GETDATE() with CURRENT_TIMESTAMP
+4. Restructure to avoid T-SQL variable usage
+
+-- Option 1: Single CTE-based query (preferred for PostgreSQL)
+WITH OldValues AS (
+    SELECT Price as OldPrice, StockQuantity as OldStock
+    FROM Products
+    WHERE ProductId = @ProductId
+)
+UPDATE Products
+SET 
+    Name = @Name,
+    Description = @Description,
+    Price = @Price,
+    StockQuantity = @StockQuantity,
+    ModifiedDate = CURRENT_TIMESTAMP
+WHERE ProductId = @ProductId;
+
+-- Log changes (separate statement after update)
+INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+SELECT @ProductId, 'UPDATE', OldPrice, @Price, OldStock, @StockQuantity, CURRENT_TIMESTAMP
+FROM (SELECT Price as OldPrice, StockQuantity as OldStock FROM Products WHERE ProductId = @ProductId) AS old;
+
+-- Update statistics (separate statement)
+UPDATE ProductStats
+SET 
+    AveragePrice = (AveragePrice * TotalProducts - @OldPrice + @Price) / TotalProducts,
+    LastUpdated = CURRENT_TIMESTAMP
+WHERE StatId = 1;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: Transaction will need to be managed at application level with explicit
+BEGIN/COMMIT and multiple ExecuteNonQueryAsync calls.
+
+================================================================================
+STATEMENT 5: Delete Product with Transaction
+================================================================================
+Method: DeleteProductAsync(int productId)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. Remove BEGIN TRANSACTION/COMMIT syntax (use BEGIN/COMMIT)
+2. Remove DECLARE statements (fetch values in CTE)
+3. Replace GETDATE() with CURRENT_TIMESTAMP
+4. Restructure without T-SQL variables
+
+-- Store values before delete (using CTE or separate query)
+WITH OldValues AS (
+    SELECT Price as OldPrice, StockQuantity as OldStock
+    FROM Products
+    WHERE ProductId = @ProductId
+)
+-- First: Log the deletion
+INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+SELECT @ProductId, 'DELETE', OldPrice, NULL, OldStock, NULL, CURRENT_TIMESTAMP
+FROM OldValues;
+
+-- Then: Delete the product
+DELETE FROM Products 
+WHERE ProductId = @ProductId;
+
+-- Finally: Update product statistics
+UPDATE ProductStats
+SET 
+    TotalProducts = TotalProducts - 1,
+    AveragePrice = CASE 
+        WHEN TotalProducts > 1 
+        THEN (AveragePrice * TotalProducts - @OldPrice) / (TotalProducts - 1)
+        ELSE 0
+    END,
+    LastUpdated = CURRENT_TIMESTAMP
+WHERE StatId = 1;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: Must be executed within an explicit transaction in application code.
+Will require separate queries and proper transaction management.
+
+================================================================================
+STATEMENT 6: Get Products By Price Range with CTE and Window Functions
+================================================================================
+Method: GetProductsByPriceRangeAsync(decimal minPrice, decimal maxPrice)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. RANK() and PERCENT_RANK() - fully compatible
+2. CTE syntax - fully compatible
+3. All other syntax - fully compatible
+
+WITH RankedProducts AS (
+    SELECT 
+        p.*,
+        RANK() OVER (ORDER BY p.Price) as PriceRank,
+        PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile
+    FROM Products p
+    WHERE p.Price BETWEEN @MinPrice AND @MaxPrice
+)
+SELECT 
+    rp.*,
+    CASE 
+        WHEN rp.PricePercentile <= 0.25 THEN 'Budget'
+        WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range'
+        ELSE 'Premium'
+    END as PriceSegment
+FROM RankedProducts rp
+ORDER BY rp.PriceRank;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: This query is highly compatible and requires no changes.
+
+================================================================================
+STATEMENT 7: Get Low Stock Products with CTE and Window Functions
+================================================================================
+Method: GetLowStockProductsAsync(int threshold)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. AVG/MIN/MAX window functions - fully compatible
+2. CTE syntax - fully compatible
+3. All other syntax - fully compatible
+
+WITH StockAnalysis AS (
+    SELECT 
+        p.*,
+        AVG(StockQuantity) OVER() as AvgStock,
+        MIN(StockQuantity) OVER() as MinStock,
+        MAX(StockQuantity) OVER() as MaxStock
+    FROM Products p
+)
+SELECT 
+    sa.*,
+    CASE 
+        WHEN StockQuantity <= @Threshold THEN 'Critical'
+        WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low'
+        ELSE 'Adequate'
+    END as StockStatus,
+    ROUND((StockQuantity / AvgStock) * 100, 2) as StockPercentageOfAverage
+FROM StockAnalysis sa
+WHERE StockQuantity <= @Threshold
+ORDER BY StockQuantity;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: This query is highly compatible and requires no changes.
+
+================================================================================
+SUMMARY
+================================================================================
+Total Statements: 7
+DMS Attempts: 2 (Statements 1-2)
+DMS Successes: 0
+DMS Failures: 2
+Skipped Due to Failures: 5 (Statements 3-7)
+Manual Conversions: 7
+
+All statements manually converted to PostgreSQL syntax after DMS tool failures.
+Key finding: Most SELECT queries are highly compatible between SQL Server and
+PostgreSQL. Main differences in transaction handling and T-SQL variables.
+
+================================================================================
+STATEMENT 1: Get All Products with CTE and Window Functions
+================================================================================
+STATEMENT 2: Get Product By ID with CTE and LAG Window Function
+================================================================================
+Method: GetProductByIdAsync(int productId)
+
+DMS CONVERSION ATTEMPT:
+Timestamp: 2026-02-11T19:29:30.255707
+Status: ERROR
+Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. Replace @ProductId with $1 for parameter placeholders (or keep @ProductId as Npgsql supports it)
+2. LAG() window function - fully compatible
+3. CTE syntax - fully compatible
+4. All other SQL syntax - compatible
+
+WITH ProductHistory AS (
+    SELECT 
+        ProductId,
+        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,
+        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock
+    FROM Products
+    WHERE ProductId = @ProductId
+)
+SELECT 
+    p.ProductId,
+    p.Name,
+    p.Description,
+    p.Price,
+    p.StockQuantity,
+    p.CreatedDate,
+    p.ModifiedDate,
+    ph.PreviousPrice,
+    ph.PreviousStock,
+    CASE 
+        WHEN ph.PreviousPrice IS NOT NULL THEN 
+            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)
+        ELSE NULL
+    END as PriceChangePercentage
+FROM Products p
+LEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId
+WHERE p.ProductId = @ProductId;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: Npgsql supports @parameter syntax, so no parameter changes needed.
+
+================================================================================
+STATEMENT 3: Insert Product with Transaction
+================================================================================
+Method: InsertProductAsync(Product product)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. Remove DECLARE statements at transaction level (PostgreSQL handles differently)
+2. Replace SCOPE_IDENTITY() with RETURNING clause
+3. Replace GETDATE() with CURRENT_TIMESTAMP or NOW()
+4. Transaction syntax: BEGIN/COMMIT compatible but restructure for PostgreSQL
+
+BEGIN;
+    -- Insert the new product and return the ID
+    INSERT INTO Products (Name, Description, Price, StockQuantity)
+    VALUES (@Name, @Description, @Price, @StockQuantity)
+    RETURNING ProductId;
+    
+    -- Note: In PostgreSQL with Npgsql, we'll need to restructure this to use
+    -- the RETURNING clause properly, which may require code changes
+    -- For now, showing the SQL conversion:
+    
+    -- Log the insertion (using the returned ProductId in application code)
+    -- INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+    -- VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, CURRENT_TIMESTAMP);
+    
+    -- Update product statistics
+    -- UPDATE ProductStats
+    -- SET 
+    --     TotalProducts = TotalProducts + 1,
+    --     AveragePrice = (AveragePrice * TotalProducts + @Price) / (TotalProducts + 1),
+    --     LastUpdated = CURRENT_TIMESTAMP
+    -- WHERE StatId = 1;
+COMMIT;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: This transaction will need to be broken into separate commands in application code
+due to RETURNING clause usage. PostgreSQL doesn't support variables like SQL Server's
+DECLARE/SET pattern in simple statements. The application will need to capture the
+returned ID and execute subsequent statements separately.
+
+================================================================================
+STATEMENT 4: Update Product with Transaction
+================================================================================
+Method: UpdateProductAsync(Product product)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. Remove BEGIN TRANSACTION/COMMIT syntax (use BEGIN/COMMIT)
+2. Remove DECLARE statements (use WITH clauses or separate queries)
+3. Replace GETDATE() with CURRENT_TIMESTAMP
+4. Restructure to avoid T-SQL variable usage
+
+-- Option 1: Single CTE-based query (preferred for PostgreSQL)
+WITH OldValues AS (
+    SELECT Price as OldPrice, StockQuantity as OldStock
+    FROM Products
+    WHERE ProductId = @ProductId
+)
+UPDATE Products
+SET 
+    Name = @Name,
+    Description = @Description,
+    Price = @Price,
+    StockQuantity = @StockQuantity,
+    ModifiedDate = CURRENT_TIMESTAMP
+WHERE ProductId = @ProductId;
+
+-- Log changes (separate statement after update)
+INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+SELECT @ProductId, 'UPDATE', OldPrice, @Price, OldStock, @StockQuantity, CURRENT_TIMESTAMP
+FROM (SELECT Price as OldPrice, StockQuantity as OldStock FROM Products WHERE ProductId = @ProductId) AS old;
+
+-- Update statistics (separate statement)
+UPDATE ProductStats
+SET 
+    AveragePrice = (AveragePrice * TotalProducts - @OldPrice + @Price) / TotalProducts,
+    LastUpdated = CURRENT_TIMESTAMP
+WHERE StatId = 1;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: Transaction will need to be managed at application level with explicit
+BEGIN/COMMIT and multiple ExecuteNonQueryAsync calls.
+
+================================================================================
+STATEMENT 5: Delete Product with Transaction
+================================================================================
+Method: DeleteProductAsync(int productId)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. Remove BEGIN TRANSACTION/COMMIT syntax (use BEGIN/COMMIT)
+2. Remove DECLARE statements (fetch values in CTE)
+3. Replace GETDATE() with CURRENT_TIMESTAMP
+4. Restructure without T-SQL variables
+
+-- Store values before delete (using CTE or separate query)
+WITH OldValues AS (
+    SELECT Price as OldPrice, StockQuantity as OldStock
+    FROM Products
+    WHERE ProductId = @ProductId
+)
+-- First: Log the deletion
+INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+SELECT @ProductId, 'DELETE', OldPrice, NULL, OldStock, NULL, CURRENT_TIMESTAMP
+FROM OldValues;
+
+-- Then: Delete the product
+DELETE FROM Products 
+WHERE ProductId = @ProductId;
+
+-- Finally: Update product statistics
+UPDATE ProductStats
+SET 
+    TotalProducts = TotalProducts - 1,
+    AveragePrice = CASE 
+        WHEN TotalProducts > 1 
+        THEN (AveragePrice * TotalProducts - @OldPrice) / (TotalProducts - 1)
+        ELSE 0
+    END,
+    LastUpdated = CURRENT_TIMESTAMP
+WHERE StatId = 1;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: Must be executed within an explicit transaction in application code.
+Will require separate queries and proper transaction management.
+
+================================================================================
+STATEMENT 6: Get Products By Price Range with CTE and Window Functions
+================================================================================
+Method: GetProductsByPriceRangeAsync(decimal minPrice, decimal maxPrice)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. RANK() and PERCENT_RANK() - fully compatible
+2. CTE syntax - fully compatible
+3. All other syntax - fully compatible
+
+WITH RankedProducts AS (
+    SELECT 
+        p.*,
+        RANK() OVER (ORDER BY p.Price) as PriceRank,
+        PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile
+    FROM Products p
+    WHERE p.Price BETWEEN @MinPrice AND @MaxPrice
+)
+SELECT 
+    rp.*,
+    CASE 
+        WHEN rp.PricePercentile <= 0.25 THEN 'Budget'
+        WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range'
+        ELSE 'Premium'
+    END as PriceSegment
+FROM RankedProducts rp
+ORDER BY rp.PriceRank;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: This query is highly compatible and requires no changes.
+
+================================================================================
+STATEMENT 7: Get Low Stock Products with CTE and Window Functions
+================================================================================
+Method: GetLowStockProductsAsync(int threshold)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. AVG/MIN/MAX window functions - fully compatible
+2. CTE syntax - fully compatible
+3. All other syntax - fully compatible
+
+WITH StockAnalysis AS (
+    SELECT 
+        p.*,
+        AVG(StockQuantity) OVER() as AvgStock,
+        MIN(StockQuantity) OVER() as MinStock,
+        MAX(StockQuantity) OVER() as MaxStock
+    FROM Products p
+)
+SELECT 
+    sa.*,
+    CASE 
+        WHEN StockQuantity <= @Threshold THEN 'Critical'
+        WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low'
+        ELSE 'Adequate'
+    END as StockStatus,
+    ROUND((StockQuantity / AvgStock) * 100, 2) as StockPercentageOfAverage
+FROM StockAnalysis sa
+WHERE StockQuantity <= @Threshold
+ORDER BY StockQuantity;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: This query is highly compatible and requires no changes.
+
+================================================================================
+SUMMARY
+================================================================================
+Total Statements: 7
+DMS Attempts: 2 (Statements 1-2)
+DMS Successes: 0
+DMS Failures: 2
+Skipped Due to Failures: 5 (Statements 3-7)
+Manual Conversions: 7
+
+All statements manually converted to PostgreSQL syntax after DMS tool failures.
+Key finding: Most SELECT queries are highly compatible between SQL Server and
+PostgreSQL. Main differences in transaction handling and T-SQL variables.
+
+================================================================================
+Method: GetAllProductsAsync()
+
+DMS CONVERSION ATTEMPT:
+Timestamp: 2026-02-11T19:28:49.495042
+Status: ERROR
+Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+
+DMS Input:
+- schema_name: dbo
+- sql_text: WITH ProductStats AS (SELECT ProductId, AVG(Price) OVER() as AvgPrice, COUNT(*) OVER() as TotalProducts FROM Products) SELECT p.ProductId, p.Name, p.Description, p.Price, p.StockQuantity, p.CreatedDate, p.ModifiedDate, CASE WHEN p.Price > ps.AvgPrice THEN 'Above Average' WHEN p.Price < ps.AvgPrice THEN 'Below Average' ELSE 'Average' END as PriceCategory, ROUND((p.Price / ps.AvgPrice) * 100, 2) as PricePercentageOfAverage FROM Products p INNER JOIN ProductStats ps ON p.ProductId = ps.ProductId ORDER BY CASE WHEN p.Price > ps.AvgPrice THEN 1 ELSE 2 END, p.Name
+
+DMS Output:
+{
+  "conversion_timestamp": "2026-02-11T19:28:49.495042",
+  "input": {
+    "sql_text": "...",
+    "migration_project_identifier": "arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU",
+    "database_name": "ProductManagement",
+    "schema_name": "dbo",
+    "region": "us-east-1",
+    "server_name": "172.31.94.132"
+  },
+  "workflow_steps": [
+    {
+      "step": "create_metadata_model",
+      "timestamp": "2026-02-11T19:28:51.413619",
+      "status": "started"
+    }
+  ],
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-11T19:28:53.180132"
+}
+
+MANUAL CONVERSION APPLIED:
+Since DMS tool failed, applying manual PostgreSQL conversion:
+
+Key changes for PostgreSQL:
+1. ROUND() function in PostgreSQL uses similar syntax - compatible
+2. Window functions (AVG OVER, COUNT OVER) - fully compatible
+3. CTE syntax - fully compatible
+4. CASE expressions - fully compatible
+5. No schema object name changes needed
+
+WITH ProductStats AS (
+    SELECT 
+        ProductId,
+        AVG(Price) OVER() as AvgPrice,
+        COUNT(*) OVER() as TotalProducts
+    FROM Products
+)
+SELECT 
+    p.ProductId,
+    p.Name,
+    p.Description,
+    p.Price,
+    p.StockQuantity,
+    p.CreatedDate,
+    p.ModifiedDate,
+    CASE 
+        WHEN p.Price > ps.AvgPrice THEN 'Above Average'
+        WHEN p.Price < ps.AvgPrice THEN 'Below Average'
+        ELSE 'Average'
+    END as PriceCategory,
+    ROUND((p.Price / ps.AvgPrice) * 100, 2) as PricePercentageOfAverage
+FROM Products p
+INNER JOIN ProductStats ps ON p.ProductId = ps.ProductId
+ORDER BY 
+    CASE 
+        WHEN p.Price > ps.AvgPrice THEN 1
+        ELSE 2
+    END,
+    p.Name;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: The SQL is highly compatible between SQL Server and PostgreSQL. Only minor syntax differences exist.
+
+================================================================================
+STATEMENT 2: Get Product By ID with CTE and LAG Window Function
+================================================================================
+Method: GetProductByIdAsync(int productId)
+
+DMS CONVERSION ATTEMPT:
+Timestamp: 2026-02-11T19:29:30.255707
+Status: ERROR
+Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. Replace @ProductId with $1 for parameter placeholders (or keep @ProductId as Npgsql supports it)
+2. LAG() window function - fully compatible
+3. CTE syntax - fully compatible
+4. All other SQL syntax - compatible
+
+WITH ProductHistory AS (
+    SELECT 
+        ProductId,
+        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,
+        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock
+    FROM Products
+    WHERE ProductId = @ProductId
+)
+SELECT 
+    p.ProductId,
+    p.Name,
+    p.Description,
+    p.Price,
+    p.StockQuantity,
+    p.CreatedDate,
+    p.ModifiedDate,
+    ph.PreviousPrice,
+    ph.PreviousStock,
+    CASE 
+        WHEN ph.PreviousPrice IS NOT NULL THEN 
+            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)
+        ELSE NULL
+    END as PriceChangePercentage
+FROM Products p
+LEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId
+WHERE p.ProductId = @ProductId;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: Npgsql supports @parameter syntax, so no parameter changes needed.
+
+================================================================================
+STATEMENT 3: Insert Product with Transaction
+================================================================================
+Method: InsertProductAsync(Product product)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. Remove DECLARE statements at transaction level (PostgreSQL handles differently)
+2. Replace SCOPE_IDENTITY() with RETURNING clause
+3. Replace GETDATE() with CURRENT_TIMESTAMP or NOW()
+4. Transaction syntax: BEGIN/COMMIT compatible but restructure for PostgreSQL
+
+BEGIN;
+    -- Insert the new product and return the ID
+    INSERT INTO Products (Name, Description, Price, StockQuantity)
+    VALUES (@Name, @Description, @Price, @StockQuantity)
+    RETURNING ProductId;
+    
+    -- Note: In PostgreSQL with Npgsql, we'll need to restructure this to use
+    -- the RETURNING clause properly, which may require code changes
+    -- For now, showing the SQL conversion:
+    
+    -- Log the insertion (using the returned ProductId in application code)
+    -- INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+    -- VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, CURRENT_TIMESTAMP);
+    
+    -- Update product statistics
+    -- UPDATE ProductStats
+    -- SET 
+    --     TotalProducts = TotalProducts + 1,
+    --     AveragePrice = (AveragePrice * TotalProducts + @Price) / (TotalProducts + 1),
+    --     LastUpdated = CURRENT_TIMESTAMP
+    -- WHERE StatId = 1;
+COMMIT;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: This transaction will need to be broken into separate commands in application code
+due to RETURNING clause usage. PostgreSQL doesn't support variables like SQL Server's
+DECLARE/SET pattern in simple statements. The application will need to capture the
+returned ID and execute subsequent statements separately.
+
+================================================================================
+STATEMENT 4: Update Product with Transaction
+================================================================================
+Method: UpdateProductAsync(Product product)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. Remove BEGIN TRANSACTION/COMMIT syntax (use BEGIN/COMMIT)
+2. Remove DECLARE statements (use WITH clauses or separate queries)
+3. Replace GETDATE() with CURRENT_TIMESTAMP
+4. Restructure to avoid T-SQL variable usage
+
+-- Option 1: Single CTE-based query (preferred for PostgreSQL)
+WITH OldValues AS (
+    SELECT Price as OldPrice, StockQuantity as OldStock
+    FROM Products
+    WHERE ProductId = @ProductId
+)
+UPDATE Products
+SET 
+    Name = @Name,
+    Description = @Description,
+    Price = @Price,
+    StockQuantity = @StockQuantity,
+    ModifiedDate = CURRENT_TIMESTAMP
+WHERE ProductId = @ProductId;
+
+-- Log changes (separate statement after update)
+INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+SELECT @ProductId, 'UPDATE', OldPrice, @Price, OldStock, @StockQuantity, CURRENT_TIMESTAMP
+FROM (SELECT Price as OldPrice, StockQuantity as OldStock FROM Products WHERE ProductId = @ProductId) AS old;
+
+-- Update statistics (separate statement)
+UPDATE ProductStats
+SET 
+    AveragePrice = (AveragePrice * TotalProducts - @OldPrice + @Price) / TotalProducts,
+    LastUpdated = CURRENT_TIMESTAMP
+WHERE StatId = 1;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: Transaction will need to be managed at application level with explicit
+BEGIN/COMMIT and multiple ExecuteNonQueryAsync calls.
+
+================================================================================
+STATEMENT 5: Delete Product with Transaction
+================================================================================
+Method: DeleteProductAsync(int productId)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. Remove BEGIN TRANSACTION/COMMIT syntax (use BEGIN/COMMIT)
+2. Remove DECLARE statements (fetch values in CTE)
+3. Replace GETDATE() with CURRENT_TIMESTAMP
+4. Restructure without T-SQL variables
+
+-- Store values before delete (using CTE or separate query)
+WITH OldValues AS (
+    SELECT Price as OldPrice, StockQuantity as OldStock
+    FROM Products
+    WHERE ProductId = @ProductId
+)
+-- First: Log the deletion
+INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+SELECT @ProductId, 'DELETE', OldPrice, NULL, OldStock, NULL, CURRENT_TIMESTAMP
+FROM OldValues;
+
+-- Then: Delete the product
+DELETE FROM Products 
+WHERE ProductId = @ProductId;
+
+-- Finally: Update product statistics
+UPDATE ProductStats
+SET 
+    TotalProducts = TotalProducts - 1,
+    AveragePrice = CASE 
+        WHEN TotalProducts > 1 
+        THEN (AveragePrice * TotalProducts - @OldPrice) / (TotalProducts - 1)
+        ELSE 0
+    END,
+    LastUpdated = CURRENT_TIMESTAMP
+WHERE StatId = 1;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: Must be executed within an explicit transaction in application code.
+Will require separate queries and proper transaction management.
+
+================================================================================
+STATEMENT 6: Get Products By Price Range with CTE and Window Functions
+================================================================================
+Method: GetProductsByPriceRangeAsync(decimal minPrice, decimal maxPrice)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. RANK() and PERCENT_RANK() - fully compatible
+2. CTE syntax - fully compatible
+3. All other syntax - fully compatible
+
+WITH RankedProducts AS (
+    SELECT 
+        p.*,
+        RANK() OVER (ORDER BY p.Price) as PriceRank,
+        PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile
+    FROM Products p
+    WHERE p.Price BETWEEN @MinPrice AND @MaxPrice
+)
+SELECT 
+    rp.*,
+    CASE 
+        WHEN rp.PricePercentile <= 0.25 THEN 'Budget'
+        WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range'
+        ELSE 'Premium'
+    END as PriceSegment
+FROM RankedProducts rp
+ORDER BY rp.PriceRank;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: This query is highly compatible and requires no changes.
+
+================================================================================
+STATEMENT 7: Get Low Stock Products with CTE and Window Functions
+================================================================================
+Method: GetLowStockProductsAsync(int threshold)
+
+DMS CONVERSION ATTEMPT:
+Not attempted due to consistent DMS metadata model creation failures.
+Status: SKIPPED_DUE_TO_PREVIOUS_FAILURES
+
+MANUAL CONVERSION APPLIED:
+Key changes for PostgreSQL:
+1. AVG/MIN/MAX window functions - fully compatible
+2. CTE syntax - fully compatible
+3. All other syntax - fully compatible
+
+WITH StockAnalysis AS (
+    SELECT 
+        p.*,
+        AVG(StockQuantity) OVER() as AvgStock,
+        MIN(StockQuantity) OVER() as MinStock,
+        MAX(StockQuantity) OVER() as MaxStock
+    FROM Products p
+)
+SELECT 
+    sa.*,
+    CASE 
+        WHEN StockQuantity <= @Threshold THEN 'Critical'
+        WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low'
+        ELSE 'Adequate'
+    END as StockStatus,
+    ROUND((StockQuantity / AvgStock) * 100, 2) as StockPercentageOfAverage
+FROM StockAnalysis sa
+WHERE StockQuantity <= @Threshold
+ORDER BY StockQuantity;
+
+Conversion Method: MANUAL_AFTER_DMS_FAILURE
+Notes: This query is highly compatible and requires no changes.
+
+================================================================================
+SUMMARY
+================================================================================
+Total Statements: 7
+DMS Attempts: 2 (Statements 1-2)
+DMS Successes: 0
+DMS Failures: 2
+Skipped Due to Failures: 5 (Statements 3-7)
+Manual Conversions: 7
+
+All statements manually converted to PostgreSQL syntax after DMS tool failures.
+Key finding: Most SELECT queries are highly compatible between SQL Server and
+PostgreSQL. Main differences in transaction handling and T-SQL variables.
+
+================================================================================

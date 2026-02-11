@@ -1,0 +1,78 @@
+================================================================================
+SQL STATEMENT RE-INTEGRATION NOTES
+Migration: Microsoft SQL Server to PostgreSQL
+Date: 2026-02-11
+File: DataAccess/ProductRepository.cs
+================================================================================
+
+CHANGES APPLIED IN STEP 3:
+---------------------------
+
+1. DATE/TIME FUNCTIONS:
+   - Replaced all GETDATE() calls with CURRENT_TIMESTAMP (7 occurrences)
+   - Locations: InsertProductAsync (2x), UpdateProductAsync (2x), DeleteProductAsync (2x), ProductStats updates (1x)
+   - This change makes the SQL compatible with PostgreSQL while maintaining code structure
+
+2. SELECT STATEMENTS (No Changes Required):
+   - GetAllProductsAsync: CTE with window functions - Already PostgreSQL compatible
+   - GetProductByIdAsync: CTE with LAG window function - Already PostgreSQL compatible  
+   - GetProductsByPriceRangeAsync: CTE with RANK/PERCENT_RANK - Already PostgreSQL compatible
+   - GetLowStockProductsAsync: CTE with AVG/MIN/MAX window functions - Already PostgreSQL compatible
+
+CHANGES DEFERRED TO LATER STEPS:
+----------------------------------
+
+1. TRANSACTION RESTRUCTURING (Requires Code Changes):
+   The following methods use T-SQL transaction patterns that need restructuring:
+   
+   a) InsertProductAsync:
+      - Current: Uses BEGIN TRANSACTION...COMMIT with DECLARE/SET pattern
+      - Needed: Split into separate statements with RETURNING clause for ProductId
+      - Impact: Requires code changes to capture RETURNING value and execute multiple statements
+      - Reason for deferral: This requires application code restructuring beyond SQL statement updates
+   
+   b) UpdateProductAsync:
+      - Current: Uses BEGIN TRANSACTION...COMMIT with DECLARE variables
+      - Needed: Execute SELECT to get old values, then UPDATE, then INSERT history
+      - Impact: Requires managing transaction in application code with multiple ExecuteNonQueryAsync calls
+      - Reason for deferral: Requires application-level transaction management
+   
+   c) DeleteProductAsync:
+      - Current: Uses BEGIN TRANSACTION...COMMIT with DECLARE variables
+      - Needed: Execute SELECT to get old values, then history INSERT, then DELETE
+      - Impact: Requires managing transaction in application code with multiple statements
+      - Reason for deferral: Requires application-level transaction management
+
+2. SCOPE_IDENTITY() TO RETURNING CLAUSE:
+   - Current: InsertProductAsync uses SCOPE_IDENTITY() to get inserted ID
+   - Needed: Use RETURNING ProductId clause in INSERT statement
+   - Impact: Requires code changes to use ExecuteScalarAsync with RETURNING
+   - Reason for deferral: This change is bundled with transaction restructuring
+
+VERIFICATION STATUS:
+--------------------
+✓ Application compiles successfully with current changes
+✓ All SQL Server-specific date/time functions replaced with PostgreSQL equivalents
+✓ All SELECT queries confirmed as PostgreSQL-compatible (no changes needed)
+✓ Schema object names verified - no changes required (documented in schema_mapping.txt)
+✓ Code structure maintained - all method signatures and logic unchanged
+
+NEXT STEPS REQUIRED:
+--------------------
+1. In a future iteration or manual review:
+   - Restructure transaction methods to use explicit transaction management
+   - Implement RETURNING clause usage for INSERT operations
+   - Split complex T-SQL transactions into separate PostgreSQL statements
+   
+2. Continue with Step 4: Update dependencies (Microsoft.Data.SqlClient → Npgsql)
+3. Continue with Step 5: Update ADO.NET classes (SqlConnection → NpgsqlConnection, etc.)
+
+IMPORTANT NOTES:
+----------------
+- The current changes make the code compatible with PostgreSQL for SELECT operations
+- Transaction methods will need PostgreSQL database to test properly
+- The RETURNING clause and transaction restructuring will be more efficient when
+  combined with Npgsql driver (Step 4-5) which has native PostgreSQL support
+- Consider implementing transaction restructuring after completing Steps 4-5
+
+================================================================================
