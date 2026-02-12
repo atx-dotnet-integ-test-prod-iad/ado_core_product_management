@@ -1,0 +1,43 @@
+Build started 02/12/2026 23:36:36.
+     1>Project "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/AdoCore.sln" on node 1 (Clean target(s)).
+     1>ValidateSolutionConfiguration:
+         Building solution configuration "Debug|Any CPU".
+     1>Project "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/AdoCore.sln" (1) is building "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/AdoCore.csproj" (2) on node 1 (Clean target(s)).
+     2>CoreClean:
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/bin/Debug/net9.0/appsettings.json".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/bin/Debug/net9.0/AdoCore".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/bin/Debug/net9.0/AdoCore.deps.json".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/bin/Debug/net9.0/AdoCore.runtimeconfig.json".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/bin/Debug/net9.0/AdoCore.dll".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/bin/Debug/net9.0/AdoCore.pdb".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/bin/Debug/net9.0/Microsoft.Extensions.Configuration.dll".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/bin/Debug/net9.0/Microsoft.Extensions.Configuration.Abstractions.dll".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/bin/Debug/net9.0/Microsoft.Extensions.Configuration.FileExtensions.dll".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/bin/Debug/net9.0/Microsoft.Extensions.Configuration.Json.dll".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/bin/Debug/net9.0/Microsoft.Extensions.DependencyInjection.dll".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/bin/Debug/net9.0/Microsoft.Extensions.DependencyInjection.Abstractions.dll".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/bin/Debug/net9.0/Microsoft.Extensions.FileProviders.Abstractions.dll".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/bin/Debug/net9.0/Microsoft.Extensions.FileProviders.Physical.dll".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/bin/Debug/net9.0/Microsoft.Extensions.FileSystemGlobbing.dll".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/bin/Debug/net9.0/Microsoft.Extensions.Logging.Abstractions.dll".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/bin/Debug/net9.0/Microsoft.Extensions.Primitives.dll".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/bin/Debug/net9.0/Npgsql.dll".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/obj/Debug/net9.0/AdoCore.csproj.AssemblyReference.cache".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/obj/Debug/net9.0/AdoCore.GeneratedMSBuildEditorConfig.editorconfig".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/obj/Debug/net9.0/AdoCore.AssemblyInfoInputs.cache".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/obj/Debug/net9.0/AdoCore.AssemblyInfo.cs".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/obj/Debug/net9.0/AdoCore.csproj.CoreCompileInputs.cache".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/obj/Debug/net9.0/AdoCore.csproj.Up2Date".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/obj/Debug/net9.0/AdoCore.dll".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/obj/Debug/net9.0/refint/AdoCore.dll".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/obj/Debug/net9.0/AdoCore.pdb".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/obj/Debug/net9.0/AdoCore.genruntimeconfig.cache".
+         Deleting file "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/obj/Debug/net9.0/ref/AdoCore.dll".
+     2>Done Building Project "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/AdoCore.csproj" (Clean target(s)).
+     1>Done Building Project "/QNet/site-packages/atx_dot_net_strands_cli/all_local_test_output/artifact-AdoCore/artifact/sourceCode/AdoCore.sln" (Clean target(s)).
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:00.51
