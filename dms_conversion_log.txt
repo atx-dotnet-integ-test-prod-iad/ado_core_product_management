@@ -1,0 +1,157 @@
+================================================================================
+DMS CONVERSION LOG - SQL Server to PostgreSQL Migration
+Date: 2026-02-13
+================================================================================
+
+SUMMARY:
+--------
+All 7 SQL statements were processed through the DMS MCP tool as required.
+All conversions failed with the same metadata model creation error.
+Manual conversions have been performed based on SQL Server to PostgreSQL migration best practices.
+
+================================================================================
+STATEMENT 1: GetAllProductsAsync
+================================================================================
+Original SQL: CTE with AVG/COUNT window functions and CASE statements
+DMS Tool Result: ERROR
+DMS Error Output:
+{
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-13T07:47:30.397894"
+}
+
+Manual Conversion Applied:
+- CTE syntax is compatible with PostgreSQL
+- Window functions (AVG, COUNT OVER) are supported
+- CASE statements are identical
+- ROUND function is compatible
+- No schema name changes needed (Products table remains as-is)
+- Main changes: None required, syntax is PostgreSQL-compatible
+
+================================================================================
+STATEMENT 2: GetProductByIdAsync
+================================================================================
+Original SQL: CTE with LAG window function
+DMS Tool Result: ERROR
+DMS Error Output:
+{
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-13T07:47:45.159034"
+}
+
+Manual Conversion Applied:
+- CTE syntax is compatible
+- LAG window function is supported in PostgreSQL
+- Parameters remain as $1, $2 format (will be handled by Npgsql driver with @ syntax)
+- No schema name changes needed
+- Main changes: None required, syntax is PostgreSQL-compatible
+
+================================================================================
+STATEMENT 3: InsertProductAsync
+================================================================================
+Original SQL: Transaction with DECLARE, SCOPE_IDENTITY(), and GETDATE()
+DMS Tool Result: ERROR
+DMS Error Output:
+{
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-13T07:47:59.119153"
+}
+
+Manual Conversion Applied:
+Key T-SQL to PostgreSQL conversions:
+1. SCOPE_IDENTITY() → Replaced with RETURNING clause on INSERT
+2. GETDATE() → Replaced with CURRENT_TIMESTAMP
+3. BEGIN TRANSACTION/COMMIT → Compatible but transactions handled at connection level in code
+4. DECLARE and SET → Removed, using RETURNING clause instead
+5. Multi-statement transaction maintained with proper PostgreSQL syntax
+
+================================================================================
+STATEMENT 4: UpdateProductAsync
+================================================================================
+Original SQL: Transaction with DECLARE variables and GETDATE()
+DMS Tool Result: ERROR
+DMS Error Output:
+{
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-13T07:48:14.060485"
+}
+
+Manual Conversion Applied:
+Key T-SQL to PostgreSQL conversions:
+1. DECLARE @OldPrice/@OldStock → Using PostgreSQL variables or CTE approach
+2. GETDATE() → Replaced with CURRENT_TIMESTAMP
+3. Transaction structure adapted for PostgreSQL
+4. Variable assignments converted to subqueries or CTEs
+
+================================================================================
+STATEMENT 5: DeleteProductAsync
+================================================================================
+Original SQL: Transaction with DECLARE, DELETE, and calculations
+DMS Tool Result: ERROR
+DMS Error Output:
+{
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-13T07:48:27.196844"
+}
+
+Manual Conversion Applied:
+Key T-SQL to PostgreSQL conversions:
+1. DECLARE @OldPrice/@OldStock → Using WITH clause or temporary storage
+2. GETDATE() → Replaced with CURRENT_TIMESTAMP
+3. DELETE syntax compatible
+4. CASE expressions compatible
+
+================================================================================
+STATEMENT 6: GetProductsByPriceRangeAsync
+================================================================================
+Original SQL: CTE with RANK and PERCENT_RANK window functions
+DMS Tool Result: ERROR
+DMS Error Output:
+{
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-13T07:48:40.100480"
+}
+
+Manual Conversion Applied:
+- CTE syntax is compatible
+- RANK() and PERCENT_RANK() window functions are supported in PostgreSQL
+- BETWEEN operator is compatible
+- No changes required, syntax is PostgreSQL-compatible
+
+================================================================================
+STATEMENT 7: GetLowStockProductsAsync
+================================================================================
+Original SQL: CTE with AVG/MIN/MAX window functions
+DMS Tool Result: ERROR
+DMS Error Output:
+{
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-13T07:48:53.413987"
+}
+
+Manual Conversion Applied:
+- CTE syntax is compatible
+- Window functions (AVG, MIN, MAX OVER) are supported
+- ROUND function is compatible
+- No changes required, syntax is PostgreSQL-compatible
+
+================================================================================
+CONCLUSION:
+-----------
+All statements were passed through the DMS MCP tool as required by the transformation definition.
+Due to consistent metadata model creation failures, manual conversions were applied.
+Primary conversion patterns:
+1. GETDATE() → CURRENT_TIMESTAMP
+2. SCOPE_IDENTITY() → RETURNING clause
+3. T-SQL variables → PostgreSQL DO blocks or CTEs
+4. Most window functions and CTEs are already PostgreSQL-compatible
+
+All conversions documented in converted_statements.sql.
+================================================================================
