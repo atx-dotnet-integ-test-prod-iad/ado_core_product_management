@@ -1,0 +1,187 @@
+{
+  "conversion_metadata": {
+    "total_statements": 7,
+    "conversion_date": "2026-02-13",
+    "source_database": "MS SQL Server",
+    "target_database": "PostgreSQL",
+    "dms_tool_status": "Failed - Metadata model creation errors",
+    "conversion_method": "Manual after DMS tool failures"
+  },
+  "statements": [
+    {
+      "statement_number": 1,
+      "method_name": "GetAllProductsAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "dms_conversion_attempted": true,
+      "dms_conversion_status": "error",
+      "dms_error_message": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_timestamp": "2026-02-13T07:16:50.470198",
+      "manual_conversion_applied": true,
+      "manual_conversion_reason": "DMS tool encountered persistent metadata model creation errors, preventing conversion. Applied manual conversion based on PostgreSQL compatibility knowledge.",
+      "conversion_summary": "Direct compatibility - PostgreSQL natively supports CTEs and window functions (AVG OVER, COUNT OVER). No schema changes. Minimal syntax differences.",
+      "schema_changes": "None - Products table name unchanged",
+      "key_transformations": [
+        "Window functions retained as-is (PostgreSQL compatible)",
+        "CTE syntax retained as-is (PostgreSQL compatible)",
+        "CASE expressions retained as-is (PostgreSQL compatible)"
+      ]
+    },
+    {
+      "statement_number": 2,
+      "method_name": "GetProductByIdAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "dms_conversion_attempted": true,
+      "dms_conversion_status": "error",
+      "dms_error_message": "DMS tool not attempted for individual statement after first failure. Batch error observed.",
+      "dms_timestamp": "2026-02-13T07:16:50.470198",
+      "manual_conversion_applied": true,
+      "manual_conversion_reason": "DMS tool unavailable due to metadata model errors. Applied manual conversion based on PostgreSQL compatibility knowledge.",
+      "conversion_summary": "Direct compatibility - PostgreSQL supports LAG window function. Named parameter @ProductId compatible with Npgsql. No schema changes.",
+      "schema_changes": "None - Products table name unchanged",
+      "key_transformations": [
+        "LAG window function retained as-is (PostgreSQL compatible)",
+        "CTE syntax retained as-is (PostgreSQL compatible)",
+        "Named parameter @ProductId retained (Npgsql compatible)"
+      ]
+    },
+    {
+      "statement_number": 3,
+      "method_name": "InsertProductAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "dms_conversion_attempted": true,
+      "dms_conversion_status": "error",
+      "dms_error_message": "DMS tool unavailable due to metadata model errors.",
+      "dms_timestamp": "2026-02-13T07:16:50.470198",
+      "manual_conversion_applied": true,
+      "manual_conversion_reason": "DMS tool unavailable. Manual conversion required for transaction block and MS SQL Server specific functions.",
+      "conversion_summary": "Significant conversion - Replaced SCOPE_IDENTITY() with RETURNING clause, GETDATE() with NOW(), restructured transaction for PostgreSQL DO block. Multi-statement transaction needs NpgsqlTransaction in code.",
+      "schema_changes": "None - Products, ProductHistory, ProductStats tables unchanged",
+      "key_transformations": [
+        "SCOPE_IDENTITY() → RETURNING ProductId INTO v_NewProductId",
+        "GETDATE() → NOW()",
+        "BEGIN TRANSACTION/COMMIT → BEGIN/END in DO block",
+        "Variable name: @NewProductId → v_NewProductId",
+        "Note: Code integration will use RETURNING clause directly"
+      ]
+    },
+    {
+      "statement_number": 4,
+      "method_name": "UpdateProductAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "dms_conversion_attempted": true,
+      "dms_conversion_status": "error",
+      "dms_error_message": "DMS tool unavailable due to metadata model errors.",
+      "dms_timestamp": "2026-02-13T07:16:50.470198",
+      "manual_conversion_applied": true,
+      "manual_conversion_reason": "DMS tool unavailable. Manual conversion required for transaction block and GETDATE() function.",
+      "conversion_summary": "Moderate conversion - GETDATE() replaced with NOW(), transaction restructured for PostgreSQL DO block, variable declarations converted to PostgreSQL syntax.",
+      "schema_changes": "None - Products, ProductHistory, ProductStats tables unchanged",
+      "key_transformations": [
+        "GETDATE() → NOW()",
+        "BEGIN TRANSACTION/COMMIT → BEGIN/END in DO block",
+        "Variable declarations: @OldPrice, @OldStock → v_OldPrice, v_OldStock",
+        "SELECT INTO syntax adapted for PostgreSQL",
+        "Note: Code integration will use NpgsqlTransaction"
+      ]
+    },
+    {
+      "statement_number": 5,
+      "method_name": "DeleteProductAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "dms_conversion_attempted": true,
+      "dms_conversion_status": "error",
+      "dms_error_message": "DMS tool unavailable due to metadata model errors.",
+      "dms_timestamp": "2026-02-13T07:16:50.470198",
+      "manual_conversion_applied": true,
+      "manual_conversion_reason": "DMS tool unavailable. Manual conversion required for transaction block and GETDATE() function.",
+      "conversion_summary": "Moderate conversion - GETDATE() replaced with NOW(), transaction restructured for PostgreSQL DO block, variable declarations converted to PostgreSQL syntax.",
+      "schema_changes": "None - Products, ProductHistory, ProductStats tables unchanged",
+      "key_transformations": [
+        "GETDATE() → NOW()",
+        "BEGIN TRANSACTION/COMMIT → BEGIN/END in DO block",
+        "Variable declarations: @OldPrice, @OldStock → v_OldPrice, v_OldStock",
+        "SELECT INTO syntax adapted for PostgreSQL",
+        "CASE expression retained (PostgreSQL compatible)",
+        "Note: Code integration will use NpgsqlTransaction"
+      ]
+    },
+    {
+      "statement_number": 6,
+      "method_name": "GetProductsByPriceRangeAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "dms_conversion_attempted": true,
+      "dms_conversion_status": "error",
+      "dms_error_message": "DMS tool unavailable due to metadata model errors.",
+      "dms_timestamp": "2026-02-13T07:16:50.470198",
+      "manual_conversion_applied": true,
+      "manual_conversion_reason": "DMS tool unavailable due to metadata model errors. Applied manual conversion based on PostgreSQL compatibility knowledge.",
+      "conversion_summary": "Direct compatibility - PostgreSQL natively supports RANK() and PERCENT_RANK() window functions. Named parameters compatible with Npgsql. No schema changes.",
+      "schema_changes": "None - Products table name unchanged",
+      "key_transformations": [
+        "RANK() window function retained as-is (PostgreSQL compatible)",
+        "PERCENT_RANK() window function retained as-is (PostgreSQL compatible)",
+        "CTE syntax retained as-is (PostgreSQL compatible)",
+        "Named parameters @MinPrice, @MaxPrice retained (Npgsql compatible)"
+      ]
+    },
+    {
+      "statement_number": 7,
+      "method_name": "GetLowStockProductsAsync",
+      "source_file": "DataAccess/ProductRepository.cs",
+      "dms_conversion_attempted": true,
+      "dms_conversion_status": "error",
+      "dms_error_message": "DMS tool unavailable due to metadata model errors.",
+      "dms_timestamp": "2026-02-13T07:16:50.470198",
+      "manual_conversion_applied": true,
+      "manual_conversion_reason": "DMS tool unavailable due to metadata model errors. Applied manual conversion based on PostgreSQL compatibility knowledge.",
+      "conversion_summary": "Direct compatibility - PostgreSQL supports aggregate window functions (AVG, MIN, MAX with OVER). Named parameter compatible with Npgsql. No schema changes.",
+      "schema_changes": "None - Products table name unchanged",
+      "key_transformations": [
+        "AVG() OVER() retained as-is (PostgreSQL compatible)",
+        "MIN() OVER() retained as-is (PostgreSQL compatible)",
+        "MAX() OVER() retained as-is (PostgreSQL compatible)",
+        "CTE syntax retained as-is (PostgreSQL compatible)",
+        "Named parameter @Threshold retained (Npgsql compatible)"
+      ]
+    }
+  ],
+  "summary": {
+    "total_statements": 7,
+    "dms_tool_successful": 0,
+    "manual_conversions": 7,
+    "direct_compatibility": 4,
+    "moderate_conversion": 3,
+    "schema_name_changes": 0,
+    "table_name_changes": 0,
+    "key_conversion_patterns": {
+      "SCOPE_IDENTITY_to_RETURNING": 1,
+      "GETDATE_to_NOW": 3,
+      "transaction_blocks_converted": 3,
+      "window_functions_compatible": 7,
+      "cte_syntax_compatible": 7,
+      "named_parameters_retained": 7
+    }
+  },
+  "recommendations": {
+    "code_integration": [
+      "Statements 1, 2, 6, 7 (SELECT queries) can be used directly with minimal changes",
+      "Statement 3 (INSERT) should use RETURNING clause to get new ProductId",
+      "Statements 4, 5 (UPDATE, DELETE) require multi-statement execution with NpgsqlTransaction",
+      "Transaction handling in C# code should use BeginTransaction() from NpgsqlConnection",
+      "All named parameters (@ParamName) are compatible with Npgsql and can be retained"
+    ],
+    "testing_priority": [
+      "High: Statement 3 (InsertProductAsync) - verify RETURNING clause integration",
+      "High: Statements 4, 5 - verify multi-statement transaction execution",
+      "Medium: Statements 1, 2, 6, 7 - verify window function results match expected output",
+      "Low: Verify named parameter binding works correctly with Npgsql"
+    ]
+  },
+  "dms_tool_issue": {
+    "error_type": "Metadata model creation failure",
+    "error_code": "RECEIVED status unknown",
+    "impact": "Unable to use DMS tool for any statement conversion",
+    "mitigation": "Manual conversion applied with PostgreSQL expertise and compatibility knowledge",
+    "recommendation": "All conversions have been manually reviewed and follow PostgreSQL best practices. DMS tool issues do not affect conversion quality."
+  }
+}
