@@ -1,0 +1,393 @@
+====================================================================
+DMS MCP TOOL CONVERSION LOG
+====================================================================
+Repository: AdoCore
+Conversion Date: 2026-02-14
+Total Statements Processed: 7
+DMS Tool Successful Conversions: 0
+Manual Conversions Required: 7
+====================================================================
+
+====================================================================
+STATEMENT 1: GetAllProductsAsync
+====================================================================
+Timestamp: 2026-02-14T19:41:45.838770
+DMS Tool Status: ERROR
+DMS Tool Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+
+Input SQL:
+WITH ProductStats AS (
+    SELECT 
+        ProductId,
+        AVG(Price) OVER() as AvgPrice,
+        COUNT(*) OVER() as TotalProducts
+    FROM Products
+)
+SELECT 
+    p.ProductId,
+    p.Name,
+    p.Description,
+    p.Price,
+    p.StockQuantity,
+    p.CreatedDate,
+    p.ModifiedDate,
+    CASE 
+        WHEN p.Price > ps.AvgPrice THEN 'Above Average'
+        WHEN p.Price < ps.AvgPrice THEN 'Below Average'
+        ELSE 'Average'
+    END as PriceCategory,
+    ROUND((p.Price / ps.AvgPrice) * 100, 2) as PricePercentageOfAverage
+FROM Products p
+INNER JOIN ProductStats ps ON p.ProductId = ps.ProductId
+ORDER BY 
+    CASE 
+        WHEN p.Price > ps.AvgPrice THEN 1
+        ELSE 2
+    END,
+    p.Name
+
+DMS Tool Output:
+{
+  "conversion_timestamp": "2026-02-14T19:41:45.838770",
+  "input": {
+    "sql_text": "...",
+    "migration_project_identifier": "arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU",
+    "database_name": "ProductManagement",
+    "schema_name": "dbo",
+    "region": "us-east-1",
+    "server_name": "172.31.94.132"
+  },
+  "workflow_steps": [
+    {
+      "step": "create_metadata_model",
+      "timestamp": "2026-02-14T19:41:48.422440",
+      "status": "started"
+    }
+  ],
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-14T19:41:50.325053"
+}
+
+Manual Conversion Applied: YES
+Conversion Notes: Statement is already PostgreSQL-compatible. No changes required.
+All window functions (AVG OVER, COUNT OVER), CASE expressions, and ROUND function are supported in PostgreSQL.
+
+====================================================================
+STATEMENT 2: GetProductByIdAsync
+====================================================================
+Timestamp: 2026-02-14T19:42:01.229151
+DMS Tool Status: ERROR
+DMS Tool Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+
+Input SQL:
+WITH ProductHistory AS (
+    SELECT 
+        ProductId,
+        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,
+        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock
+    FROM Products
+    WHERE ProductId = @ProductId
+)
+SELECT 
+    p.ProductId,
+    p.Name,
+    p.Description,
+    p.Price,
+    p.StockQuantity,
+    p.CreatedDate,
+    p.ModifiedDate,
+    ph.PreviousPrice,
+    ph.PreviousStock,
+    CASE 
+        WHEN ph.PreviousPrice IS NOT NULL THEN 
+            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)
+        ELSE NULL
+    END as PriceChangePercentage
+FROM Products p
+LEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId
+WHERE p.ProductId = @ProductId
+
+DMS Tool Output:
+{
+  "conversion_timestamp": "2026-02-14T19:42:01.229151",
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-14T19:42:05.180284"
+}
+
+Manual Conversion Applied: YES
+Conversion Notes: Statement is already PostgreSQL-compatible. No changes required.
+LAG() window function, CASE expressions, and parameter syntax (@ProductId) are all supported.
+Npgsql handles @ parameter syntax natively.
+
+====================================================================
+STATEMENT 3: InsertProductAsync
+====================================================================
+Timestamp: 2026-02-14T19:42:15.143491
+DMS Tool Status: ERROR
+DMS Tool Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+
+Input SQL:
+DECLARE @NewProductId INT;
+
+BEGIN TRANSACTION;
+    INSERT INTO Products (Name, Description, Price, StockQuantity)
+    VALUES (@Name, @Description, @Price, @StockQuantity);
+    
+    SET @NewProductId = SCOPE_IDENTITY();
+    
+    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+    VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, GETDATE());
+    
+    UPDATE ProductStats
+    SET 
+        TotalProducts = TotalProducts + 1,
+        AveragePrice = (AveragePrice * TotalProducts + @Price) / (TotalProducts + 1),
+        LastUpdated = GETDATE()
+    WHERE StatId = 1;
+COMMIT;
+
+SELECT @NewProductId;
+
+DMS Tool Output:
+{
+  "conversion_timestamp": "2026-02-14T19:42:15.143491",
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-14T19:42:19.172132"
+}
+
+Manual Conversion Applied: YES
+Conversion Notes: Significant conversion required for T-SQL specific features:
+1. SCOPE_IDENTITY() converted to RETURNING clause in INSERT statement
+2. GETDATE() converted to CURRENT_TIMESTAMP
+3. DECLARE and variable handling removed (transaction management in application code)
+4. BEGIN TRANSACTION/COMMIT removed (handled by NpgsqlTransaction)
+5. Multi-statement transaction split into separate commands to be executed in sequence
+
+PostgreSQL Conversion:
+- INSERT...RETURNING ProductId for getting new ID
+- Separate statements for history logging and statistics update
+- Transaction management moved to C# code layer
+
+====================================================================
+STATEMENT 4: UpdateProductAsync
+====================================================================
+Timestamp: 2026-02-14T19:42:28.022770
+DMS Tool Status: ERROR
+DMS Tool Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+
+Input SQL:
+BEGIN TRANSACTION;
+    DECLARE @OldPrice DECIMAL(18,2);
+    DECLARE @OldStock INT;
+    
+    SELECT @OldPrice = Price, @OldStock = StockQuantity
+    FROM Products
+    WHERE ProductId = @ProductId;
+    
+    UPDATE Products
+    SET 
+        Name = @Name,
+        Description = @Description,
+        Price = @Price,
+        StockQuantity = @StockQuantity,
+        ModifiedDate = GETDATE()
+    WHERE ProductId = @ProductId;
+    
+    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+    VALUES (@ProductId, 'UPDATE', @OldPrice, @Price, @OldStock, @StockQuantity, GETDATE());
+    
+    UPDATE ProductStats
+    SET 
+        AveragePrice = (AveragePrice * TotalProducts - @OldPrice + @Price) / TotalProducts,
+        LastUpdated = GETDATE()
+    WHERE StatId = 1;
+COMMIT;
+
+DMS Tool Output:
+{
+  "conversion_timestamp": "2026-02-14T19:42:28.022770",
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-14T19:42:32.127585"
+}
+
+Manual Conversion Applied: YES
+Conversion Notes: Conversion required for T-SQL specific features:
+1. GETDATE() converted to CURRENT_TIMESTAMP
+2. DECLARE removed (old values retrieved via separate SELECT)
+3. BEGIN TRANSACTION/COMMIT removed (handled by NpgsqlTransaction)
+4. Variable assignment from SELECT converted to separate query
+5. Multi-statement transaction split into separate commands
+
+PostgreSQL Conversion:
+- Separate SELECT to get old values before update
+- UPDATE with CURRENT_TIMESTAMP
+- Separate statements for history logging and statistics update
+- Transaction management in C# code
+
+====================================================================
+STATEMENT 5: DeleteProductAsync
+====================================================================
+Timestamp: 2026-02-14T19:42:41.111401
+DMS Tool Status: ERROR
+DMS Tool Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+
+Input SQL:
+BEGIN TRANSACTION;
+    DECLARE @OldPrice DECIMAL(18,2);
+    DECLARE @OldStock INT;
+    
+    SELECT @OldPrice = Price, @OldStock = StockQuantity
+    FROM Products
+    WHERE ProductId = @ProductId;
+    
+    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+    VALUES (@ProductId, 'DELETE', @OldPrice, NULL, @OldStock, NULL, GETDATE());
+    
+    DELETE FROM Products 
+    WHERE ProductId = @ProductId;
+    
+    UPDATE ProductStats
+    SET 
+        TotalProducts = TotalProducts - 1,
+        AveragePrice = CASE 
+            WHEN TotalProducts > 1 
+            THEN (AveragePrice * TotalProducts - @OldPrice) / (TotalProducts - 1)
+            ELSE 0
+        END,
+        LastUpdated = GETDATE()
+    WHERE StatId = 1;
+COMMIT;
+
+DMS Tool Output:
+{
+  "conversion_timestamp": "2026-02-14T19:42:41.111401",
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-14T19:42:45.495191"
+}
+
+Manual Conversion Applied: YES
+Conversion Notes: Conversion required for T-SQL specific features:
+1. GETDATE() converted to CURRENT_TIMESTAMP
+2. DECLARE removed (old values retrieved via separate SELECT)
+3. BEGIN TRANSACTION/COMMIT removed (handled by NpgsqlTransaction)
+4. CASE expression is PostgreSQL-compatible
+5. Multi-statement transaction split into separate commands
+
+PostgreSQL Conversion:
+- Separate SELECT to get old values before delete
+- DELETE statement unchanged
+- CURRENT_TIMESTAMP instead of GETDATE()
+- Separate statements for history logging and statistics update
+- Transaction management in C# code
+
+====================================================================
+STATEMENT 6: GetProductsByPriceRangeAsync
+====================================================================
+Timestamp: 2026-02-14T19:42:54.414720
+DMS Tool Status: ERROR
+DMS Tool Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+
+Input SQL:
+WITH RankedProducts AS (
+    SELECT 
+        p.*,
+        RANK() OVER (ORDER BY p.Price) as PriceRank,
+        PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile
+    FROM Products p
+    WHERE p.Price BETWEEN @MinPrice AND @MaxPrice
+)
+SELECT 
+    rp.*,
+    CASE 
+        WHEN rp.PricePercentile <= 0.25 THEN 'Budget'
+        WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range'
+        ELSE 'Premium'
+    END as PriceSegment
+FROM RankedProducts rp
+ORDER BY rp.PriceRank
+
+DMS Tool Output:
+{
+  "conversion_timestamp": "2026-02-14T19:42:54.414720",
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-14T19:42:58.521835"
+}
+
+Manual Conversion Applied: YES
+Conversion Notes: Statement is already PostgreSQL-compatible. No changes required.
+RANK() and PERCENT_RANK() window functions, BETWEEN operator, and CASE expressions are all supported in PostgreSQL.
+
+====================================================================
+STATEMENT 7: GetLowStockProductsAsync
+====================================================================
+Timestamp: 2026-02-14T19:43:07.496992
+DMS Tool Status: ERROR
+DMS Tool Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+
+Input SQL:
+WITH StockAnalysis AS (
+    SELECT 
+        p.*,
+        AVG(StockQuantity) OVER() as AvgStock,
+        MIN(StockQuantity) OVER() as MinStock,
+        MAX(StockQuantity) OVER() as MaxStock
+    FROM Products p
+)
+SELECT 
+    sa.*,
+    CASE 
+        WHEN StockQuantity <= @Threshold THEN 'Critical'
+        WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low'
+        ELSE 'Adequate'
+    END as StockStatus,
+    ROUND((StockQuantity / AvgStock) * 100, 2) as StockPercentageOfAverage
+FROM StockAnalysis sa
+WHERE StockQuantity <= @Threshold
+ORDER BY StockQuantity
+
+DMS Tool Output:
+{
+  "conversion_timestamp": "2026-02-14T19:43:07.496992",
+  "status": "error",
+  "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+  "error_timestamp": "2026-02-14T19:43:11.517656"
+}
+
+Manual Conversion Applied: YES
+Conversion Notes: Statement is already PostgreSQL-compatible. No changes required.
+All window functions (AVG OVER, MIN OVER, MAX OVER), CASE expressions, and ROUND function are supported in PostgreSQL.
+
+====================================================================
+SUMMARY
+====================================================================
+Total Statements: 7
+DMS Tool Errors: 7 (all with same metadata model creation error)
+Manual Conversions: 7
+
+Statements Requiring Significant Changes (3):
+- Statement 3 (InsertProductAsync): SCOPE_IDENTITY → RETURNING, GETDATE → CURRENT_TIMESTAMP
+- Statement 4 (UpdateProductAsync): GETDATE → CURRENT_TIMESTAMP, transaction restructuring
+- Statement 5 (DeleteProductAsync): GETDATE → CURRENT_TIMESTAMP, transaction restructuring
+
+Statements Already PostgreSQL-Compatible (4):
+- Statement 1 (GetAllProductsAsync): No changes
+- Statement 2 (GetProductByIdAsync): No changes
+- Statement 6 (GetProductsByPriceRangeAsync): No changes
+- Statement 7 (GetLowStockProductsAsync): No changes
+
+Schema Object Name Changes: None detected
+
+Key Conversion Patterns Applied:
+1. SCOPE_IDENTITY() → INSERT...RETURNING
+2. GETDATE() → CURRENT_TIMESTAMP
+3. BEGIN TRANSACTION/COMMIT → Application layer (NpgsqlTransaction)
+4. DECLARE variables → Separate queries or application variables
+5. @ parameter syntax → Compatible with Npgsql (no changes needed)
+
+====================================================================
