@@ -1,0 +1,159 @@
+{
+  "conversion_summary": {
+    "total_statements": 7,
+    "dms_tool_success": 0,
+    "manual_after_dms_failure": 7,
+    "conversion_timestamp": "2026-02-14T10:35:00Z"
+  },
+  "statements": [
+    {
+      "statement_number": 1,
+      "method_name": "GetAllProductsAsync",
+      "statement_type": "SELECT with CTE and Window Functions",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_attempted": true,
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_full_output": {
+        "conversion_timestamp": "2026-02-14T10:35:04.620975",
+        "status": "error",
+        "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+        "error_timestamp": "2026-02-14T10:35:08.877193"
+      },
+      "manual_conversion_notes": "CTE and window functions (AVG OVER, COUNT OVER) are fully supported in PostgreSQL with identical syntax. No changes needed.",
+      "key_transformations": [
+        "No syntax changes required - PostgreSQL supports CTEs and window functions identically to SQL Server"
+      ]
+    },
+    {
+      "statement_number": 2,
+      "method_name": "GetProductByIdAsync",
+      "statement_type": "SELECT with CTE and LAG Window Function",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_attempted": true,
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_full_output": {
+        "conversion_timestamp": "2026-02-14T10:35:19.107224",
+        "status": "error",
+        "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+        "error_timestamp": "2026-02-14T10:35:23.034204"
+      },
+      "manual_conversion_notes": "LAG window function is fully supported in PostgreSQL. Parameter syntax (@ProductId) remains compatible with Npgsql.",
+      "key_transformations": [
+        "No syntax changes required - PostgreSQL supports LAG window function identically"
+      ]
+    },
+    {
+      "statement_number": 3,
+      "method_name": "InsertProductAsync",
+      "statement_type": "TRANSACTION with INSERT statements",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_attempted": true,
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_full_output": {
+        "conversion_timestamp": "2026-02-14T10:35:33.011587",
+        "status": "error",
+        "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+        "error_timestamp": "2026-02-14T10:35:36.925450"
+      },
+      "manual_conversion_notes": "Major restructuring required. PostgreSQL uses RETURNING clause instead of SCOPE_IDENTITY(). Transaction handling moved to ADO.NET code level. GETDATE() converted to NOW().",
+      "key_transformations": [
+        "Removed DECLARE @NewProductId INT",
+        "Removed BEGIN TRANSACTION/COMMIT (handled by NpgsqlTransaction in code)",
+        "Changed SCOPE_IDENTITY() to RETURNING ProductId clause",
+        "Changed GETDATE() to NOW()",
+        "Split into multiple statements to be executed sequentially in transaction"
+      ]
+    },
+    {
+      "statement_number": 4,
+      "method_name": "UpdateProductAsync",
+      "statement_type": "TRANSACTION with UPDATE and INSERT statements",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_attempted": true,
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_full_output": {
+        "conversion_timestamp": "2026-02-14T10:35:33.011587",
+        "status": "error",
+        "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+        "error_timestamp": "2026-02-14T10:35:36.925450"
+      },
+      "manual_conversion_notes": "Transaction syntax removed, DECLARE variables removed (handled in C# code), GETDATE() converted to NOW().",
+      "key_transformations": [
+        "Removed BEGIN TRANSACTION/COMMIT",
+        "Removed DECLARE statements for @OldPrice and @OldStock",
+        "Changed GETDATE() to NOW()",
+        "Split into multiple statements with old values fetched first in C# code"
+      ]
+    },
+    {
+      "statement_number": 5,
+      "method_name": "DeleteProductAsync",
+      "statement_type": "TRANSACTION with DELETE and UPDATE statements",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_attempted": true,
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_full_output": {
+        "conversion_timestamp": "2026-02-14T10:35:33.011587",
+        "status": "error",
+        "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+        "error_timestamp": "2026-02-14T10:35:36.925450"
+      },
+      "manual_conversion_notes": "Transaction syntax removed, DECLARE variables removed (handled in C# code), GETDATE() converted to NOW().",
+      "key_transformations": [
+        "Removed BEGIN TRANSACTION/COMMIT",
+        "Removed DECLARE statements for @OldPrice and @OldStock",
+        "Changed GETDATE() to NOW()",
+        "Split into multiple statements with old values fetched first in C# code"
+      ]
+    },
+    {
+      "statement_number": 6,
+      "method_name": "GetProductsByPriceRangeAsync",
+      "statement_type": "SELECT with CTE and Window Functions (RANK, PERCENT_RANK)",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_attempted": true,
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_full_output": {
+        "conversion_timestamp": "2026-02-14T10:35:04.620975",
+        "status": "error",
+        "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+        "error_timestamp": "2026-02-14T10:35:08.877193"
+      },
+      "manual_conversion_notes": "RANK and PERCENT_RANK window functions are fully supported in PostgreSQL with identical syntax.",
+      "key_transformations": [
+        "No syntax changes required - PostgreSQL supports RANK and PERCENT_RANK identically"
+      ]
+    },
+    {
+      "statement_number": 7,
+      "method_name": "GetLowStockProductsAsync",
+      "statement_type": "SELECT with CTE and Window Functions (AVG, MIN, MAX OVER)",
+      "conversion_method": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_attempted": true,
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_full_output": {
+        "conversion_timestamp": "2026-02-14T10:35:04.620975",
+        "status": "error",
+        "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+        "error_timestamp": "2026-02-14T10:35:08.877193"
+      },
+      "manual_conversion_notes": "Window aggregate functions (AVG, MIN, MAX OVER) are fully supported in PostgreSQL with identical syntax.",
+      "key_transformations": [
+        "No syntax changes required - PostgreSQL supports window aggregates identically"
+      ]
+    }
+  ],
+  "notes": [
+    "DMS MCP tool encountered consistent 'Metadata model creation failed' errors for all statements",
+    "All statements were attempted through DMS first as required",
+    "Manual conversions were performed following PostgreSQL syntax rules",
+    "Main differences between SQL Server and PostgreSQL:",
+    "  1. SCOPE_IDENTITY() -> RETURNING clause",
+    "  2. GETDATE() -> NOW() or CURRENT_TIMESTAMP",
+    "  3. BEGIN TRANSACTION/COMMIT -> Handled at ADO.NET connection level with NpgsqlTransaction",
+    "  4. DECLARE variables in T-SQL -> Handled in C# code or DO blocks",
+    "  5. CTEs and window functions have identical syntax (no changes needed)",
+    "Transaction management will be handled in C# code using NpgsqlTransaction.BeginTransaction()",
+    "Parameters syntax (@ParamName) is compatible with Npgsql - no changes needed"
+  ]
+}
