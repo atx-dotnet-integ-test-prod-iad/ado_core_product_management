@@ -1,0 +1,101 @@
+{
+  "conversion_metadata": {
+    "date": "2026-02-16",
+    "source_database": "Microsoft SQL Server",
+    "target_database": "PostgreSQL",
+    "total_statements": 7,
+    "dms_tool_available": true,
+    "dms_tool_status": "error"
+  },
+  "summary": {
+    "statements_processed": 7,
+    "dms_successful_conversions": 0,
+    "manual_conversions_after_dms_failure": 7,
+    "conversion_failures": 0
+  },
+  "conversion_details": [
+    {
+      "statement_number": 1,
+      "method_name": "GetAllProductsAsync",
+      "original_statement": "WITH ProductStats AS (\n    SELECT \n        ProductId,\n        AVG(Price) OVER() as AvgPrice,\n        COUNT(*) OVER() as TotalProducts\n    FROM Products\n)\nSELECT \n    p.ProductId,\n    p.Name,\n    p.Description,\n    p.Price,\n    p.StockQuantity,\n    p.CreatedDate,\n    p.ModifiedDate,\n    CASE \n        WHEN p.Price > ps.AvgPrice THEN 'Above Average'\n        WHEN p.Price < ps.AvgPrice THEN 'Below Average'\n        ELSE 'Average'\n    END as PriceCategory,\n    ROUND((p.Price / ps.AvgPrice) * 100, 2) as PricePercentageOfAverage\nFROM Products p\nINNER JOIN ProductStats ps ON p.ProductId = ps.ProductId\nORDER BY \n    CASE \n        WHEN p.Price > ps.AvgPrice THEN 1\n        ELSE 2\n    END,\n    p.Name",
+      "conversion_status": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_timestamp": "2026-02-16T19:35:05.150501",
+      "manual_conversion_notes": "CTEs and window functions are directly supported in PostgreSQL. No syntax changes required except for potential parameter markers.",
+      "conversion_successful": true
+    },
+    {
+      "statement_number": 2,
+      "method_name": "GetProductByIdAsync",
+      "original_statement": "WITH ProductHistory AS (\n    SELECT \n        ProductId,\n        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,\n        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock\n    FROM Products\n    WHERE ProductId = @ProductId\n)\nSELECT \n    p.ProductId,\n    p.Name,\n    p.Description,\n    p.Price,\n    p.StockQuantity,\n    p.CreatedDate,\n    p.ModifiedDate,\n    ph.PreviousPrice,\n    ph.PreviousStock,\n    CASE \n        WHEN ph.PreviousPrice IS NOT NULL THEN \n            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)\n        ELSE NULL\n    END as PriceChangePercentage\nFROM Products p\nLEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId\nWHERE p.ProductId = @ProductId",
+      "conversion_status": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_timestamp": "2026-02-16T19:35:20.421477",
+      "manual_conversion_notes": "LAG window function supported in PostgreSQL. Changed @ProductId to $1 for positional parameter syntax.",
+      "conversion_successful": true
+    },
+    {
+      "statement_number": 3,
+      "method_name": "InsertProductAsync",
+      "original_statement": "DECLARE @NewProductId INT;\n\nBEGIN TRANSACTION;\n    INSERT INTO Products (Name, Description, Price, StockQuantity)\n    VALUES (@Name, @Description, @Price, @StockQuantity);\n    \n    SET @NewProductId = SCOPE_IDENTITY();\n    \n    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)\n    VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, GETDATE());\n    \n    UPDATE ProductStats\n    SET \n        TotalProducts = TotalProducts + 1,\n        AveragePrice = (AveragePrice * TotalProducts + @Price) / (TotalProducts + 1),\n        LastUpdated = GETDATE()\n    WHERE StatId = 1;\nCOMMIT;\n\nSELECT @NewProductId;",
+      "conversion_status": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_timestamp": "2026-02-16T19:35:36.180615",
+      "manual_conversion_notes": "Major changes: SCOPE_IDENTITY() replaced with RETURNING clause. GETDATE() to CURRENT_TIMESTAMP. Multi-statement transaction converted to DO block or refactored to use RETURNING in INSERT statement for C# ExecuteScalarAsync.",
+      "conversion_successful": true
+    },
+    {
+      "statement_number": 4,
+      "method_name": "UpdateProductAsync",
+      "original_statement": "BEGIN TRANSACTION;\n    DECLARE @OldPrice DECIMAL(18,2);\n    DECLARE @OldStock INT;\n    \n    SELECT @OldPrice = Price, @OldStock = StockQuantity\n    FROM Products\n    WHERE ProductId = @ProductId;\n    \n    UPDATE Products\n    SET \n        Name = @Name,\n        Description = @Description,\n        Price = @Price,\n        StockQuantity = @StockQuantity,\n        ModifiedDate = GETDATE()\n    WHERE ProductId = @ProductId;\n    \n    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)\n    VALUES (@ProductId, 'UPDATE', @OldPrice, @Price, @OldStock, @StockQuantity, GETDATE());\n    \n    UPDATE ProductStats\n    SET \n        AveragePrice = (AveragePrice * TotalProducts - @OldPrice + @Price) / TotalProducts,\n        LastUpdated = GETDATE()\n    WHERE StatId = 1;\nCOMMIT;",
+      "conversion_status": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_timestamp": "2026-02-16T19:35:52.760002",
+      "manual_conversion_notes": "Converted to DO block with PostgreSQL variable declaration syntax. GETDATE() to CURRENT_TIMESTAMP. Parameter markers changed to positional ($1, $2, etc.).",
+      "conversion_successful": true
+    },
+    {
+      "statement_number": 5,
+      "method_name": "DeleteProductAsync",
+      "original_statement": "BEGIN TRANSACTION;\n    DECLARE @OldPrice DECIMAL(18,2);\n    DECLARE @OldStock INT;\n    \n    SELECT @OldPrice = Price, @OldStock = StockQuantity\n    FROM Products\n    WHERE ProductId = @ProductId;\n    \n    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)\n    VALUES (@ProductId, 'DELETE', @OldPrice, NULL, @OldStock, NULL, GETDATE());\n    \n    DELETE FROM Products \n    WHERE ProductId = @ProductId;\n    \n    UPDATE ProductStats\n    SET \n        TotalProducts = TotalProducts - 1,\n        AveragePrice = CASE \n            WHEN TotalProducts > 1 \n            THEN (AveragePrice * TotalProducts - @OldPrice) / (TotalProducts - 1)\n            ELSE 0\n        END,\n        LastUpdated = GETDATE()\n    WHERE StatId = 1;\nCOMMIT;",
+      "conversion_status": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_timestamp": "2026-02-16T19:36:10.060062",
+      "manual_conversion_notes": "Converted to DO block. GETDATE() to CURRENT_TIMESTAMP. Parameter marker @ProductId to $1.",
+      "conversion_successful": true
+    },
+    {
+      "statement_number": 6,
+      "method_name": "GetProductsByPriceRangeAsync",
+      "original_statement": "WITH RankedProducts AS (\n    SELECT \n        p.*,\n        RANK() OVER (ORDER BY p.Price) as PriceRank,\n        PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile\n    FROM Products p\n    WHERE p.Price BETWEEN @MinPrice AND @MaxPrice\n)\nSELECT \n    rp.*,\n    CASE \n        WHEN rp.PricePercentile <= 0.25 THEN 'Budget'\n        WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range'\n        ELSE 'Premium'\n    END as PriceSegment\nFROM RankedProducts rp\nORDER BY rp.PriceRank",
+      "conversion_status": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_timestamp": "2026-02-16T19:36:27.758633",
+      "manual_conversion_notes": "RANK and PERCENT_RANK window functions are supported in PostgreSQL. Changed parameter markers from @MinPrice/@MaxPrice to $1/$2.",
+      "conversion_successful": true
+    },
+    {
+      "statement_number": 7,
+      "method_name": "GetLowStockProductsAsync",
+      "original_statement": "WITH StockAnalysis AS (\n    SELECT \n        p.*,\n        AVG(StockQuantity) OVER() as AvgStock,\n        MIN(StockQuantity) OVER() as MinStock,\n        MAX(StockQuantity) OVER() as MaxStock\n    FROM Products p\n)\nSELECT \n    sa.*,\n    CASE \n        WHEN StockQuantity <= @Threshold THEN 'Critical'\n        WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low'\n        ELSE 'Adequate'\n    END as StockStatus,\n    ROUND((StockQuantity / AvgStock) * 100, 2) as StockPercentageOfAverage\nFROM StockAnalysis sa\nWHERE StockQuantity <= @Threshold\nORDER BY StockQuantity",
+      "conversion_status": "MANUAL_AFTER_DMS_FAILURE",
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_timestamp": "2026-02-16T19:36:41.455939",
+      "manual_conversion_notes": "Window functions (AVG, MIN, MAX) are supported in PostgreSQL. Changed parameter marker from @Threshold to $1.",
+      "conversion_successful": true
+    }
+  ],
+  "key_conversion_patterns": {
+    "parameter_syntax": "Changed from @ParameterName to positional $1, $2, etc.",
+    "scope_identity": "SCOPE_IDENTITY() replaced with RETURNING clause in INSERT statements",
+    "getdate_function": "GETDATE() replaced with CURRENT_TIMESTAMP",
+    "transactions": "Multi-statement transactions with variables converted to DO blocks or refactored into multiple separate statements",
+    "window_functions": "All window functions (AVG, COUNT, LAG, RANK, PERCENT_RANK, MIN, MAX) are directly supported in PostgreSQL",
+    "cte_support": "Common Table Expressions (WITH clauses) are fully supported in PostgreSQL"
+  },
+  "recommendations": {
+    "transaction_handling": "For C# ADO.NET code, the multi-statement transactions (InsertProductAsync, UpdateProductAsync, DeleteProductAsync) should be refactored. Instead of using DO blocks, execute multiple separate commands within a NpgsqlTransaction to maintain proper transaction semantics and error handling in the C# application layer.",
+    "parameter_binding": "Update all Parameter.AddWithValue calls to use positional parameters ($1, $2, etc.) or use NpgsqlParameter with proper parameter names",
+    "testing": "Thoroughly test all converted queries, especially the transaction blocks, to ensure proper error handling and rollback behavior"
+  }
+}
