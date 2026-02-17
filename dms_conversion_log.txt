@@ -1,0 +1,317 @@
+===============================================
+DMS MCP TOOL CONVERSION LOG
+SQL Server to PostgreSQL Statement Conversion
+Date: 2026-02-17
+===============================================
+
+SUMMARY:
+- Total Statements Processed: 7
+- Successfully Converted by DMS: 0
+- Failed DMS Conversions: 7
+- Manual Conversions Required: 7
+
+DMS TOOL CONFIGURATION:
+- Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+- Database Name: ProductManagement
+- Schema Name: dbo
+- Region: us-east-1
+- Server Name: 172.31.94.132
+
+===============================================
+STATEMENT 1: GetAllProductsAsync
+===============================================
+Original SQL:
+WITH ProductStats AS (
+    SELECT 
+        ProductId,
+        AVG(Price) OVER() as AvgPrice,
+        COUNT(*) OVER() as TotalProducts
+    FROM Products
+)
+SELECT 
+    p.ProductId,
+    p.Name,
+    p.Description,
+    p.Price,
+    p.StockQuantity,
+    p.CreatedDate,
+    p.ModifiedDate,
+    CASE 
+        WHEN p.Price > ps.AvgPrice THEN 'Above Average'
+        WHEN p.Price < ps.AvgPrice THEN 'Below Average'
+        ELSE 'Average'
+    END as PriceCategory,
+    ROUND((p.Price / ps.AvgPrice) * 100, 2) as PricePercentageOfAverage
+FROM Products p
+INNER JOIN ProductStats ps ON p.ProductId = ps.ProductId
+ORDER BY 
+    CASE 
+        WHEN p.Price > ps.AvgPrice THEN 1
+        ELSE 2
+    END,
+    p.Name
+
+DMS Tool Status: FAILED
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+DMS Timestamp: 2026-02-17T03:31:59.700761
+Workflow Step Failed: create_metadata_model
+
+Manual Conversion: YES
+Manual Conversion Notes: PostgreSQL syntax is largely compatible. CTE, window functions (AVG, COUNT OVER), CASE expressions, and ROUND function are all supported in PostgreSQL without changes.
+
+===============================================
+STATEMENT 2: GetProductByIdAsync
+===============================================
+Original SQL:
+WITH ProductHistory AS (
+    SELECT 
+        ProductId,
+        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,
+        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock
+    FROM Products
+    WHERE ProductId = @ProductId
+)
+SELECT 
+    p.ProductId,
+    p.Name,
+    p.Description,
+    p.Price,
+    p.StockQuantity,
+    p.CreatedDate,
+    p.ModifiedDate,
+    ph.PreviousPrice,
+    ph.PreviousStock,
+    CASE 
+        WHEN ph.PreviousPrice IS NOT NULL THEN 
+            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)
+        ELSE NULL
+    END as PriceChangePercentage
+FROM Products p
+LEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId
+WHERE p.ProductId = @ProductId
+
+DMS Tool Status: FAILED
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+DMS Timestamp: 2026-02-17T03:32:13.551581
+Workflow Step Failed: create_metadata_model
+
+Manual Conversion: YES
+Manual Conversion Notes: LAG window function is fully supported in PostgreSQL. Parameters (@ProductId) are compatible with Npgsql parameterization.
+
+===============================================
+STATEMENT 3: InsertProductAsync
+===============================================
+Original SQL:
+DECLARE @NewProductId INT;
+
+BEGIN TRANSACTION;
+    INSERT INTO Products (Name, Description, Price, StockQuantity)
+    VALUES (@Name, @Description, @Price, @StockQuantity);
+    
+    SET @NewProductId = SCOPE_IDENTITY();
+    
+    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+    VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, GETDATE());
+    
+    UPDATE ProductStats
+    SET 
+        TotalProducts = TotalProducts + 1,
+        AveragePrice = (AveragePrice * TotalProducts + @Price) / (TotalProducts + 1),
+        LastUpdated = GETDATE()
+    WHERE StatId = 1;
+COMMIT;
+
+SELECT @NewProductId;
+
+DMS Tool Status: FAILED
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+DMS Timestamp: 2026-02-17T03:32:27.631618
+Workflow Step Failed: create_metadata_model
+
+Manual Conversion: YES
+Manual Conversion Notes: 
+- SCOPE_IDENTITY() replaced with RETURNING clause
+- GETDATE() replaced with CURRENT_TIMESTAMP
+- Transaction structure needs refactoring for ADO.NET usage
+- Best approach: Use INSERT...RETURNING for identity, handle subsequent operations in application code
+
+===============================================
+STATEMENT 4: UpdateProductAsync
+===============================================
+Original SQL:
+BEGIN TRANSACTION;
+    DECLARE @OldPrice DECIMAL(18,2);
+    DECLARE @OldStock INT;
+    
+    SELECT @OldPrice = Price, @OldStock = StockQuantity
+    FROM Products
+    WHERE ProductId = @ProductId;
+    
+    UPDATE Products
+    SET 
+        Name = @Name,
+        Description = @Description,
+        Price = @Price,
+        StockQuantity = @StockQuantity,
+        ModifiedDate = GETDATE()
+    WHERE ProductId = @ProductId;
+    
+    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+    VALUES (@ProductId, 'UPDATE', @OldPrice, @Price, @OldStock, @StockQuantity, GETDATE());
+    
+    UPDATE ProductStats
+    SET 
+        AveragePrice = (AveragePrice * TotalProducts - @OldPrice + @Price) / TotalProducts,
+        LastUpdated = GETDATE()
+    WHERE StatId = 1;
+COMMIT;
+
+DMS Tool Status: FAILED
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+DMS Timestamp: 2026-02-17T03:32:41.781702
+Workflow Step Failed: create_metadata_model
+
+Manual Conversion: YES
+Manual Conversion Notes:
+- GETDATE() replaced with CURRENT_TIMESTAMP
+- Transaction handling should be managed by ADO.NET connection
+- Variables should be handled in application code
+- Split into multiple statements executed within application transaction scope
+
+===============================================
+STATEMENT 5: DeleteProductAsync
+===============================================
+Original SQL:
+BEGIN TRANSACTION;
+    DECLARE @OldPrice DECIMAL(18,2);
+    DECLARE @OldStock INT;
+    
+    SELECT @OldPrice = Price, @OldStock = StockQuantity
+    FROM Products
+    WHERE ProductId = @ProductId;
+    
+    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+    VALUES (@ProductId, 'DELETE', @OldPrice, NULL, @OldStock, NULL, GETDATE());
+    
+    DELETE FROM Products 
+    WHERE ProductId = @ProductId;
+    
+    UPDATE ProductStats
+    SET 
+        TotalProducts = TotalProducts - 1,
+        AveragePrice = CASE 
+            WHEN TotalProducts > 1 
+            THEN (AveragePrice * TotalProducts - @OldPrice) / (TotalProducts - 1)
+            ELSE 0
+        END,
+        LastUpdated = GETDATE()
+    WHERE StatId = 1;
+COMMIT;
+
+DMS Tool Status: FAILED
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+DMS Timestamp: 2026-02-17T03:32:55.527400
+Workflow Step Failed: create_metadata_model
+
+Manual Conversion: YES
+Manual Conversion Notes:
+- GETDATE() replaced with CURRENT_TIMESTAMP
+- Transaction handling should be managed by ADO.NET connection
+- Variables should be handled in application code
+- Split into multiple statements executed within application transaction scope
+
+===============================================
+STATEMENT 6: GetProductsByPriceRangeAsync
+===============================================
+Original SQL:
+WITH RankedProducts AS (
+    SELECT 
+        p.*,
+        RANK() OVER (ORDER BY p.Price) as PriceRank,
+        PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile
+    FROM Products p
+    WHERE p.Price BETWEEN @MinPrice AND @MaxPrice
+)
+SELECT 
+    rp.*,
+    CASE 
+        WHEN rp.PricePercentile <= 0.25 THEN 'Budget'
+        WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range'
+        ELSE 'Premium'
+    END as PriceSegment
+FROM RankedProducts rp
+ORDER BY rp.PriceRank
+
+DMS Tool Status: FAILED
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+DMS Timestamp: 2026-02-17T03:33:08.673981
+Workflow Step Failed: create_metadata_model
+
+Manual Conversion: YES
+Manual Conversion Notes: PostgreSQL fully supports RANK() and PERCENT_RANK() window functions. BETWEEN operator is compatible. No syntax changes required.
+
+===============================================
+STATEMENT 7: GetLowStockProductsAsync
+===============================================
+Original SQL:
+WITH StockAnalysis AS (
+    SELECT 
+        p.*,
+        AVG(StockQuantity) OVER() as AvgStock,
+        MIN(StockQuantity) OVER() as MinStock,
+        MAX(StockQuantity) OVER() as MaxStock
+    FROM Products p
+)
+SELECT 
+    sa.*,
+    CASE 
+        WHEN StockQuantity <= @Threshold THEN 'Critical'
+        WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low'
+        ELSE 'Adequate'
+    END as StockStatus,
+    ROUND((StockQuantity / AvgStock) * 100, 2) as StockPercentageOfAverage
+FROM StockAnalysis sa
+WHERE StockQuantity <= @Threshold
+ORDER BY StockQuantity
+
+DMS Tool Status: FAILED
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+DMS Timestamp: 2026-02-17T03:33:22.473064
+Workflow Step Failed: create_metadata_model
+
+Manual Conversion: YES
+Manual Conversion Notes: PostgreSQL fully supports AVG, MIN, MAX window functions and ROUND. No syntax changes required.
+
+===============================================
+OVERALL ANALYSIS
+===============================================
+
+DMS Tool Failure Analysis:
+- All 7 statements failed at the "create_metadata_model" step
+- Consistent error: "Unknown metadata model creation status: RECEIVED"
+- This appears to be a DMS service configuration or availability issue
+- The error occurred before actual SQL syntax conversion could be attempted
+
+Manual Conversion Summary:
+- Statements 1, 2, 6, 7: Minimal changes (mostly compatible SQL syntax)
+- Statements 3, 4, 5: Significant changes required for transaction handling
+  * SCOPE_IDENTITY() → RETURNING clause
+  * GETDATE() → CURRENT_TIMESTAMP
+  * Variable declarations and transaction blocks need refactoring for ADO.NET
+
+Key PostgreSQL Syntax Differences Applied:
+1. SCOPE_IDENTITY() → INSERT...RETURNING ProductId
+2. GETDATE() → CURRENT_TIMESTAMP or NOW()
+3. DECLARE/SET variable syntax → PostgreSQL DO blocks (not ideal for ADO.NET)
+4. BEGIN TRANSACTION/COMMIT → Handled by ADO.NET transaction scope
+
+Recommendation:
+For ADO.NET integration, transaction-based statements (3, 4, 5) should be:
+- Split into individual SQL statements
+- Variables managed in C# application code
+- Transaction handling done via NpgsqlConnection.BeginTransaction()
+- This provides better error handling and cleaner code structure
+
+===============================================
+END OF DMS CONVERSION LOG
+===============================================
