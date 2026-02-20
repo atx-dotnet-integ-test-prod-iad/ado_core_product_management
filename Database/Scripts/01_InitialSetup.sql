@@ -1,146 +1,100 @@
 -- Create ProductManagement Database
-IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'ProductManagement')
-BEGIN
-    CREATE DATABASE ProductManagement;
-END
-GO
-
-USE ProductManagement;
-GO
+-- Note: In PostgreSQL, database creation is done outside of a script context
+-- CREATE DATABASE ProductManagement;
 
 -- Drop existing objects in correct order
-IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[trg_Products_History]') AND type = 'TR')
-BEGIN
-    DROP TRIGGER [dbo].[trg_Products_History]
-END
-GO
-
-IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ProductHistory]') AND type in (N'U'))
-BEGIN
-    DROP TABLE [dbo].[ProductHistory]
-END
-GO
-
-IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Products]') AND type in (N'U'))
-BEGIN
-    DROP TABLE [dbo].[Products]
-END
-GO
-
-IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Categories]') AND type in (N'U'))
-BEGIN
-    DROP TABLE [dbo].[Categories]
-END
-GO
-
-IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Suppliers]') AND type in (N'U'))
-BEGIN
-    DROP TABLE [dbo].[Suppliers]
-END
-GO
-
-IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ProductStats]') AND type in (N'U'))
-BEGIN
-    DROP TABLE [dbo].[ProductStats]
-END
-GO
+DROP TRIGGER IF EXISTS trg_Products_History ON Products;
+DROP TABLE IF EXISTS ProductHistory CASCADE;
+DROP TABLE IF EXISTS Products CASCADE;
+DROP TABLE IF EXISTS Categories CASCADE;
+DROP TABLE IF EXISTS Suppliers CASCADE;
+DROP TABLE IF EXISTS ProductStats CASCADE;
 
 -- Create Categories Table
-CREATE TABLE [dbo].[Categories](
-    [CategoryId] [int] IDENTITY(1,1) PRIMARY KEY,
-    [Name] [nvarchar](50) NOT NULL,
-    [Description] [nvarchar](200) NULL,
-    [ParentCategoryId] [int] NULL,
-    [CreatedDate] [datetime] NOT NULL DEFAULT GETDATE()
-)
-GO
+CREATE TABLE Categories(
+    CategoryId SERIAL PRIMARY KEY,
+    Name varchar(50) NOT NULL,
+    Description varchar(200) NULL,
+    ParentCategoryId int NULL,
+    CreatedDate timestamp NOT NULL DEFAULT NOW()
+);
 
 -- Add self-referencing foreign key for Categories
-ALTER TABLE [dbo].[Categories]
-ADD CONSTRAINT [FK_Categories_Categories] 
-FOREIGN KEY ([ParentCategoryId]) REFERENCES [dbo].[Categories] ([CategoryId])
-GO
+ALTER TABLE Categories
+ADD CONSTRAINT FK_Categories_Categories 
+FOREIGN KEY (ParentCategoryId) REFERENCES Categories (CategoryId);
 
 -- Create Suppliers Table
-CREATE TABLE [dbo].[Suppliers](
-    [SupplierId] [int] IDENTITY(1,1) PRIMARY KEY,
-    [Name] [nvarchar](100) NOT NULL,
-    [ContactName] [nvarchar](100) NULL,
-    [Email] [nvarchar](100) NULL,
-    [Phone] [nvarchar](20) NULL,
-    [Address] [nvarchar](200) NULL,
-    [Country] [nvarchar](50) NULL,
-    [IsActive] [bit] NOT NULL DEFAULT 1,
-    [CreatedDate] [datetime] NOT NULL DEFAULT GETDATE()
-)
-GO
+CREATE TABLE Suppliers(
+    SupplierId SERIAL PRIMARY KEY,
+    Name varchar(100) NOT NULL,
+    ContactName varchar(100) NULL,
+    Email varchar(100) NULL,
+    Phone varchar(20) NULL,
+    Address varchar(200) NULL,
+    Country varchar(50) NULL,
+    IsActive boolean NOT NULL DEFAULT true,
+    CreatedDate timestamp NOT NULL DEFAULT NOW()
+);
 
 -- Create Products Table
-CREATE TABLE [dbo].[Products](
-    [ProductId] [int] IDENTITY(1,1) PRIMARY KEY,
-    [Name] [nvarchar](100) NOT NULL,
-    [Description] [nvarchar](500) NULL,
-    [Price] [decimal](18, 2) NOT NULL,
-    [StockQuantity] [int] NOT NULL,
-    [CategoryId] [int] NULL,
-    [SupplierId] [int] NULL,
-    [SKU] [nvarchar](50) NULL,
-    [Weight] [decimal](10, 2) NULL,
-    [Dimensions] [nvarchar](50) NULL,
-    [IsDiscontinued] [bit] NOT NULL DEFAULT 0,
-    [ReorderLevel] [int] NOT NULL DEFAULT 10,
-    [CreatedDate] [datetime] NOT NULL DEFAULT GETDATE(),
-    [ModifiedDate] [datetime] NULL,
-    CONSTRAINT [FK_Products_Categories] FOREIGN KEY ([CategoryId]) 
-        REFERENCES [dbo].[Categories] ([CategoryId]),
-    CONSTRAINT [FK_Products_Suppliers] FOREIGN KEY ([SupplierId]) 
-        REFERENCES [dbo].[Suppliers] ([SupplierId])
-)
-GO
+CREATE TABLE Products(
+    ProductId SERIAL PRIMARY KEY,
+    Name varchar(100) NOT NULL,
+    Description varchar(500) NULL,
+    Price decimal(18, 2) NOT NULL,
+    StockQuantity int NOT NULL,
+    CategoryId int NULL,
+    SupplierId int NULL,
+    SKU varchar(50) NULL,
+    Weight decimal(10, 2) NULL,
+    Dimensions varchar(50) NULL,
+    IsDiscontinued boolean NOT NULL DEFAULT false,
+    ReorderLevel int NOT NULL DEFAULT 10,
+    CreatedDate timestamp NOT NULL DEFAULT NOW(),
+    ModifiedDate timestamp NULL,
+    CONSTRAINT FK_Products_Categories FOREIGN KEY (CategoryId) 
+        REFERENCES Categories (CategoryId),
+    CONSTRAINT FK_Products_Suppliers FOREIGN KEY (SupplierId) 
+        REFERENCES Suppliers (SupplierId)
+);
 
 -- Create ProductHistory Table
-CREATE TABLE [dbo].[ProductHistory](
-    [HistoryId] [int] IDENTITY(1,1) PRIMARY KEY,
-    [ProductId] [int] NOT NULL,
-    [Action] [varchar](10) NOT NULL,
-    [OldPrice] [decimal](18, 2) NULL,
-    [NewPrice] [decimal](18, 2) NULL,
-    [OldStock] [int] NULL,
-    [NewStock] [int] NULL,
-    [ActionDate] [datetime] NOT NULL DEFAULT GETDATE(),
-    [ModifiedBy] [nvarchar](100) NULL,
-    CONSTRAINT [FK_ProductHistory_Products] FOREIGN KEY ([ProductId]) 
-        REFERENCES [dbo].[Products] ([ProductId])
-)
-GO
+CREATE TABLE ProductHistory(
+    HistoryId SERIAL PRIMARY KEY,
+    ProductId int NOT NULL,
+    Action varchar(10) NOT NULL,
+    OldPrice decimal(18, 2) NULL,
+    NewPrice decimal(18, 2) NULL,
+    OldStock int NULL,
+    NewStock int NULL,
+    ActionDate timestamp NOT NULL DEFAULT NOW(),
+    ModifiedBy varchar(100) NULL,
+    CONSTRAINT FK_ProductHistory_Products FOREIGN KEY (ProductId) 
+        REFERENCES Products (ProductId)
+);
 
 -- Create ProductStats Table
-CREATE TABLE [dbo].[ProductStats](
-    [StatId] [int] PRIMARY KEY DEFAULT 1,
-    [TotalProducts] [int] NOT NULL DEFAULT 0,
-    [AveragePrice] [decimal](18, 2) NOT NULL DEFAULT 0,
-    [TotalStockValue] [decimal](18, 2) NOT NULL DEFAULT 0,
-    [LowStockCount] [int] NOT NULL DEFAULT 0,
-    [DiscontinuedCount] [int] NOT NULL DEFAULT 0,
-    [LastUpdated] [datetime] NOT NULL DEFAULT GETDATE()
-)
-GO
+CREATE TABLE ProductStats(
+    StatId int PRIMARY KEY DEFAULT 1,
+    TotalProducts int NOT NULL DEFAULT 0,
+    AveragePrice decimal(18, 2) NOT NULL DEFAULT 0,
+    TotalStockValue decimal(18, 2) NOT NULL DEFAULT 0,
+    LowStockCount int NOT NULL DEFAULT 0,
+    DiscontinuedCount int NOT NULL DEFAULT 0,
+    LastUpdated timestamp NOT NULL DEFAULT NOW()
+);
 
 -- Create Indexes
-CREATE INDEX [IX_Products_CategoryId] ON [dbo].[Products] ([CategoryId])
-GO
+CREATE INDEX IX_Products_CategoryId ON Products (CategoryId);
 
-CREATE INDEX [IX_Products_SupplierId] ON [dbo].[Products] ([SupplierId])
-GO
+CREATE INDEX IX_Products_SupplierId ON Products (SupplierId);
 
-CREATE UNIQUE INDEX [IX_Products_SKU] ON [dbo].[Products] ([SKU])
-GO
+CREATE UNIQUE INDEX IX_Products_SKU ON Products (SKU);
 
-CREATE INDEX [IX_ProductHistory_ProductId] ON [dbo].[ProductHistory] ([ProductId])
-GO
+CREATE INDEX IX_ProductHistory_ProductId ON ProductHistory (ProductId);
 
-CREATE INDEX [IX_ProductHistory_ActionDate] ON [dbo].[ProductHistory] ([ActionDate])
-GO
+CREATE INDEX IX_ProductHistory_ActionDate ON ProductHistory (ActionDate);
 
 -- Insert Sample Categories
 INSERT INTO Categories (Name, Description, ParentCategoryId)
@@ -164,8 +118,7 @@ VALUES
     ('Gaming Accessories', 'Gaming peripherals', 6),
     ('Printers', 'Printing devices', 7),
     ('Routers', 'Network routers', 8),
-    ('Switches', 'Network switches', 8)
-GO
+    ('Switches', 'Network switches', 8);
 
 -- Insert Sample Suppliers
 INSERT INTO Suppliers (Name, ContactName, Email, Phone, Address, Country)
@@ -177,8 +130,7 @@ VALUES
     ('AudioTech Systems', 'Emma Brown', 'emma@audiotech.com', '+1-555-0303', '789 Sound Road, Nashville, TN', 'USA'),
     ('Storage Solutions', 'James Lee', 'james@storagesolutions.com', '+1-555-0404', '321 Data Drive, Austin, TX', 'USA'),
     ('Office Supplies Pro', 'Lisa Anderson', 'lisa@officesupplies.com', '+1-555-0505', '654 Office Park, Chicago, IL', 'USA'),
-    ('Network Experts', 'Robert Taylor', 'robert@networkexperts.com', '+1-555-0606', '987 Network Way, Boston, MA', 'USA')
-GO
+    ('Network Experts', 'Robert Taylor', 'robert@networkexperts.com', '+1-555-0606', '987 Network Way, Boston, MA', 'USA');
 
 -- Insert Sample Products
 INSERT INTO Products (Name, Description, Price, StockQuantity, CategoryId, SupplierId, SKU, Weight, Dimensions, ReorderLevel)
@@ -218,13 +170,11 @@ VALUES
     
     -- Networking
     ('WiFi 6 Router', 'High-speed WiFi 6 router', 199.99, 20, 19, 8, 'NET-WR-001', 1.5, '10" x 7" x 2"', 8),
-    ('Gigabit Switch', '24-port gigabit network switch', 299.99, 10, 20, 8, 'NET-GS-001', 3.0, '17" x 10" x 1.5"', 4)
-GO
+    ('Gigabit Switch', '24-port gigabit network switch', 299.99, 10, 20, 8, 'NET-GS-001', 3.0, '17" x 10" x 1.5"', 4);
 
 -- Insert initial stats record
 INSERT INTO ProductStats (StatId, TotalProducts, AveragePrice, TotalStockValue, LowStockCount, DiscontinuedCount, LastUpdated)
-VALUES (1, 0, 0, 0, 0, 0, GETDATE())
-GO
+VALUES (1, 0, 0, 0, 0, 0, NOW());
 
 -- Update initial statistics
 UPDATE ProductStats
@@ -233,130 +183,119 @@ SET
     AveragePrice = (SELECT AVG(Price) FROM Products),
     TotalStockValue = (SELECT SUM(Price * StockQuantity) FROM Products),
     LowStockCount = (SELECT COUNT(*) FROM Products WHERE StockQuantity <= ReorderLevel),
-    DiscontinuedCount = (SELECT COUNT(*) FROM Products WHERE IsDiscontinued = 1),
-    LastUpdated = GETDATE()
-WHERE StatId = 1
-GO
+    DiscontinuedCount = (SELECT COUNT(*) FROM Products WHERE IsDiscontinued = true),
+    LastUpdated = NOW()
+WHERE StatId = 1;
 
--- Create Trigger for Product History
-CREATE TRIGGER [dbo].[trg_Products_History]
-ON [dbo].[Products]
-AFTER INSERT, UPDATE, DELETE
-AS
+-- Create Trigger Function for Product History (replaces SQL Server trigger)
+CREATE OR REPLACE FUNCTION fn_products_history()
+RETURNS TRIGGER AS $$
 BEGIN
-    SET NOCOUNT ON;
-    
-    -- Handle INSERT
-    IF EXISTS (SELECT 1 FROM inserted) AND NOT EXISTS (SELECT 1 FROM deleted)
-    BEGIN
+    IF (TG_OP = 'INSERT') THEN
         INSERT INTO ProductHistory (ProductId, Action, NewPrice, NewStock, ModifiedBy)
-        SELECT 
-            ProductId,
-            'INSERT',
-            Price,
-            StockQuantity,
-            SYSTEM_USER
-        FROM inserted;
-    END
-    
-    -- Handle UPDATE
-    IF EXISTS (SELECT 1 FROM inserted) AND EXISTS (SELECT 1 FROM deleted)
-    BEGIN
-        INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ModifiedBy)
-        SELECT 
-            i.ProductId,
-            'UPDATE',
-            d.Price,
-            i.Price,
-            d.StockQuantity,
-            i.StockQuantity,
-            SYSTEM_USER
-        FROM inserted i
-        INNER JOIN deleted d ON i.ProductId = d.ProductId
-        WHERE i.Price <> d.Price OR i.StockQuantity <> d.StockQuantity;
-    END
-    
-    -- Handle DELETE
-    IF NOT EXISTS (SELECT 1 FROM inserted) AND EXISTS (SELECT 1 FROM deleted)
-    BEGIN
+        VALUES (NEW.ProductId, 'INSERT', NEW.Price, NEW.StockQuantity, current_user);
+        RETURN NEW;
+    ELSIF (TG_OP = 'UPDATE') THEN
+        IF (OLD.Price <> NEW.Price OR OLD.StockQuantity <> NEW.StockQuantity) THEN
+            INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ModifiedBy)
+            VALUES (NEW.ProductId, 'UPDATE', OLD.Price, NEW.Price, OLD.StockQuantity, NEW.StockQuantity, current_user);
+        END IF;
+        RETURN NEW;
+    ELSIF (TG_OP = 'DELETE') THEN
         INSERT INTO ProductHistory (ProductId, Action, OldPrice, OldStock, ModifiedBy)
-        SELECT 
-            ProductId,
-            'DELETE',
-            Price,
-            StockQuantity,
-            SYSTEM_USER
-        FROM deleted;
-    END
-END
-GO
+        VALUES (OLD.ProductId, 'DELETE', OLD.Price, OLD.StockQuantity, current_user);
+        RETURN OLD;
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
 
--- Create Stored Procedure for Getting All Products
-CREATE OR ALTER PROCEDURE [dbo].[sp_GetAllProducts]
-AS
-BEGIN
-    SET NOCOUNT ON;
-    SELECT ProductId, Name, Description, Price, StockQuantity, CreatedDate, ModifiedDate
-    FROM Products
-    ORDER BY Name;
-END
-GO
+-- Create Trigger
+CREATE TRIGGER trg_Products_History
+AFTER INSERT OR UPDATE OR DELETE ON Products
+FOR EACH ROW
+EXECUTE FUNCTION fn_products_history();
 
--- Create Stored Procedure for Getting Product by ID
-CREATE OR ALTER PROCEDURE [dbo].[sp_GetProductById]
-    @ProductId INT
-AS
+-- Create Function for Getting All Products (replaces stored procedure)
+CREATE OR REPLACE FUNCTION sp_GetAllProducts()
+RETURNS TABLE(
+    ProductId int,
+    Name varchar(100),
+    Description varchar(500),
+    Price decimal(18,2),
+    StockQuantity int,
+    CreatedDate timestamp,
+    ModifiedDate timestamp
+) AS $$
 BEGIN
-    SET NOCOUNT ON;
-    SELECT ProductId, Name, Description, Price, StockQuantity, CreatedDate, ModifiedDate
-    FROM Products
-    WHERE ProductId = @ProductId;
-END
-GO
+    RETURN QUERY
+    SELECT p.ProductId, p.Name, p.Description, p.Price, p.StockQuantity, p.CreatedDate, p.ModifiedDate
+    FROM Products p
+    ORDER BY p.Name;
+END;
+$$ LANGUAGE plpgsql;
 
--- Create Stored Procedure for Inserting Product
-CREATE OR ALTER PROCEDURE [dbo].[sp_InsertProduct]
-    @Name NVARCHAR(100),
-    @Description NVARCHAR(500),
-    @Price DECIMAL(18,2),
-    @StockQuantity INT
-AS
+-- Create Function for Getting Product by ID (replaces stored procedure)
+CREATE OR REPLACE FUNCTION sp_GetProductById(p_ProductId INT)
+RETURNS TABLE(
+    ProductId int,
+    Name varchar(100),
+    Description varchar(500),
+    Price decimal(18,2),
+    StockQuantity int,
+    CreatedDate timestamp,
+    ModifiedDate timestamp
+) AS $$
 BEGIN
-    SET NOCOUNT ON;
+    RETURN QUERY
+    SELECT p.ProductId, p.Name, p.Description, p.Price, p.StockQuantity, p.CreatedDate, p.ModifiedDate
+    FROM Products p
+    WHERE p.ProductId = p_ProductId;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create Function for Inserting Product (replaces stored procedure)
+CREATE OR REPLACE FUNCTION sp_InsertProduct(
+    p_Name varchar(100),
+    p_Description varchar(500),
+    p_Price decimal(18,2),
+    p_StockQuantity int
+) RETURNS int AS $$
+DECLARE
+    v_ProductId int;
+BEGIN
     INSERT INTO Products (Name, Description, Price, StockQuantity)
-    VALUES (@Name, @Description, @Price, @StockQuantity);
+    VALUES (p_Name, p_Description, p_Price, p_StockQuantity)
+    RETURNING Products.ProductId INTO v_ProductId;
     
-    SELECT SCOPE_IDENTITY() AS ProductId;
-END
-GO
+    RETURN v_ProductId;
+END;
+$$ LANGUAGE plpgsql;
 
--- Create Stored Procedure for Updating Product
-CREATE OR ALTER PROCEDURE [dbo].[sp_UpdateProduct]
-    @ProductId INT,
-    @Name NVARCHAR(100),
-    @Description NVARCHAR(500),
-    @Price DECIMAL(18,2),
-    @StockQuantity INT
-AS
+-- Create Function for Updating Product (replaces stored procedure)
+CREATE OR REPLACE FUNCTION sp_UpdateProduct(
+    p_ProductId INT,
+    p_Name varchar(100),
+    p_Description varchar(500),
+    p_Price decimal(18,2),
+    p_StockQuantity int
+) RETURNS void AS $$
 BEGIN
-    SET NOCOUNT ON;
     UPDATE Products
-    SET Name = @Name,
-        Description = @Description,
-        Price = @Price,
-        StockQuantity = @StockQuantity,
-        ModifiedDate = GETDATE()
-    WHERE ProductId = @ProductId;
-END
-GO
+    SET Name = p_Name,
+        Description = p_Description,
+        Price = p_Price,
+        StockQuantity = p_StockQuantity,
+        ModifiedDate = NOW()
+    WHERE ProductId = p_ProductId;
+END;
+$$ LANGUAGE plpgsql;
 
--- Create Stored Procedure for Deleting Product
-CREATE OR ALTER PROCEDURE [dbo].[sp_DeleteProduct]
-    @ProductId INT
-AS
+-- Create Function for Deleting Product (replaces stored procedure)
+CREATE OR REPLACE FUNCTION sp_DeleteProduct(p_ProductId INT)
+RETURNS void AS $$
 BEGIN
-    SET NOCOUNT ON;
     DELETE FROM Products
-    WHERE ProductId = @ProductId;
-END
-GO 
+    WHERE ProductId = p_ProductId;
+END;
+$$ LANGUAGE plpgsql;
