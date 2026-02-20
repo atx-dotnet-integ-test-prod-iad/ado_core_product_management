@@ -1,0 +1,138 @@
+{
+  "migration_report": {
+    "title": "MS SQL Server to PostgreSQL Migration Report",
+    "date": "2026-02-20",
+    "source_database": "Microsoft SQL Server 2019",
+    "target_database": "PostgreSQL 13",
+    "application_framework": ".NET 9.0 ADO.NET"
+  },
+  "sql_statement_summary": {
+    "total_statements_processed": 44,
+    "statements_from_product_repository": 7,
+    "statements_from_database_scripts": 29,
+    "statements_from_scripts": 8,
+    "dms_conversion_results": {
+      "successful": 0,
+      "failed": 44,
+      "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "note": "All 44 statements were attempted through DMS MCP tool. All failed with the same metadata model creation error. Manual conversion was applied for all statements per transformation definition guidance."
+    },
+    "manual_conversions": 44,
+    "equivalency_validation_results": {
+      "total_validated": 44,
+      "equivalent": 0,
+      "not_equivalent": 0,
+      "error": 44,
+      "tool_error": "'uniqueID'",
+      "note": "All 44 statement pairs were validated through sql-equivalency___validate_sql_equivalence tool. All returned ERROR with 'uniqueID' error. This is a tool-side issue, not a conversion quality issue."
+    }
+  },
+  "key_sql_conversions_applied": [
+    "SCOPE_IDENTITY() → RETURNING clause + currval()",
+    "GETDATE() → NOW()",
+    "IDENTITY(1,1) → SERIAL",
+    "nvarchar(N) → VARCHAR(N)",
+    "datetime → TIMESTAMP",
+    "bit → BOOLEAN",
+    "DEFAULT 1/0 for bit → DEFAULT TRUE/FALSE",
+    "DECLARE @variable → DO $$ DECLARE variable",
+    "BEGIN TRANSACTION/COMMIT → DO $$ block (app-level transactions via Npgsql)",
+    "CREATE OR ALTER PROCEDURE → CREATE OR REPLACE FUNCTION ... LANGUAGE plpgsql",
+    "IF EXISTS (sys.objects) DROP → DROP IF EXISTS",
+    "Trigger syntax → Separate trigger function + trigger",
+    "SYSTEM_USER → current_user",
+    "ROUND(expr, 2) → ROUND(expr::numeric, 2)",
+    "[dbo].[TableName] → table_name (snake_case)",
+    "SET NOCOUNT ON → Removed (not applicable)",
+    "GO batch separator → Removed (not applicable)",
+    "USE database → Removed (handled by connection string)"
+  ],
+  "files_modified": {
+    "code_files": [
+      {
+        "file": "DataAccess/ProductRepository.cs",
+        "changes": [
+          "using Microsoft.Data.SqlClient → using Npgsql",
+          "SqlConnection → NpgsqlConnection (3 occurrences)",
+          "SqlCommand → NpgsqlCommand (7 occurrences)",
+          "SqlDataReader → NpgsqlDataReader (1 occurrence)",
+          "7 SQL statements converted to PostgreSQL syntax",
+          "Transaction blocks restructured as DO $$ anonymous blocks",
+          "SCOPE_IDENTITY() replaced with RETURNING + currval()",
+          "GETDATE() replaced with NOW()",
+          "ROUND() updated with ::numeric casts"
+        ]
+      },
+      {
+        "file": "AdoCore.csproj",
+        "changes": [
+          "Microsoft.Data.SqlClient 5.1.4 → Npgsql 8.0.6"
+        ]
+      }
+    ],
+    "configuration_files": [
+      {
+        "file": "appsettings.json",
+        "changes": [
+          "Connection string format: SQL Server → PostgreSQL",
+          "Server= → Host=",
+          "Removed: Trusted_Connection, MultipleActiveResultSets, TrustServerCertificate",
+          "Added: Username, Password"
+        ]
+      }
+    ],
+    "sql_script_files": [
+      {
+        "file": "Database/Scripts/01_InitialSetup.sql",
+        "changes": [
+          "Complete rewrite to PostgreSQL syntax",
+          "5 CREATE TABLE statements converted",
+          "5 CREATE INDEX statements converted",
+          "1 trigger converted to function + trigger pattern",
+          "5 stored procedures converted to functions",
+          "4 INSERT statements converted",
+          "1 UPDATE statement converted"
+        ]
+      },
+      {
+        "file": "Scripts/01_InitialSetup.sql",
+        "changes": [
+          "Complete rewrite to PostgreSQL syntax",
+          "1 CREATE TABLE statement converted",
+          "5 stored procedures converted to functions",
+          "Sample data insert converted to DO $$ block"
+        ]
+      }
+    ],
+    "documentation_files": [
+      {
+        "file": "README.md",
+        "changes": [
+          "Updated title, prerequisites, setup instructions",
+          "Updated NuGet package references",
+          "Updated connection string examples",
+          "Updated troubleshooting section"
+        ]
+      }
+    ]
+  },
+  "ado_net_class_replacements": {
+    "SqlConnection_to_NpgsqlConnection": "Complete",
+    "SqlCommand_to_NpgsqlCommand": "Complete",
+    "SqlDataReader_to_NpgsqlDataReader": "Complete",
+    "SqlParameter_to_NpgsqlParameter": "Not applicable (AddWithValue used, compatible with Npgsql)",
+    "no_remaining_sql_server_references": true
+  },
+  "artifacts_generated": [
+    "extracted_statements.sql - Complete catalog of all 44 original MS SQL statements",
+    "converted_statements.sql - Complete catalog of all 44 converted PostgreSQL statements",
+    "sql_equivalency_validation_report.json - Comprehensive equivalency validation report with all 44 statement pairs"
+  ],
+  "build_status": "SUCCESS - 0 errors, warnings are pre-existing nullable reference type warnings",
+  "items_needing_manual_review": [
+    "All 44 equivalency validations returned ERROR from the tool - manual review of converted SQL recommended",
+    "Connection string credentials in appsettings.json are placeholder values - update for production",
+    "PostgreSQL DO $$ anonymous blocks for Insert/Update/Delete may need testing against actual PostgreSQL database",
+    "currval() for retrieving last inserted ID assumes sequence naming convention matches"
+  ]
+}
