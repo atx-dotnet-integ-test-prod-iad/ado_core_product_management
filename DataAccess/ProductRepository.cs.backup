@@ -57,16 +57,16 @@ namespace AdoCore.DataAccess
                     p.createddate,
                     p.modifieddate,
                     CASE 
-                        WHEN p.price > ps.avgprice THEN 'Above Average'
-                        WHEN p.price < ps.avgprice THEN 'Below Average'
+                        WHEN p.price > ps.AvgPrice THEN 'Above Average'
+                        WHEN p.price < ps.AvgPrice THEN 'Below Average'
                         ELSE 'Average'
                     END as priceCategory,
-                    ROUND((p.price / ps.avgprice) * 100, 2) as pricePercentageOfAverage
+                    ROUND((p.price / ps.AvgPrice) * 100, 2) as pricePercentageOfAverage
                 FROM products p
                 INNER JOIN productstats ps ON p.productid = ps.productid
                 ORDER BY 
                     CASE 
-                        WHEN p.price > ps.avgprice THEN 1
+                        WHEN p.price > ps.AvgPrice THEN 1
                         ELSE 2
                     END,
                     p.name";
@@ -102,11 +102,11 @@ namespace AdoCore.DataAccess
                     p.stockquantity,
                     p.createddate,
                     p.modifieddate,
-                    ph.previousprice,
-                    ph.previousstock,
+                    ph.PreviousPrice,
+                    ph.PreviousStock,
                     CASE 
-                        WHEN ph.previousprice IS NOT NULL THEN 
-                            ROUND(((p.price - ph.previousprice) / ph.previousprice) * 100, 2)
+                        WHEN ph.PreviousPrice IS NOT NULL THEN 
+                            ROUND(((p.price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)
                         ELSE NULL
                     END as priceChangePercentage
                 FROM products p
@@ -131,9 +131,12 @@ namespace AdoCore.DataAccess
 
             const string sql = @"
 -- Insert the new product
-                    INSERT INTO products (name, description, price, stockquantity)
+                    INSERT INTO products (Name, description, price, stockquantity)
                     VALUES (@Name, @Description, @Price, @StockQuantity) RETURNING productid;
-                -- Log the insertion
+                    
+                    SET @NewProductId = SCOPE_IDENTITY();
+                    
+                    -- Log the insertion
                     INSERT INTO producthistory (productid, action, oldprice, newprice, oldstock, newstock, actionDate)
                     VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, CURRENT_TIMESTAMP);
                     
@@ -141,15 +144,16 @@ namespace AdoCore.DataAccess
                     UPDATE productstats
                     SET 
                         totalproducts = totalproducts + 1,
-                        averageprice = (averageprice * totalproducts + @Price) / (totalproducts + 1),
+                        averageprice = (AveragePrice * totalproducts + @Price) / (TotalProducts + 1),
                         lastupdated = CURRENT_TIMESTAMP
-                    WHERE statid = 1;";
+                    WHERE statid = 1;
+                SELECT @NewProductId;";
 
             using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("@Name", product.Name);
-            command.Parameters.AddWithValue("@Description", (object)product.Description ?? DBNull.Value);
-            command.Parameters.AddWithValue("@Price", product.Price);
-            command.Parameters.AddWithValue("@StockQuantity", product.StockQuantity);
+            command.Parameters.AddWithValue("@Name", product.name);
+            command.Parameters.AddWithValue("@Description", (object)product.description ?? DBNull.Value);
+            command.Parameters.AddWithValue("@Price", product.price);
+            command.Parameters.AddWithValue("@StockQuantity", product.stockquantity);
 
             return Convert.ToInt32(await command.ExecuteScalarAsync());
         }
@@ -177,17 +181,17 @@ namespace AdoCore.DataAccess
                     -- Update product statistics
                     UPDATE productstats
                     SET 
-                        averageprice = (averageprice * totalproducts - @OldPrice + @Price) / totalproducts,
+                        averageprice = (AveragePrice * totalproducts - @OldPrice + @Price) / totalproducts,
                         lastupdated = CURRENT_TIMESTAMP
                     WHERE statid = 1;
                 ";
 
             using var command = new NpgsqlCommand(sql, connection);
-            command.Parameters.AddWithValue("@ProductId", product.ProductId);
-            command.Parameters.AddWithValue("@Name", product.Name);
-            command.Parameters.AddWithValue("@Description", (object)product.Description ?? DBNull.Value);
-            command.Parameters.AddWithValue("@Price", product.Price);
-            command.Parameters.AddWithValue("@StockQuantity", product.StockQuantity);
+            command.Parameters.AddWithValue("@ProductId", product.productid);
+            command.Parameters.AddWithValue("@Name", product.name);
+            command.Parameters.AddWithValue("@Description", (object)product.description ?? DBNull.Value);
+            command.Parameters.AddWithValue("@Price", product.price);
+            command.Parameters.AddWithValue("@StockQuantity", product.stockquantity);
 
             await command.ExecuteNonQueryAsync();
         }
@@ -212,7 +216,7 @@ namespace AdoCore.DataAccess
                         totalproducts = totalproducts - 1,
                         averageprice = CASE 
                             WHEN totalproducts > 1 
-                            THEN (averageprice * totalproducts - @OldPrice) / (totalproducts - 1)
+                            THEN (AveragePrice * totalproducts - @OldPrice) / (TotalProducts - 1)
                             ELSE 0
                         END,
                         lastupdated = CURRENT_TIMESTAMP
@@ -280,10 +284,10 @@ namespace AdoCore.DataAccess
                     sa.*,
                     CASE 
                         WHEN stockquantity <= @Threshold THEN 'Critical'
-                        WHEN stockquantity <= avgstock * 0.5 THEN 'Low'
+                        WHEN stockquantity <= AvgStock * 0.5 THEN 'Low'
                         ELSE 'Adequate'
                     END as stockstatus,
-                    ROUND((stockquantity / avgstock) * 100, 2) as stockpercentageofaverage
+                    ROUND((stockquantity / AvgStock) * 100, 2) as stockpercentageofaverage
                 FROM stockanalysis sa
                 WHERE stockquantity <= @Threshold
                 ORDER BY stockquantity";
@@ -328,7 +332,8 @@ namespace AdoCore.DataAccess
                 CreatedDate = Convert.ToDateTime(reader["createddate"]),
                 ModifiedDate = reader["modifieddate"] == DBNull.Value ? null : (DateTime?)Convert.ToDateTime(reader["modifieddate"])
             };
- }
+        };
+        }
 
         public async ValueTask DisposeAsync()
         {
