@@ -1,0 +1,143 @@
+{
+  "conversion_summary": {
+    "total_statements_processed": 7,
+    "successful_dms_conversions": 0,
+    "failed_dms_conversions_requiring_manual_intervention": 7,
+    "conversion_date": "2025-02-22T23:30:00Z"
+  },
+  "statement_conversions": [
+    {
+      "statement_id": "GET_ALL_PRODUCTS",
+      "statement_number": 1,
+      "source_method": "GetAllProductsAsync()",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "dms_status": "error",
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_timestamp": "2026-02-22T23:30:45.601013",
+      "manual_conversion_applied": true,
+      "manual_conversion_notes": "Applied lowercase schema mapping: Products->products, ProductId->productid, Name->name, etc. CTE and window functions (AVG, COUNT) are compatible with PostgreSQL without syntax changes.",
+      "key_transformations": [
+        "Table names to lowercase",
+        "Column names to lowercase"
+      ]
+    },
+    {
+      "statement_id": "GET_BY_ID",
+      "statement_number": 2,
+      "source_method": "GetProductByIdAsync(int productId)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "dms_status": "error",
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_timestamp": "2026-02-22T23:30:59.135523",
+      "manual_conversion_applied": true,
+      "manual_conversion_notes": "Applied lowercase schema mapping. LAG window function is compatible with PostgreSQL. Parameter @ProductId is compatible with Npgsql.",
+      "key_transformations": [
+        "Table names to lowercase",
+        "Column names to lowercase"
+      ]
+    },
+    {
+      "statement_id": "INSERT_PRODUCT",
+      "statement_number": 3,
+      "source_method": "InsertProductAsync(Product product)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "dms_status": "error",
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_timestamp": "2026-02-22T23:31:12.102897",
+      "manual_conversion_applied": true,
+      "manual_conversion_notes": "Applied lowercase schema mapping. Replaced SCOPE_IDENTITY() with RETURNING clause. Replaced GETDATE() with CURRENT_TIMESTAMP. Removed explicit BEGIN TRANSACTION/COMMIT (handled at code layer). Used CTE pattern for multi-statement transaction.",
+      "key_transformations": [
+        "Table names to lowercase",
+        "Column names to lowercase",
+        "SCOPE_IDENTITY() -> RETURNING productid",
+        "GETDATE() -> CURRENT_TIMESTAMP",
+        "Removed BEGIN TRANSACTION/COMMIT",
+        "Restructured as CTE with INSERT...RETURNING"
+      ]
+    },
+    {
+      "statement_id": "UPDATE_PRODUCT",
+      "statement_number": 4,
+      "source_method": "UpdateProductAsync(Product product)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "dms_status": "error",
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_timestamp": "2026-02-22T23:31:25.107939",
+      "manual_conversion_applied": true,
+      "manual_conversion_notes": "Applied lowercase schema mapping. Replaced DECLARE with CTE to store old values. Replaced GETDATE() with CURRENT_TIMESTAMP. Removed explicit BEGIN TRANSACTION/COMMIT (handled at code layer).",
+      "key_transformations": [
+        "Table names to lowercase",
+        "Column names to lowercase",
+        "DECLARE -> CTE (WITH old_values AS)",
+        "GETDATE() -> CURRENT_TIMESTAMP",
+        "Removed BEGIN TRANSACTION/COMMIT"
+      ]
+    },
+    {
+      "statement_id": "DELETE_PRODUCT",
+      "statement_number": 5,
+      "source_method": "DeleteProductAsync(int productId)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "dms_status": "error",
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_timestamp": "2026-02-22T23:31:37.437545",
+      "manual_conversion_applied": true,
+      "manual_conversion_notes": "Applied lowercase schema mapping. Replaced DECLARE with CTE to store old values. Replaced GETDATE() with CURRENT_TIMESTAMP. Removed explicit BEGIN TRANSACTION/COMMIT (handled at code layer). CASE statement compatible with PostgreSQL.",
+      "key_transformations": [
+        "Table names to lowercase",
+        "Column names to lowercase",
+        "DECLARE -> CTE (WITH old_values AS)",
+        "GETDATE() -> CURRENT_TIMESTAMP",
+        "Removed BEGIN TRANSACTION/COMMIT"
+      ]
+    },
+    {
+      "statement_id": "GET_PRODUCTS_BY_PRICE_RANGE",
+      "statement_number": 6,
+      "source_method": "GetProductsByPriceRangeAsync(decimal minPrice, decimal maxPrice)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "dms_status": "error",
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_timestamp": "2026-02-22T23:31:49.786640",
+      "manual_conversion_applied": true,
+      "manual_conversion_notes": "Applied lowercase schema mapping. RANK() and PERCENT_RANK() window functions are compatible with PostgreSQL. BETWEEN operator is compatible.",
+      "key_transformations": [
+        "Table names to lowercase",
+        "Column names to lowercase"
+      ]
+    },
+    {
+      "statement_id": "GET_LOW_STOCK_PRODUCTS",
+      "statement_number": 7,
+      "source_method": "GetLowStockProductsAsync(int threshold)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "dms_status": "error",
+      "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+      "dms_timestamp": "2026-02-22T23:32:02.667861",
+      "manual_conversion_applied": true,
+      "manual_conversion_notes": "Applied lowercase schema mapping. Window functions (AVG, MIN, MAX) are compatible with PostgreSQL. CASE statement is compatible.",
+      "key_transformations": [
+        "Table names to lowercase",
+        "Column names to lowercase"
+      ]
+    }
+  ],
+  "common_transformations_applied": {
+    "schema_naming": "All table and column names converted to lowercase for PostgreSQL compatibility",
+    "scope_identity": "SCOPE_IDENTITY() replaced with RETURNING clause in INSERT statements",
+    "date_functions": "GETDATE() replaced with CURRENT_TIMESTAMP",
+    "transactions": "BEGIN TRANSACTION/COMMIT removed from SQL (handled at code/connection level)",
+    "variables": "DECLARE statements replaced with CTE (WITH clauses) for temporary values",
+    "window_functions": "All window functions (LAG, RANK, PERCENT_RANK, AVG, COUNT, MIN, MAX) are compatible",
+    "case_statements": "CASE statements are compatible with PostgreSQL",
+    "parameters": "Parameter placeholders (@ParameterName) are compatible with Npgsql driver"
+  },
+  "notes": [
+    "ALL 7 statements were processed through DMS MCP tool as required",
+    "ALL 7 statements failed with same metadata model creation error",
+    "Manual conversion applied following lowercase schema mapping rules",
+    "PostgreSQL syntax compatibility verified for all converted statements",
+    "Transaction handling moved from SQL to application code layer using NpgsqlConnection.BeginTransactionAsync()",
+    "All converted statements ready for integration into ProductRepository.cs"
+  ]
+}

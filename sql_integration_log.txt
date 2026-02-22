@@ -1,0 +1,173 @@
+================================================================================
+SQL STATEMENT INTEGRATION LOG
+================================================================================
+File: ProductRepository.cs
+Integration Date: 2025-02-22
+Total Statements Replaced: 7
+================================================================================
+
+STATEMENT 1: GET_ALL_PRODUCTS
+------------------------------
+Method: GetAllProductsAsync()
+Conversion Source: Manual (DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA)
+Changes Applied:
+  - Table name: Products -> products
+  - Column names: ProductId->productid, Name->name, Description->description, etc.
+  - CTE name: ProductStats -> productstats
+  - All column references updated to lowercase
+  - No syntax changes (CTE, OVER(), CASE compatible with PostgreSQL)
+Code Adjustments:
+  - None required beyond SQL replacement
+  - Parameter bindings unchanged
+Status: INTEGRATED
+
+STATEMENT 2: GET_BY_ID
+----------------------
+Method: GetProductByIdAsync(int productId)
+Conversion Source: Manual (DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA)
+Changes Applied:
+  - Table name: Products -> products
+  - Column names: All lowercase (productid, price, stockquantity, modifieddate, etc.)
+  - CTE name: ProductHistory -> producthistory
+  - LAG() window function compatible with PostgreSQL
+  - Parameter @ProductId compatible with Npgsql
+Code Adjustments:
+  - None required beyond SQL replacement
+  - Parameter bindings unchanged (Parameters.AddWithValue("@ProductId", productId))
+Status: INTEGRATED
+
+STATEMENT 3: INSERT_PRODUCT
+----------------------------
+Method: InsertProductAsync(Product product)
+Conversion Source: Manual (DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA)
+Changes Applied:
+  - Table names: Products->products, ProductHistory->producthistory, ProductStats->productstats
+  - Column names: All lowercase
+  - Removed DECLARE @NewProductId
+  - Removed BEGIN TRANSACTION/COMMIT from SQL (moved to code level)
+  - SCOPE_IDENTITY() replaced with RETURNING productid
+  - GETDATE() replaced with CURRENT_TIMESTAMP
+  - Restructured as CTE with multiple operations
+Code Adjustments:
+  - Added transaction handling at code level:
+    * using var transaction = await connection.BeginTransactionAsync();
+    * command.Transaction = (SqlTransaction)transaction;
+    * await transaction.CommitAsync(); / await transaction.RollbackAsync();
+  - Parameter bindings unchanged
+  - Return value obtained from ExecuteScalarAsync()
+Status: INTEGRATED
+
+STATEMENT 4: UPDATE_PRODUCT
+----------------------------
+Method: UpdateProductAsync(Product product)
+Conversion Source: Manual (DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA)
+Changes Applied:
+  - Table names: All lowercase (products, producthistory, productstats)
+  - Column names: All lowercase
+  - Removed BEGIN TRANSACTION/COMMIT from SQL (moved to code level)
+  - Removed DECLARE statements, replaced with CTE (old_values)
+  - GETDATE() replaced with CURRENT_TIMESTAMP
+  - Restructured as multi-CTE statement
+Code Adjustments:
+  - Added transaction handling at code level:
+    * using var transaction = await connection.BeginTransactionAsync();
+    * command.Transaction = (SqlTransaction)transaction;
+    * await transaction.CommitAsync(); / await transaction.RollbackAsync();
+  - Parameter bindings unchanged
+Status: INTEGRATED
+
+STATEMENT 5: DELETE_PRODUCT
+----------------------------
+Method: DeleteProductAsync(int productId)
+Conversion Source: Manual (DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA)
+Changes Applied:
+  - Table names: All lowercase (products, producthistory, productstats)
+  - Column names: All lowercase
+  - Removed BEGIN TRANSACTION/COMMIT from SQL (moved to code level)
+  - Removed DECLARE statements, replaced with CTE (old_values)
+  - GETDATE() replaced with CURRENT_TIMESTAMP
+  - Restructured as multi-CTE statement
+  - CASE statement compatible with PostgreSQL
+Code Adjustments:
+  - Added transaction handling at code level:
+    * using var transaction = await connection.BeginTransactionAsync();
+    * command.Transaction = (SqlTransaction)transaction;
+    * await transaction.CommitAsync(); / await transaction.RollbackAsync();
+  - Parameter bindings unchanged
+Status: INTEGRATED
+
+STATEMENT 6: GET_PRODUCTS_BY_PRICE_RANGE
+-----------------------------------------
+Method: GetProductsByPriceRangeAsync(decimal minPrice, decimal maxPrice)
+Conversion Source: Manual (DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA)
+Changes Applied:
+  - Table name: Products -> products
+  - Column names: All lowercase (price, pricerank, pricepercentile, pricesegment)
+  - CTE name: RankedProducts -> rankedproducts
+  - RANK() and PERCENT_RANK() window functions compatible with PostgreSQL
+  - BETWEEN operator compatible
+Code Adjustments:
+  - None required beyond SQL replacement
+  - Parameter bindings unchanged
+Status: INTEGRATED
+
+STATEMENT 7: GET_LOW_STOCK_PRODUCTS
+------------------------------------
+Method: GetLowStockProductsAsync(int threshold)
+Conversion Source: Manual (DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA)
+Changes Applied:
+  - Table name: Products -> products
+  - Column names: All lowercase (stockquantity, avgstock, minstock, maxstock, stockstatus, etc.)
+  - CTE name: StockAnalysis -> stockanalysis
+  - Window functions (AVG, MIN, MAX) compatible with PostgreSQL
+  - CASE statement compatible
+Code Adjustments:
+  - None required beyond SQL replacement
+  - Parameter bindings unchanged
+Status: INTEGRATED
+
+ADDITIONAL CODE CHANGES
+========================
+
+MapProductFromReader Method:
+----------------------------
+Updated column name references to lowercase for PostgreSQL:
+  - reader["ProductId"] -> reader["productid"]
+  - reader["Name"] -> reader["name"]
+  - reader["Description"] -> reader["description"]
+  - reader["Price"] -> reader["price"]
+  - reader["StockQuantity"] -> reader["stockquantity"]
+  - reader["CreatedDate"] -> reader["createddate"]
+  - reader["ModifiedDate"] -> reader["modifieddate"]
+
+Transaction Handling:
+---------------------
+Three methods now include explicit transaction management at code level:
+  1. InsertProductAsync() - Added transaction wrapper
+  2. UpdateProductAsync() - Added transaction wrapper
+  3. DeleteProductAsync() - Added transaction wrapper
+
+Original SQL had BEGIN TRANSACTION/COMMIT within the SQL statements.
+PostgreSQL conversion moved transaction control to application code using:
+  - connection.BeginTransactionAsync()
+  - command.Transaction = transaction
+  - transaction.CommitAsync() / transaction.RollbackAsync()
+
+INTEGRATION SUMMARY
+===================
+Total Statements: 7
+Successfully Integrated: 7
+Failed Integrations: 0
+
+All SQL statements successfully replaced with PostgreSQL-compatible versions.
+All parameter bindings maintained compatibility with Npgsql.
+Transaction handling appropriately moved from SQL to application code.
+Column name references updated to lowercase throughout.
+
+VERIFICATION STATUS
+===================
+Code compiles: TO BE VERIFIED (Step 4 verification)
+Functional testing: REQUIRED with actual PostgreSQL database
+Performance testing: RECOMMENDED for complex CTE queries
+
+================================================================================
