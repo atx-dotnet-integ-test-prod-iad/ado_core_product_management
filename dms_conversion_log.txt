@@ -1,0 +1,126 @@
+================================================================================
+DMS MCP TOOL CONVERSION LOG
+SQL Server to PostgreSQL Migration
+Timestamp: 2026-02-24T07:41-07:42 UTC
+================================================================================
+
+SUMMARY:
+--------
+Total Statements Processed: 7
+DMS Tool Successes: 0
+DMS Tool Failures: 7
+Manual Conversions Required: 7
+
+ALL STATEMENTS FAILED WITH IDENTICAL ERROR:
+-------------------------------------------
+Error Status: "error"
+Error Message: "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+Workflow Step: "create_metadata_model"
+
+STATEMENT-BY-STATEMENT DETAILS:
+================================
+
+Statement 1: GetAllProductsAsync
+---------------------------------
+Conversion Timestamp: 2026-02-24T07:41:20.232928
+Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: Applied lowercase schema mapping
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+Statement 2: GetProductByIdAsync
+---------------------------------
+Conversion Timestamp: 2026-02-24T07:41:33.249831
+Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: Applied lowercase schema mapping
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+Statement 3: InsertProductAsync
+--------------------------------
+Conversion Timestamp: 2026-02-24T07:41:48.359309
+Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: Applied lowercase schema mapping + SCOPE_IDENTITY() -> RETURNING + GETDATE() -> CURRENT_TIMESTAMP
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+Statement 4: UpdateProductAsync
+--------------------------------
+Conversion Timestamp: 2026-02-24T07:41:59.846998
+Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: Applied lowercase schema mapping + GETDATE() -> CURRENT_TIMESTAMP + DO block
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+Statement 5: DeleteProductAsync
+--------------------------------
+Conversion Timestamp: 2026-02-24T07:42:11.401814
+Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: Applied lowercase schema mapping + GETDATE() -> CURRENT_TIMESTAMP + DO block
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+Statement 6: GetProductsByPriceRangeAsync
+------------------------------------------
+Conversion Timestamp: 2026-02-24T07:42:23.162186
+Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: Applied lowercase schema mapping
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+Statement 7: GetLowStockProductsAsync
+--------------------------------------
+Conversion Timestamp: 2026-02-24T07:42:35.584118
+Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: Applied lowercase schema mapping
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+================================================================================
+CONVERSION TRANSFORMATIONS APPLIED:
+================================================================================
+
+1. Schema Object Name Mapping (All Statements):
+   - Products -> products
+   - ProductId -> productid
+   - Name -> name
+   - Description -> description
+   - Price -> price
+   - StockQuantity -> stockquantity
+   - CreatedDate -> createddate
+   - ModifiedDate -> modifieddate
+   - ProductHistory -> producthistory
+   - ProductStats -> productstats
+   - StatId -> statid
+   - Action -> action
+   - OldPrice -> oldprice
+   - NewPrice -> newprice
+   - OldStock -> oldstock
+   - NewStock -> newstock
+   - ActionDate -> actiondate
+   - TotalProducts -> totalproducts
+   - AveragePrice -> averageprice
+   - LastUpdated -> lastupdated
+
+2. Function Conversions:
+   - GETDATE() -> CURRENT_TIMESTAMP
+   - SCOPE_IDENTITY() -> RETURNING productid clause
+
+3. Transaction Syntax:
+   - BEGIN TRANSACTION / COMMIT -> DO $$ ... END $$ block
+   - DECLARE variables -> DECLARE in DO block
+
+4. Parameter Syntax:
+   - Kept @ParameterName format (will be handled in C# code mapping)
+
+================================================================================
+RECOMMENDATIONS:
+================================================================================
+
+1. The DMS tool experienced consistent failures with metadata model creation
+2. All manual conversions follow PostgreSQL best practices
+3. Statements 3, 4, 5 require code refactoring due to multi-statement transactions
+4. Consider using PostgreSQL stored procedures for complex transaction logic
+5. Equivalency validation should proceed with manually converted statements
+
+================================================================================
