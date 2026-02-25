@@ -1,0 +1,224 @@
+========================================================================================================
+DMS MCP TOOL CONVERSION LOG
+SQL Server to PostgreSQL Statement Conversion
+========================================================================================================
+Conversion Date: 2026-02-25
+Tool: dms-mcp____statement_conversion_tool
+Region: us-east-1
+Schema Name: dbo
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+========================================================================================================
+
+SUMMARY:
+--------
+Total Statements Processed: 7
+Successful DMS Conversions: 0
+Failed DMS Conversions: 7
+Manual Conversions Required: 7
+
+========================================================================================================
+STATEMENT 1: GetAllProductsAsync - CTE with Window Functions
+========================================================================================================
+Method: GetAllProductsAsync()
+Conversion Timestamp: 2026-02-25T11:10:14.542736
+DMS Status: ERROR
+Error Message: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Workflow Step: create_metadata_model (status: started)
+
+Original SQL (excerpt):
+WITH ProductStats AS (
+    SELECT ProductId, AVG(Price) OVER() as AvgPrice, COUNT(*) OVER() as TotalProducts
+    FROM Products
+)
+SELECT p.ProductId, p.Name, p.Description, p.Price, p.StockQuantity...
+
+Manual Conversion Applied: YES
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Manual Conversion Notes:
+- Applied lowercase to all schema objects (Products -> products)
+- Applied lowercase to all column names (ProductId -> productid)
+- Window functions (AVG OVER, COUNT OVER) compatible with PostgreSQL
+- ROUND() function compatible with PostgreSQL
+
+========================================================================================================
+STATEMENT 2: GetProductByIdAsync - CTE with LAG Window Function
+========================================================================================================
+Method: GetProductByIdAsync(int productId)
+Conversion Timestamp: 2026-02-25T11:10:29.426829
+DMS Status: ERROR
+Error Message: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Workflow Step: create_metadata_model (status: started)
+
+Original SQL (excerpt):
+WITH ProductHistory AS (
+    SELECT ProductId, LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice...
+    FROM Products WHERE ProductId = @ProductId
+)
+
+Manual Conversion Applied: YES
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Manual Conversion Notes:
+- Applied lowercase to all schema objects
+- LAG() window function compatible with PostgreSQL
+- Parameter @ProductId remains compatible with Npgsql
+- ROUND() function compatible with PostgreSQL
+
+========================================================================================================
+STATEMENT 3: InsertProductAsync - Transaction with SCOPE_IDENTITY()
+========================================================================================================
+Method: InsertProductAsync(Product product)
+Conversion Timestamp: 2026-02-25T11:10:42.526715
+DMS Status: ERROR
+Error Message: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Workflow Step: create_metadata_model (status: started)
+
+Original SQL (excerpt):
+BEGIN TRANSACTION;
+    INSERT INTO Products (Name, Description, Price, StockQuantity)
+    VALUES (@Name, @Description, @Price, @StockQuantity);
+    SET @NewProductId = SCOPE_IDENTITY();
+    ...
+COMMIT;
+
+Manual Conversion Applied: YES
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Manual Conversion Notes:
+- Applied lowercase to all schema objects (Products -> products, ProductHistory -> producthistory, ProductStats -> productstats)
+- BEGIN TRANSACTION -> BEGIN (implicit in DO block)
+- SCOPE_IDENTITY() -> RETURNING productid INTO variable
+- GETDATE() -> CURRENT_TIMESTAMP
+- Used DO $$ block with DECLARE for transaction context
+- Parameters remain compatible with Npgsql
+
+========================================================================================================
+STATEMENT 4: UpdateProductAsync - Transaction with Multiple DML Operations
+========================================================================================================
+Method: UpdateProductAsync(Product product)
+Conversion Timestamp: 2026-02-25T11:10:56.116157
+DMS Status: ERROR
+Error Message: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Workflow Step: create_metadata_model (status: started)
+
+Original SQL (excerpt):
+BEGIN TRANSACTION;
+    DECLARE @OldPrice DECIMAL(18,2); DECLARE @OldStock INT;
+    SELECT @OldPrice = Price, @OldStock = StockQuantity FROM Products...
+    UPDATE Products SET Name = @Name, ModifiedDate = GETDATE()...
+COMMIT;
+
+Manual Conversion Applied: YES
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Manual Conversion Notes:
+- Applied lowercase to all schema objects
+- DECLARE syntax converted to PostgreSQL format
+- SELECT @Var = Column -> SELECT Column INTO var
+- GETDATE() -> CURRENT_TIMESTAMP
+- Used DO $$ block for transaction context
+
+========================================================================================================
+STATEMENT 5: DeleteProductAsync - Transaction with DELETE and Logging
+========================================================================================================
+Method: DeleteProductAsync(int productId)
+Conversion Timestamp: 2026-02-25T11:11:10.213153
+DMS Status: ERROR
+Error Message: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Workflow Step: create_metadata_model (status: started)
+
+Original SQL (excerpt):
+BEGIN TRANSACTION;
+    SELECT @OldPrice = Price, @OldStock = StockQuantity FROM Products...
+    INSERT INTO ProductHistory... VALUES (..., GETDATE());
+    DELETE FROM Products WHERE ProductId = @ProductId;
+COMMIT;
+
+Manual Conversion Applied: YES
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Manual Conversion Notes:
+- Applied lowercase to all schema objects
+- GETDATE() -> CURRENT_TIMESTAMP
+- Variable declarations converted to PostgreSQL syntax
+- Used DO $$ block for transaction context
+
+========================================================================================================
+STATEMENT 6: GetProductsByPriceRangeAsync - CTE with RANK() and PERCENT_RANK()
+========================================================================================================
+Method: GetProductsByPriceRangeAsync(decimal minPrice, decimal maxPrice)
+Conversion Timestamp: 2026-02-25T11:11:23.111283
+DMS Status: ERROR
+Error Message: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Workflow Step: create_metadata_model (status: started)
+
+Original SQL (excerpt):
+WITH RankedProducts AS (
+    SELECT p.*, RANK() OVER (ORDER BY p.Price) as PriceRank,
+    PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile
+    FROM Products p WHERE p.Price BETWEEN @MinPrice AND @MaxPrice
+)
+
+Manual Conversion Applied: YES
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Manual Conversion Notes:
+- Applied lowercase to all schema objects
+- RANK() and PERCENT_RANK() window functions compatible with PostgreSQL
+- BETWEEN operator compatible with PostgreSQL
+
+========================================================================================================
+STATEMENT 7: GetLowStockProductsAsync - CTE with Multiple Window Functions
+========================================================================================================
+Method: GetLowStockProductsAsync(int threshold)
+Conversion Timestamp: 2026-02-25T11:11:37.089747
+DMS Status: ERROR
+Error Message: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Workflow Step: create_metadata_model (status: started)
+
+Original SQL (excerpt):
+WITH StockAnalysis AS (
+    SELECT p.*, AVG(StockQuantity) OVER() as AvgStock,
+    MIN(StockQuantity) OVER() as MinStock, MAX(StockQuantity) OVER() as MaxStock
+    FROM Products p
+)
+
+Manual Conversion Applied: YES
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Manual Conversion Notes:
+- Applied lowercase to all schema objects
+- AVG(), MIN(), MAX() window functions compatible with PostgreSQL
+- ROUND() function compatible with PostgreSQL
+
+========================================================================================================
+ANALYSIS AND RECOMMENDATIONS
+========================================================================================================
+
+DMS Tool Failure Pattern:
+- All 7 statements failed with identical error: "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+- Error occurred at the "create_metadata_model" workflow step
+- This appears to be an infrastructure/configuration issue with the DMS service, not a SQL syntax issue
+
+Manual Conversion Strategy Applied:
+1. Converted all schema object names to lowercase (PostgreSQL naming convention)
+2. Converted all column names to lowercase
+3. Replaced SQL Server-specific functions:
+   - SCOPE_IDENTITY() -> RETURNING clause with INTO variable
+   - GETDATE() -> CURRENT_TIMESTAMP
+4. Converted transaction blocks to PostgreSQL DO $$ blocks with variable declarations
+5. Updated variable declaration and assignment syntax to PostgreSQL format
+6. Preserved all window functions (LAG, RANK, PERCENT_RANK, AVG OVER, etc.) - already PostgreSQL compatible
+7. Preserved parameterized query syntax (@Parameter) - compatible with Npgsql
+
+PostgreSQL Compatibility Notes:
+- Window functions (RANK, PERCENT_RANK, LAG, AVG OVER, COUNT OVER, MIN OVER, MAX OVER) are natively supported
+- CTEs (WITH clauses) are natively supported
+- ROUND() function syntax is compatible
+- CASE expressions are compatible
+- JOIN syntax is compatible
+- Parameters with @ prefix are supported by Npgsql driver
+
+Post-Conversion Actions Required:
+1. Validate all converted statements using SQL Equivalency tool (Step 3)
+2. Test transaction blocks with actual PostgreSQL database
+3. Verify RETURNING clause behavior matches SCOPE_IDENTITY() semantics
+4. Confirm parameterized queries work with Npgsql driver
+
+========================================================================================================
+END OF CONVERSION LOG
+========================================================================================================
