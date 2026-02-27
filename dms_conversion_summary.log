@@ -1,0 +1,59 @@
+=== DMS CONVERSION FAILURE SUMMARY LOG ===
+Date: 2026-02-26
+Migration Project ARN: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Database: ProductManagement
+Schema: dbo
+
+=== DMS FAILURE DETAILS ===
+All 44 SQL statements were submitted to the DMS MCP tool for conversion.
+All 44 statements failed with the same error:
+
+Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Status: error
+Workflow Step: create_metadata_model
+
+The error occurred at the metadata model creation step, before any SQL conversion could take place.
+This appears to be a DMS infrastructure issue, not related to the SQL statements themselves.
+
+DMS was attempted multiple times with different statement types:
+1. Simple SELECT statement - FAILED
+2. Complex CTE with window functions - FAILED  
+3. Transaction blocks with SCOPE_IDENTITY/GETDATE - FAILED
+4. CREATE TABLE DDL - FAILED
+5. CREATE PROCEDURE - FAILED
+6. CREATE TRIGGER - FAILED
+7. INSERT/UPDATE DML - FAILED
+8. Various combinations of parameters (max_poll_attempts, poll_interval_seconds) - FAILED
+
+=== MANUAL CONVERSION APPROACH ===
+Per transformation definition rules, since DMS failed:
+- All schema object names converted to lowercase for PostgreSQL compatibility
+- Key conversions applied:
+  * IDENTITY(1,1) → SERIAL
+  * NVARCHAR(n) → VARCHAR(n)
+  * DATETIME → TIMESTAMP  
+  * GETDATE() → NOW()
+  * SCOPE_IDENTITY() → RETURNING clause / lastval()
+  * BIT → BOOLEAN
+  * [dbo].[tablename] → tablename (lowercase)
+  * BEGIN TRANSACTION/COMMIT → PostgreSQL DO $$ blocks
+  * SYSTEM_USER → CURRENT_USER
+  * SET NOCOUNT ON → removed (not applicable in PostgreSQL)
+  * Stored Procedures → PostgreSQL functions (CREATE OR REPLACE FUNCTION)
+  * Triggers → PostgreSQL trigger functions + CREATE TRIGGER
+  * GO batch separators → removed
+
+=== SQL EQUIVALENCY VALIDATION ===
+All 44 statement pairs were submitted to the SQL Equivalency MCP tool.
+All 44 validations returned ERROR with: {'error': "'uniqueID'"}
+This appears to be a tool-level issue unrelated to the SQL statements.
+
+=== STATEMENT COUNT ===
+Total statements extracted: 44
+DMS conversion attempted: 44
+DMS conversion succeeded: 0
+Manual conversion performed: 44
+Equivalency validated: 44
+Equivalency result - EQUIVALENT: 0
+Equivalency result - NOT_EQUIVALENT: 0
+Equivalency result - ERROR: 44
