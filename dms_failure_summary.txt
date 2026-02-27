@@ -1,0 +1,37 @@
+====================================================================
+DMS MCP TOOL FAILURE SUMMARY
+====================================================================
+
+Tool: dms-mcp____statement_conversion_tool
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Database: ProductManagement
+Schema: dbo
+Region: us-east-1
+
+ERROR: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+
+All 7 SQL statements from ProductRepository.cs were submitted to the DMS MCP tool.
+All 7 attempts failed with the same error.
+
+Attempts made:
+1. Statement 1 (GetAllProductsAsync) - FAILED - Metadata model creation failed
+2. Statement 2 (GetProductByIdAsync) - FAILED - Metadata model creation failed
+3. Statement 3 (InsertProductAsync) - FAILED - Metadata model creation failed
+4. Statement 4 (UpdateProductAsync) - FAILED - Metadata model creation failed
+5. Statement 5 (DeleteProductAsync) - FAILED - Metadata model creation failed
+6. Statement 6 (GetProductsByPriceRangeAsync) - FAILED - Metadata model creation failed
+7. Statement 7 (GetLowStockProductsAsync) - FAILED - Metadata model creation failed
+
+Additional retry with simpler query also failed (simple SELECT FROM Products).
+
+Resolution: Manual conversion applied with lowercase schema object names per transformation definition rules.
+Conversion method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+Key conversions applied:
+- All table names, column names, and aliases converted to lowercase
+- SCOPE_IDENTITY() replaced with INSERT...RETURNING clause
+- GETDATE() replaced with NOW()
+- DECLARE @var TYPE blocks restructured for PostgreSQL DO $$ blocks where needed
+- BEGIN TRANSACTION/COMMIT wrapped in DO $$ blocks for procedural statements
+- ROUND with integer division uses CAST to numeric for proper PostgreSQL behavior
+- Transaction handling for simple queries managed at application level via Npgsql
