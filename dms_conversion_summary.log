@@ -1,0 +1,79 @@
+== DMS CONVERSION FAILURE SUMMARY LOG ==
+Date: 2026-02-27
+Migration Project ARN: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+
+DMS Error (consistent across all 7 statements):
+  Status: error
+  Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+  
+All 7 statements were attempted through DMS with multiple retries including:
+  - Default parameters (15 poll attempts, 10s interval)
+  - Increased parameters (30 poll attempts, 15-20s interval)  
+  - Explicit database_name parameter
+  - Simple test query
+
+All returned the same error. Manual conversion with lowercase schema was applied per fallback rules.
+
+=== STATEMENT 1: GetAllProductsAsync ===
+DMS Timestamp: 2026-02-27T14:51:15.237598
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: Applied lowercase schema object names
+  - Products -> products
+  - ProductId -> productid
+  - Price -> price  
+  - All column names -> lowercase
+  - ROUND function: compatible as-is
+
+=== STATEMENT 2: GetProductByIdAsync ===
+DMS Timestamp: 2026-02-27T14:52:11.548770
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: Applied lowercase schema object names
+  - Products -> products
+  - ProductHistory CTE -> producthistory
+  - LAG window function: compatible as-is
+
+=== STATEMENT 3: InsertProductAsync ===
+DMS Timestamp: 2026-02-27T14:52:29.117793
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: Applied lowercase schema + PostgreSQL function mapping
+  - SCOPE_IDENTITY() -> RETURNING productid clause
+  - GETDATE() -> NOW()
+  - DECLARE @var pattern -> Restructured for PostgreSQL
+  - Transaction block restructured for Npgsql handling
+
+=== STATEMENT 4: UpdateProductAsync ===
+DMS Timestamp: 2026-02-27T14:52:44.451290
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: Applied lowercase schema + PostgreSQL function mapping
+  - GETDATE() -> NOW()
+  - DECLARE + SELECT INTO variable -> SELECT INTO TEMP table
+  - Transaction block preserved
+
+=== STATEMENT 5: DeleteProductAsync ===
+DMS Timestamp: 2026-02-27T14:52:59.459581
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: Applied lowercase schema + PostgreSQL function mapping
+  - GETDATE() -> NOW()
+  - DECLARE + SELECT INTO variable -> SELECT INTO TEMP table
+  - Transaction block preserved
+
+=== STATEMENT 6: GetProductsByPriceRangeAsync ===
+DMS Timestamp: 2026-02-27T14:53:35.661634
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: Applied lowercase schema object names
+  - RANK(), PERCENT_RANK(): compatible as-is
+  - BETWEEN: compatible as-is
+
+=== STATEMENT 7: GetLowStockProductsAsync ===
+DMS Timestamp: 2026-02-27T14:53:51.013152
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: Applied lowercase schema object names
+  - AVG/MIN/MAX OVER: compatible as-is
+  - ROUND with integer division: added CAST to NUMERIC for PostgreSQL compatibility
