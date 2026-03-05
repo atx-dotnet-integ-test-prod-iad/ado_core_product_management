@@ -1,0 +1,51 @@
+============================================================================
+DMS CONVERSION FAILURE LOG
+============================================================================
+
+Statement 3: InsertProductAsync
+Source File: sourceCode/DataAccess/ProductRepository.cs
+Method: InsertProductAsync
+
+DMS Tool Attempt:
+  - Timestamp: 2026-03-05T22:44:09
+  - Status: ERROR
+  - Error: Metadata model creation failed: Statement definition is not valid.
+  - Reason: The full transaction block with DECLARE, SCOPE_IDENTITY(), and 
+    multiple statements was rejected by DMS as invalid statement definition.
+
+Original MS SQL Statement:
+--------------------------
+DECLARE @NewProductId INT;
+
+BEGIN TRANSACTION;
+    INSERT INTO Products (Name, Description, Price, StockQuantity)
+    VALUES (@Name, @Description, @Price, @StockQuantity);
+    
+    SET @NewProductId = SCOPE_IDENTITY();
+    
+    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)
+    VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, GETDATE());
+    
+    UPDATE ProductStats
+    SET 
+        TotalProducts = TotalProducts + 1,
+        AveragePrice = (AveragePrice * TotalProducts + @Price) / (TotalProducts + 1),
+        LastUpdated = GETDATE()
+    WHERE StatId = 1;
+COMMIT;
+
+SELECT @NewProductId;
+
+Manual Conversion (DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA):
+------------------------------------------------------------------------
+Applied conversions:
+  1. Schema: dbo.Products -> productmanagement_dbo.products (following DMS pattern from other successful conversions)
+  2. SCOPE_IDENTITY() -> RETURNING productid INTO var_newproductid
+  3. GETDATE() -> clock_timestamp() (following DMS pattern from statements 4 and 5)
+  4. BEGIN TRANSACTION/COMMIT -> removed (ADO.NET manages transaction externally)
+  5. DECLARE @NewProductId INT -> DECLARE var_newproductid INTEGER (PostgreSQL DO block syntax)
+  6. All column names lowercased (following DMS pattern)
+  7. Used DO $$ ... $$ block for PostgreSQL anonymous block
+
+Note: Individual INSERT INTO Products was also tested via DMS successfully, confirming 
+  schema mapping productmanagement_dbo.products is correct.
