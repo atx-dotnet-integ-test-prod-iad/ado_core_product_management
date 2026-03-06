@@ -1,0 +1,180 @@
+{
+  "number_of_statements_processed": 41,
+  "number_of_statements_equivalent": 0,
+  "number_of_statements_non_equivalent": 0,
+  "number_of_statements_with_equivalency_error": 41,
+  "equivalency_tool_systemic_error": "All 41 statement pairs returned ERROR with message: 'uniqueID'. The SQL Equivalency tool has a systemic error preventing validation. No agent judgment was used to determine equivalency.",
+  "statement_details": [
+    {
+      "statement_number": 1,
+      "description": "GetAllProductsAsync - SELECT with CTE",
+      "source_file": "sourceCode/DataAccess/ProductRepository.cs",
+      "original_statement": "WITH ProductStats AS (SELECT ProductId, AVG(Price) OVER () AS AvgPrice, COUNT(*) OVER () AS TotalProducts FROM [dbo].[Products]) SELECT p.ProductId, p.Name, p.Description, p.Price, p.StockQuantity, p.CreatedDate, p.ModifiedDate, CASE WHEN p.Price > ps.AvgPrice THEN 'Above Average' WHEN p.Price < ps.AvgPrice THEN 'Below Average' ELSE 'Average' END AS PriceCategory, ROUND((p.Price / ps.AvgPrice) * 100, 2) AS PricePercentageOfAverage FROM [dbo].[Products] AS p INNER JOIN ProductStats AS ps ON p.ProductId = ps.ProductId ORDER BY CASE WHEN p.Price > ps.AvgPrice THEN 1 ELSE 2 END, p.Name",
+      "converted_statement": "WITH productstats AS (SELECT productid, AVG(price) OVER () AS avgprice, COUNT(*) OVER () AS totalproducts FROM productmanagement_dbo.products) SELECT p.productid, p.name, p.description, p.price, p.stockquantity, p.createddate, p.modifieddate, CASE WHEN p.price > ps.avgprice THEN 'Above Average' WHEN p.price < ps.avgprice THEN 'Below Average' ELSE 'Average' END AS pricecategory, ROUND((p.price / ps.avgprice) * 100, 2) AS pricepercentageofaverage FROM productmanagement_dbo.products AS p INNER JOIN productstats AS ps ON p.productid = ps.productid ORDER BY CASE WHEN p.price > ps.avgprice THEN 1 ELSE 2 END NULLS FIRST, p.name NULLS FIRST",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}",
+      "dms_failure_reason": null
+    },
+    {
+      "statement_number": 2,
+      "description": "GetProductByIdAsync - SELECT with CTE and parameter",
+      "source_file": "sourceCode/DataAccess/ProductRepository.cs",
+      "original_statement": "WITH ProductHistory AS (SELECT ProductId, LAG(Price) OVER (ORDER BY ModifiedDate) AS PreviousPrice, LAG(StockQuantity) OVER (ORDER BY ModifiedDate) AS PreviousStock FROM [dbo].[Products] WHERE ProductId = @ProductId) SELECT p.ProductId, p.Name, p.Description, p.Price, p.StockQuantity, p.CreatedDate, p.ModifiedDate, ph.PreviousPrice, ph.PreviousStock, CASE WHEN ph.PreviousPrice IS NOT NULL THEN ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2) ELSE NULL END AS PriceChangePercentage FROM [dbo].[Products] AS p LEFT OUTER JOIN ProductHistory AS ph ON p.ProductId = ph.ProductId WHERE p.ProductId = @ProductId",
+      "converted_statement": "WITH producthistory AS (SELECT productid, lag(price) OVER (ORDER BY modifieddate) AS previousprice, lag(stockquantity) OVER (ORDER BY modifieddate) AS previousstock FROM productmanagement_dbo.products WHERE productid = @ProductId) SELECT p.productid, p.name, p.description, p.price, p.stockquantity, p.createddate, p.modifieddate, ph.previousprice, ph.previousstock, CASE WHEN ph.previousprice IS NOT NULL THEN ROUND(((p.price - ph.previousprice) / ph.previousprice) * 100, 2) ELSE NULL END AS pricechangepercentage FROM productmanagement_dbo.products AS p LEFT OUTER JOIN producthistory AS ph ON p.productid = ph.productid WHERE p.productid = @ProductId",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}",
+      "dms_failure_reason": null
+    },
+    {
+      "statement_number": 3,
+      "description": "InsertProductAsync - Transaction block",
+      "source_file": "sourceCode/DataAccess/ProductRepository.cs",
+      "original_statement": "DECLARE @NewProductId INT; INSERT INTO [dbo].[Products] (Name, Description, Price, StockQuantity) VALUES (@Name, @Description, @Price, @StockQuantity); SET @NewProductId = SCOPE_IDENTITY(); INSERT INTO [dbo].[ProductHistory]... SELECT @NewProductId;",
+      "converted_statement": "DO $$ DECLARE var_newproductid INTEGER; BEGIN INSERT INTO productmanagement_dbo.products... RETURNING productid INTO var_newproductid; ... END $$; SELECT currval(pg_get_serial_sequence('productmanagement_dbo.products', 'productid'));",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}",
+      "dms_failure_reason": "Metadata model creation failed: Statement definition is not valid. (multi-statement batch with SCOPE_IDENTITY)"
+    },
+    {
+      "statement_number": 4,
+      "description": "UpdateProductAsync - Transaction block",
+      "source_file": "sourceCode/DataAccess/ProductRepository.cs",
+      "original_statement": "DECLARE @OldPrice DECIMAL(18, 2); DECLARE @OldStock INT; SELECT @OldPrice = Price, @OldStock = StockQuantity FROM [dbo].[Products] WHERE ProductId = @ProductId; UPDATE [dbo].[Products] SET Name = @Name...; INSERT INTO [dbo].[ProductHistory]...; UPDATE [dbo].[ProductStats]...",
+      "converted_statement": "DO $$ DECLARE var_OldPrice NUMERIC(18, 2); var_OldStock INTEGER; BEGIN SELECT price, stockquantity INTO var_OldPrice, var_OldStock FROM productmanagement_dbo.products WHERE productid = @ProductId; UPDATE productmanagement_dbo.products...; INSERT INTO productmanagement_dbo.producthistory...; UPDATE productmanagement_dbo.productstats...; END $$;",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}",
+      "dms_failure_reason": null
+    },
+    {
+      "statement_number": 5,
+      "description": "DeleteProductAsync - Transaction block",
+      "source_file": "sourceCode/DataAccess/ProductRepository.cs",
+      "original_statement": "DECLARE @OldPrice DECIMAL(18, 2); DECLARE @OldStock INT; SELECT @OldPrice = Price... FROM [dbo].[Products]; INSERT INTO [dbo].[ProductHistory]...; DELETE FROM [dbo].[Products]; UPDATE [dbo].[ProductStats]...",
+      "converted_statement": "DO $$ DECLARE var_OldPrice NUMERIC(18, 2); var_OldStock INTEGER; BEGIN SELECT price, stockquantity INTO var_OldPrice, var_OldStock FROM productmanagement_dbo.products...; INSERT INTO productmanagement_dbo.producthistory...; DELETE FROM productmanagement_dbo.products...; UPDATE productmanagement_dbo.productstats...; END $$;",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}",
+      "dms_failure_reason": null
+    },
+    {
+      "statement_number": 6,
+      "description": "GetProductsByPriceRangeAsync - SELECT with CTE",
+      "source_file": "sourceCode/DataAccess/ProductRepository.cs",
+      "original_statement": "WITH RankedProducts AS (SELECT p.*, RANK() OVER (ORDER BY p.Price) AS PriceRank, PERCENT_RANK() OVER (ORDER BY p.Price) AS PricePercentile FROM [dbo].[Products] AS p WHERE p.Price BETWEEN @MinPrice AND @MaxPrice) SELECT rp.*, CASE WHEN rp.PricePercentile <= 0.25 THEN 'Budget'... END AS PriceSegment FROM RankedProducts AS rp ORDER BY rp.PriceRank",
+      "converted_statement": "WITH rankedproducts AS (SELECT p.*, RANK() OVER (ORDER BY p.price) AS pricerank, percent_rank() OVER (ORDER BY p.price) AS pricepercentile FROM productmanagement_dbo.products AS p WHERE p.price BETWEEN @MinPrice AND @MaxPrice) SELECT rp.*, CASE WHEN rp.pricepercentile <= 0.25 THEN 'Budget'... END AS pricesegment FROM rankedproducts AS rp ORDER BY rp.pricerank NULLS FIRST",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}",
+      "dms_failure_reason": null
+    },
+    {
+      "statement_number": 7,
+      "description": "GetLowStockProductsAsync - SELECT with CTE",
+      "source_file": "sourceCode/DataAccess/ProductRepository.cs",
+      "original_statement": "WITH StockAnalysis AS (SELECT p.*, AVG(StockQuantity) OVER () AS AvgStock... FROM [dbo].[Products] AS p) SELECT sa.*, CASE WHEN StockQuantity <= @Threshold THEN 'Critical'... END AS StockStatus... FROM StockAnalysis AS sa WHERE StockQuantity <= @Threshold ORDER BY StockQuantity",
+      "converted_statement": "WITH stockanalysis AS (SELECT p.*, AVG(stockquantity) OVER () AS avgstock... FROM productmanagement_dbo.products AS p) SELECT sa.*, CASE WHEN stockquantity <= @Threshold THEN 'Critical'... END AS stockstatus... FROM stockanalysis AS sa WHERE stockquantity <= @Threshold ORDER BY stockquantity NULLS FIRST",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}",
+      "dms_failure_reason": null
+    },
+    {
+      "statement_number": 8,
+      "description": "CREATE SCHEMA",
+      "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql",
+      "original_statement": "IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'dbo') BEGIN EXEC('CREATE SCHEMA [dbo]') END",
+      "converted_statement": "CREATE SCHEMA IF NOT EXISTS productmanagement_dbo",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}",
+      "dms_failure_reason": "Utility DDL not suitable for DMS statement conversion"
+    },
+    {
+      "statement_number": 9,
+      "description": "DROP TRIGGER",
+      "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql",
+      "original_statement": "IF EXISTS (SELECT * FROM sys.triggers WHERE name = 'trg_Products_History') DROP TRIGGER [dbo].[trg_Products_History]",
+      "converted_statement": "DROP TRIGGER IF EXISTS trg_products_history ON productmanagement_dbo.products; DROP FUNCTION IF EXISTS productmanagement_dbo.trg_products_history_func()",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}",
+      "dms_failure_reason": "Utility DDL not suitable for DMS statement conversion"
+    },
+    {
+      "statement_number": 10,
+      "description": "DROP TABLES",
+      "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql",
+      "original_statement": "IF OBJECT_ID('[dbo].[ProductHistory]', 'U') IS NOT NULL DROP TABLE [dbo].[ProductHistory]; ...",
+      "converted_statement": "DROP TABLE IF EXISTS productmanagement_dbo.producthistory; DROP TABLE IF EXISTS productmanagement_dbo.products CASCADE; ...",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}",
+      "dms_failure_reason": "Utility DDL not suitable for DMS statement conversion"
+    },
+    {
+      "statement_number": 11, "description": "CREATE TABLE Categories", "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql",
+      "original_statement": "CREATE TABLE [dbo].[Categories]([CategoryId] INT IDENTITY(1,1) PRIMARY KEY, [Name] NVARCHAR(50) NOT NULL, [Description] NVARCHAR(200) NULL, [ParentCategoryId] INT NULL, [CreatedDate] DATETIME NOT NULL DEFAULT GETDATE())",
+      "converted_statement": "CREATE TABLE productmanagement_dbo.categories(categoryid BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name VARCHAR(50) NOT NULL, description VARCHAR(200) NULL, parentcategoryid INTEGER NULL, createddate TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT clock_timestamp())",
+      "conversion_method": "DMS_TOOL", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": null
+    },
+    {
+      "statement_number": 12, "description": "ALTER TABLE Categories FK", "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql",
+      "original_statement": "ALTER TABLE [dbo].[Categories] ADD CONSTRAINT FK_Categories_Categories FOREIGN KEY ([ParentCategoryId]) REFERENCES [dbo].[Categories] ([CategoryId])",
+      "converted_statement": "ALTER TABLE productmanagement_dbo.categories ADD CONSTRAINT fk_categories_categories FOREIGN KEY (parentcategoryid) REFERENCES productmanagement_dbo.categories (categoryid)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": "DMS returned only 'ALTER TABLE productmanagement_dbo.categories;' - dropped FK constraint clause"
+    },
+    {
+      "statement_number": 13, "description": "CREATE TABLE Suppliers", "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql",
+      "original_statement": "CREATE TABLE [dbo].[Suppliers]([SupplierId] INT IDENTITY(1,1) PRIMARY KEY, [Name] NVARCHAR(100) NOT NULL, [IsActive] BIT NOT NULL DEFAULT 1, ...)",
+      "converted_statement": "CREATE TABLE productmanagement_dbo.suppliers(supplierid BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name VARCHAR(100) NOT NULL, isactive BOOLEAN NOT NULL DEFAULT TRUE, ...)",
+      "conversion_method": "DMS_TOOL", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": null
+    },
+    {
+      "statement_number": 14, "description": "CREATE TABLE Products", "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql",
+      "original_statement": "CREATE TABLE [dbo].[Products]([ProductId] INT IDENTITY(1,1) PRIMARY KEY, [Name] NVARCHAR(100) NOT NULL, ...)",
+      "converted_statement": "CREATE TABLE productmanagement_dbo.products(productid BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name VARCHAR(100) NOT NULL, ...)",
+      "conversion_method": "DMS_TOOL", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": null
+    },
+    {
+      "statement_number": 15, "description": "CREATE TABLE ProductHistory", "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql",
+      "original_statement": "CREATE TABLE [dbo].[ProductHistory]([HistoryId] INT IDENTITY(1,1) PRIMARY KEY, ...)",
+      "converted_statement": "CREATE TABLE productmanagement_dbo.producthistory(historyid BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, ...)",
+      "conversion_method": "DMS_TOOL", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": null
+    },
+    {
+      "statement_number": 16, "description": "CREATE TABLE ProductStats", "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql",
+      "original_statement": "CREATE TABLE [dbo].[ProductStats]([StatId] INT PRIMARY KEY DEFAULT 1, ...)",
+      "converted_statement": "CREATE TABLE productmanagement_dbo.productstats(statid INTEGER PRIMARY KEY DEFAULT 1, ...)",
+      "conversion_method": "DMS_TOOL", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": null
+    },
+    {"statement_number": 17, "description": "CREATE INDEX Products_CategoryId", "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql", "original_statement": "CREATE INDEX IX_Products_CategoryId ON [dbo].[Products] ([CategoryId])", "converted_statement": "CREATE INDEX ix_products_categoryid ON productmanagement_dbo.products (categoryid)", "conversion_method": "DMS_TOOL", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": null},
+    {"statement_number": 18, "description": "CREATE INDEX Products_SupplierId", "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql", "original_statement": "CREATE INDEX IX_Products_SupplierId ON [dbo].[Products] ([SupplierId])", "converted_statement": "CREATE INDEX ix_products_supplierid ON productmanagement_dbo.products (supplierid)", "conversion_method": "DMS_TOOL", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": null},
+    {"statement_number": 19, "description": "CREATE UNIQUE INDEX Products_SKU", "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql", "original_statement": "CREATE UNIQUE INDEX IX_Products_SKU ON [dbo].[Products] ([SKU])", "converted_statement": "CREATE UNIQUE INDEX ix_products_sku ON productmanagement_dbo.products (sku)", "conversion_method": "DMS_TOOL", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": null},
+    {"statement_number": 20, "description": "CREATE INDEX ProductHistory_ProductId", "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql", "original_statement": "CREATE INDEX IX_ProductHistory_ProductId ON [dbo].[ProductHistory] ([ProductId])", "converted_statement": "CREATE INDEX ix_producthistory_productid ON productmanagement_dbo.producthistory (productid)", "conversion_method": "DMS_TOOL", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": null},
+    {"statement_number": 21, "description": "CREATE INDEX ProductHistory_ActionDate", "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql", "original_statement": "CREATE INDEX IX_ProductHistory_ActionDate ON [dbo].[ProductHistory] ([ActionDate])", "converted_statement": "CREATE INDEX ix_producthistory_actiondate ON productmanagement_dbo.producthistory (actiondate)", "conversion_method": "DMS_TOOL", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": null},
+    {"statement_number": 22, "description": "INSERT Categories", "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql", "original_statement": "INSERT INTO [dbo].[Categories] ([Name], [Description], [ParentCategoryId]) VALUES ...", "converted_statement": "INSERT INTO productmanagement_dbo.categories (name, description, parentcategoryid) VALUES ...", "conversion_method": "DMS_TOOL", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": null},
+    {"statement_number": 23, "description": "INSERT Suppliers", "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql", "original_statement": "INSERT INTO [dbo].[Suppliers] ([Name], [ContactName], [Email], ...) VALUES ...", "converted_statement": "INSERT INTO productmanagement_dbo.suppliers (name, contactname, email, ...) VALUES ...", "conversion_method": "DMS_TOOL", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": null},
+    {"statement_number": 24, "description": "INSERT Products", "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql", "original_statement": "INSERT INTO [dbo].[Products] ([Name], [Price], [StockQuantity], ...) VALUES ...", "converted_statement": "INSERT INTO productmanagement_dbo.products (name, price, stockquantity, ...) VALUES ...", "conversion_method": "DMS_TOOL", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": null},
+    {"statement_number": 25, "description": "INSERT ProductStats", "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql", "original_statement": "INSERT INTO [dbo].[ProductStats] ([StatId], [TotalProducts], ...) VALUES (1, 0, 0, 0, 0, 0, GETDATE())", "converted_statement": "INSERT INTO productmanagement_dbo.productstats (statid, totalproducts, ...) VALUES (1, 0, 0, 0, 0, 0, clock_timestamp())", "conversion_method": "DMS_TOOL", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": null},
+    {"statement_number": 26, "description": "UPDATE ProductStats", "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql", "original_statement": "UPDATE [dbo].[ProductStats] SET TotalProducts = (SELECT COUNT(*) FROM [dbo].[Products]), ... WHERE StatId = 1", "converted_statement": "UPDATE productmanagement_dbo.productstats SET totalproducts = (SELECT COUNT(*) FROM productmanagement_dbo.products), ... WHERE statid = 1", "conversion_method": "DMS_TOOL", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": null},
+    {"statement_number": 27, "description": "CREATE TRIGGER FUNCTION", "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql", "original_statement": "CREATE TRIGGER [dbo].[trg_Products_History] ON [dbo].[Products] AFTER INSERT, UPDATE, DELETE AS BEGIN ... END", "converted_statement": "CREATE OR REPLACE FUNCTION productmanagement_dbo.trg_products_history_func() RETURNS TRIGGER LANGUAGE plpgsql AS $$ BEGIN ... END; $$", "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": "DMS converted but with CRITICAL action items for SYSTEM_USER function. Manual conversion uses current_user instead."},
+    {"statement_number": 28, "description": "CREATE TRIGGER attachment", "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql", "original_statement": "(Part of Statement 27 in MS SQL Server)", "converted_statement": "CREATE TRIGGER trg_products_history AFTER INSERT OR UPDATE OR DELETE ON productmanagement_dbo.products FOR EACH ROW EXECUTE FUNCTION productmanagement_dbo.trg_products_history_func()", "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": "PostgreSQL requires separate trigger and function; DMS converted as part of Statement 27"},
+    {"statement_number": 29, "description": "CREATE PROC sp_GetAllProducts", "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql", "original_statement": "CREATE PROCEDURE [dbo].[sp_GetAllProducts] AS BEGIN ... END", "converted_statement": "CREATE OR REPLACE FUNCTION productmanagement_dbo.sp_getallproducts() RETURNS TABLE(...) LANGUAGE plpgsql AS $$ BEGIN RETURN QUERY SELECT ... END; $$", "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": "DMS returned empty body: BEGIN END;"},
+    {"statement_number": 30, "description": "CREATE PROC sp_GetProductById", "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql", "original_statement": "CREATE PROCEDURE [dbo].[sp_GetProductById] @ProductId INT AS BEGIN ... END", "converted_statement": "CREATE OR REPLACE FUNCTION productmanagement_dbo.sp_getproductbyid(p_productid INTEGER) RETURNS TABLE(...) LANGUAGE plpgsql AS $$ BEGIN RETURN QUERY SELECT ... END; $$", "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": "DMS returned empty body: BEGIN END;"},
+    {"statement_number": 31, "description": "CREATE PROC sp_InsertProduct", "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql", "original_statement": "CREATE PROCEDURE [dbo].[sp_InsertProduct] ... AS BEGIN ... END", "converted_statement": "CREATE OR REPLACE FUNCTION productmanagement_dbo.sp_insertproduct(...) RETURNS INTEGER LANGUAGE plpgsql AS $$ ... END; $$", "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": "DMS returned empty body: BEGIN END;"},
+    {"statement_number": 32, "description": "CREATE PROC sp_UpdateProduct", "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql", "original_statement": "CREATE PROCEDURE [dbo].[sp_UpdateProduct] ... AS BEGIN ... END", "converted_statement": "CREATE OR REPLACE FUNCTION productmanagement_dbo.sp_updateproduct(...) RETURNS VOID LANGUAGE plpgsql AS $$ ... END; $$", "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": "DMS returned empty body: BEGIN END;"},
+    {"statement_number": 33, "description": "CREATE PROC sp_DeleteProduct", "source_file": "sourceCode/Database/Scripts/01_InitialSetup.sql", "original_statement": "CREATE PROCEDURE [dbo].[sp_DeleteProduct] @ProductId INT AS BEGIN ... END", "converted_statement": "CREATE OR REPLACE FUNCTION productmanagement_dbo.sp_deleteproduct(p_productid INTEGER) RETURNS VOID LANGUAGE plpgsql AS $$ ... END; $$", "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": "DMS returned empty body: BEGIN END;"},
+    {"statement_number": 34, "description": "CREATE SCHEMA (Scripts)", "source_file": "sourceCode/Scripts/01_InitialSetup.sql", "original_statement": "IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = 'dbo') BEGIN EXEC('CREATE SCHEMA [dbo]') END", "converted_statement": "CREATE SCHEMA IF NOT EXISTS productmanagement_dbo", "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": "Utility DDL not suitable for DMS"},
+    {"statement_number": 35, "description": "CREATE TABLE Products (Scripts)", "source_file": "sourceCode/Scripts/01_InitialSetup.sql", "original_statement": "CREATE TABLE [dbo].[Products]([ProductId] INT IDENTITY(1,1) PRIMARY KEY, ...)", "converted_statement": "CREATE TABLE IF NOT EXISTS productmanagement_dbo.products(productid BIGINT GENERATED ALWAYS AS IDENTITY (START WITH 1 INCREMENT BY 1) PRIMARY KEY, ...)", "conversion_method": "DMS_TOOL", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": null},
+    {"statement_number": 36, "description": "CREATE PROC sp_GetAllProducts (Scripts)", "source_file": "sourceCode/Scripts/01_InitialSetup.sql", "original_statement": "CREATE PROCEDURE [dbo].[sp_GetAllProducts] AS BEGIN ... END", "converted_statement": "CREATE OR REPLACE FUNCTION productmanagement_dbo.sp_getallproducts() RETURNS TABLE(...) LANGUAGE plpgsql AS $$ ... END; $$", "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": "DMS returned empty body: BEGIN END;"},
+    {"statement_number": 37, "description": "CREATE PROC sp_GetProductById (Scripts)", "source_file": "sourceCode/Scripts/01_InitialSetup.sql", "original_statement": "CREATE PROCEDURE [dbo].[sp_GetProductById] @ProductId INT AS BEGIN ... END", "converted_statement": "CREATE OR REPLACE FUNCTION productmanagement_dbo.sp_getproductbyid(p_productid INTEGER) RETURNS TABLE(...) LANGUAGE plpgsql AS $$ ... END; $$", "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": "DMS returned empty body: BEGIN END;"},
+    {"statement_number": 38, "description": "CREATE PROC sp_InsertProduct (Scripts)", "source_file": "sourceCode/Scripts/01_InitialSetup.sql", "original_statement": "CREATE PROCEDURE [dbo].[sp_InsertProduct] ... AS BEGIN ... END", "converted_statement": "CREATE OR REPLACE FUNCTION productmanagement_dbo.sp_insertproduct(...) RETURNS INTEGER LANGUAGE plpgsql AS $$ ... END; $$", "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": "DMS returned empty body: BEGIN END;"},
+    {"statement_number": 39, "description": "CREATE PROC sp_UpdateProduct (Scripts)", "source_file": "sourceCode/Scripts/01_InitialSetup.sql", "original_statement": "CREATE PROCEDURE [dbo].[sp_UpdateProduct] ... AS BEGIN ... END", "converted_statement": "CREATE OR REPLACE FUNCTION productmanagement_dbo.sp_updateproduct(...) RETURNS VOID LANGUAGE plpgsql AS $$ ... END; $$", "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": "DMS returned empty body: BEGIN END;"},
+    {"statement_number": 40, "description": "CREATE PROC sp_DeleteProduct (Scripts)", "source_file": "sourceCode/Scripts/01_InitialSetup.sql", "original_statement": "CREATE PROCEDURE [dbo].[sp_DeleteProduct] @ProductId INT AS BEGIN ... END", "converted_statement": "CREATE OR REPLACE FUNCTION productmanagement_dbo.sp_deleteproduct(p_productid INTEGER) RETURNS VOID LANGUAGE plpgsql AS $$ ... END; $$", "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": "DMS returned empty body: BEGIN END;"},
+    {"statement_number": 41, "description": "INSERT Sample Data (Scripts)", "source_file": "sourceCode/Scripts/01_InitialSetup.sql", "original_statement": "IF NOT EXISTS (SELECT 1 FROM [dbo].[Products]) BEGIN EXEC [dbo].[sp_InsertProduct] ... END", "converted_statement": "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM productmanagement_dbo.products LIMIT 1) THEN PERFORM productmanagement_dbo.sp_insertproduct(...); END IF; END $$", "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA", "equivalency_status": "ERROR", "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}", "dms_failure_reason": "Conditional execution with stored procedure calls not suitable for DMS"}
+  ]
+}

@@ -1,0 +1,56 @@
+-- ============================================================================
+-- CONVERTED SQL STATEMENTS CATALOG
+-- All 41 statements processed through DMS MCP tool
+-- DMS Migration Project ARN: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+-- ============================================================================
+-- SUMMARY:
+-- Total statements: 41
+-- DMS SUCCESS: 20 statements
+-- DMS ERROR/PARTIAL requiring manual conversion: 21 statements
+-- All PostgreSQL conversions verified against existing codebase
+-- ============================================================================
+
+-- Full statement pairs are documented in extracted_statements.sql
+-- This file records DMS conversion status and method for each statement
+
+-- Statement 1 (GetAllProducts) | DMS: SUCCESS | Method: DMS_TOOL
+-- Statement 2 (GetProductById) | DMS: SUCCESS | Method: DMS_TOOL
+-- Statement 3 (InsertProduct) | DMS: ERROR (multi-statement batch) | Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+-- Statement 4 (UpdateProduct) | DMS: SUCCESS | Method: DMS_TOOL
+-- Statement 5 (DeleteProduct) | DMS: SUCCESS | Method: DMS_TOOL
+-- Statement 6 (GetProductsByPriceRange) | DMS: SUCCESS | Method: DMS_TOOL
+-- Statement 7 (GetLowStockProducts) | DMS: SUCCESS | Method: DMS_TOOL
+-- Statement 8 (CREATE SCHEMA) | DMS: N/A | Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+-- Statement 9 (DROP TRIGGER) | DMS: N/A | Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+-- Statement 10 (DROP TABLES) | DMS: N/A | Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+-- Statement 11 (CREATE TABLE Categories) | DMS: SUCCESS | Method: DMS_TOOL
+-- Statement 12 (ALTER TABLE Categories FK) | DMS: PARTIAL (dropped FK clause) | Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+-- Statement 13 (CREATE TABLE Suppliers) | DMS: SUCCESS | Method: DMS_TOOL
+-- Statement 14 (CREATE TABLE Products) | DMS: SUCCESS | Method: DMS_TOOL
+-- Statement 15 (CREATE TABLE ProductHistory) | DMS: SUCCESS | Method: DMS_TOOL
+-- Statement 16 (CREATE TABLE ProductStats) | DMS: SUCCESS | Method: DMS_TOOL
+-- Statement 17 (CREATE INDEX Products_CategoryId) | DMS: SUCCESS | Method: DMS_TOOL
+-- Statement 18 (CREATE INDEX Products_SupplierId) | DMS: SUCCESS | Method: DMS_TOOL
+-- Statement 19 (CREATE UNIQUE INDEX Products_SKU) | DMS: SUCCESS | Method: DMS_TOOL
+-- Statement 20 (CREATE INDEX ProductHistory_ProductId) | DMS: SUCCESS | Method: DMS_TOOL
+-- Statement 21 (CREATE INDEX ProductHistory_ActionDate) | DMS: SUCCESS | Method: DMS_TOOL
+-- Statement 22 (INSERT Categories) | DMS: SUCCESS | Method: DMS_TOOL
+-- Statement 23 (INSERT Suppliers) | DMS: SUCCESS | Method: DMS_TOOL
+-- Statement 24 (INSERT Products) | DMS: SUCCESS | Method: DMS_TOOL
+-- Statement 25 (INSERT ProductStats) | DMS: SUCCESS | Method: DMS_TOOL
+-- Statement 26 (UPDATE ProductStats) | DMS: SUCCESS | Method: DMS_TOOL
+-- Statement 27 (CREATE TRIGGER FUNCTION) | DMS: SUCCESS with CRITICAL items (SYSTEM_USER) | Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+-- Statement 28 (CREATE TRIGGER) | DMS: Part of Statement 27 | Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+-- Statement 29 (CREATE PROC sp_GetAllProducts) | DMS: PARTIAL (empty body) | Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+-- Statement 30 (CREATE PROC sp_GetProductById) | DMS: PARTIAL (empty body) | Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+-- Statement 31 (CREATE PROC sp_InsertProduct) | DMS: PARTIAL (empty body) | Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+-- Statement 32 (CREATE PROC sp_UpdateProduct) | DMS: PARTIAL (empty body) | Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+-- Statement 33 (CREATE PROC sp_DeleteProduct) | DMS: PARTIAL (empty body) | Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+-- Statement 34 (CREATE SCHEMA - Scripts) | DMS: N/A | Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+-- Statement 35 (CREATE TABLE Products - Scripts) | DMS: SUCCESS | Method: DMS_TOOL
+-- Statement 36 (CREATE PROC sp_GetAllProducts - Scripts) | DMS: PARTIAL | Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+-- Statement 37 (CREATE PROC sp_GetProductById - Scripts) | DMS: PARTIAL | Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+-- Statement 38 (CREATE PROC sp_InsertProduct - Scripts) | DMS: PARTIAL | Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+-- Statement 39 (CREATE PROC sp_UpdateProduct - Scripts) | DMS: PARTIAL | Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+-- Statement 40 (CREATE PROC sp_DeleteProduct - Scripts) | DMS: PARTIAL | Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+-- Statement 41 (INSERT Sample Data - Scripts) | DMS: N/A | Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
