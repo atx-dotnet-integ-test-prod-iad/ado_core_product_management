@@ -1,0 +1,64 @@
+{
+  "number_of_statements_processed": 7,
+  "number_of_statements_equivalent": 0,
+  "number_of_statements_non_equivalent": 0,
+  "number_of_statements_with_equivalency_error": 7,
+  "statement_details": [
+    {
+      "original_statement": "WITH ProductStats AS (\n    SELECT ProductId, AVG(Price) OVER () AS AvgPrice, COUNT(*) OVER () AS TotalProducts\n    FROM dbo.Products\n)\nSELECT\n    p.ProductId, p.Name, p.Description, p.Price, p.StockQuantity, p.CreatedDate, p.ModifiedDate,\n    CASE\n        WHEN p.Price > ps.AvgPrice THEN 'Above Average'\n        WHEN p.Price < ps.AvgPrice THEN 'Below Average'\n        ELSE 'Average'\n    END AS PriceCategory,\n    ROUND((p.Price / ps.AvgPrice) * 100, 2) AS PricePercentageOfAverage\nFROM dbo.Products AS p\nINNER JOIN ProductStats AS ps ON p.ProductId = ps.ProductId\nORDER BY\n    CASE WHEN p.Price > ps.AvgPrice THEN 1 ELSE 2 END,\n    p.Name;",
+      "converted_statement": "WITH productstats\nAS (SELECT\n    productid, AVG(price) OVER () AS avgprice, COUNT(*) OVER () AS totalproducts\n    FROM productmanagement_dbo.products)\nSELECT\n    p.productid, p.name, p.description, p.price, p.stockquantity, p.createddate, p.modifieddate,\n    CASE\n        WHEN p.price > ps.avgprice THEN 'Above Average'\n        WHEN p.price < ps.avgprice THEN 'Below Average'\n        ELSE 'Average'\n    END AS pricecategory, ROUND((p.price / ps.avgprice) * 100, 2) AS pricepercentageofaverage\n    FROM productmanagement_dbo.products AS p\n    INNER JOIN productstats AS ps\n        ON p.productid = ps.productid\n    ORDER BY\n    CASE\n        WHEN p.price > ps.avgprice THEN 1\n        ELSE 2\n    END NULLS FIRST, p.name NULLS FIRST;",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-07T12:21:41.094233\"}",
+      "dms_failure_reason": null
+    },
+    {
+      "original_statement": "WITH ProductHistory AS (\n    SELECT ProductId, LAG(Price) OVER (ORDER BY ModifiedDate) AS PreviousPrice,\n           LAG(StockQuantity) OVER (ORDER BY ModifiedDate) AS PreviousStock\n    FROM dbo.Products\n    WHERE ProductId = @ProductId\n)\nSELECT p.ProductId, p.Name, p.Description, p.Price, p.StockQuantity, p.CreatedDate, p.ModifiedDate,\n    ph.PreviousPrice, ph.PreviousStock,\n    CASE WHEN ph.PreviousPrice IS NOT NULL THEN ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2) ELSE NULL END AS PriceChangePercentage\nFROM dbo.Products AS p\nLEFT JOIN ProductHistory AS ph ON p.ProductId = ph.ProductId\nWHERE p.ProductId = @ProductId;",
+      "converted_statement": "WITH producthistory\nAS (SELECT\n    productid, lag(price) OVER (ORDER BY modifieddate) AS previousprice, lag(stockquantity) OVER (ORDER BY modifieddate) AS previousstock\n    FROM productmanagement_dbo.products\n    WHERE productid = @ProductId)\nSELECT\n    p.productid, p.name, p.description, p.price, p.stockquantity, p.createddate, p.modifieddate, ph.previousprice, ph.previousstock,\n    CASE\n        WHEN ph.previousprice IS NOT NULL THEN ROUND(((p.price - ph.previousprice) / ph.previousprice) * 100, 2)\n        ELSE NULL\n    END AS pricechangepercentage\n    FROM productmanagement_dbo.products AS p\n    LEFT OUTER JOIN producthistory AS ph\n        ON p.productid = ph.productid\n    WHERE p.productid = @ProductId;",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-07T12:22:00.144899\"}",
+      "dms_failure_reason": null
+    },
+    {
+      "original_statement": "BEGIN TRANSACTION;\nDECLARE @NewProductId INT;\nINSERT INTO dbo.Products (Name, Description, Price, StockQuantity)\nVALUES (@Name, @Description, @Price, @StockQuantity);\nSET @NewProductId = SCOPE_IDENTITY();\nINSERT INTO dbo.ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)\nVALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, GETDATE());\nUPDATE dbo.ProductStats\nSET TotalProducts = TotalProducts + 1,\n    AveragePrice = (AveragePrice * TotalProducts + @Price) / (TotalProducts + 1),\n    LastUpdated = GETDATE()\nWHERE StatId = 1;\nCOMMIT TRANSACTION;\nSELECT @NewProductId;",
+      "converted_statement": "DO $$\nDECLARE\n    var_newproductid INTEGER;\nBEGIN\n    INSERT INTO productmanagement_dbo.products (name, description, price, stockquantity)\n    VALUES (@Name, @Description, @Price, @StockQuantity)\n    RETURNING productid INTO var_newproductid;\n\n    INSERT INTO productmanagement_dbo.producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate)\n    VALUES (var_newproductid, 'INSERT', NULL, @Price, NULL, @StockQuantity, clock_timestamp());\n\n    UPDATE productmanagement_dbo.productstats\n    SET\n        totalproducts = totalproducts + 1,\n        averageprice = (averageprice * totalproducts + @Price) / (totalproducts + 1),\n        lastupdated = clock_timestamp()\n    WHERE statid = 1;\nEND $$;\nSELECT lastval();",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-07T12:22:31.908867\"}",
+      "dms_failure_reason": "Metadata model creation failed: Statement definition is not valid."
+    },
+    {
+      "original_statement": "DECLARE @OldPrice DECIMAL(18, 2);\nDECLARE @OldStock INT;\nSELECT @OldPrice = Price, @OldStock = StockQuantity FROM dbo.Products WHERE ProductId = @ProductId;\nUPDATE dbo.Products SET Name = @Name, Description = @Description, Price = @Price, StockQuantity = @StockQuantity, ModifiedDate = GETDATE() WHERE ProductId = @ProductId;\nINSERT INTO dbo.ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate) VALUES (@ProductId, 'UPDATE', @OldPrice, @Price, @OldStock, @StockQuantity, GETDATE());\nUPDATE dbo.ProductStats SET AveragePrice = (AveragePrice * TotalProducts - @OldPrice + @Price) / TotalProducts, LastUpdated = GETDATE() WHERE StatId = 1;",
+      "converted_statement": "DECLARE\n    var_OldPrice NUMERIC(18, 2);\n    var_OldStock INTEGER;\nBEGIN\n    SELECT\n        price AS var_OldPrice, stockquantity AS var_OldStock\n        FROM productmanagement_dbo.products\n        WHERE productid = @ProductId;\n    UPDATE productmanagement_dbo.products\n    SET name = @Name, description = @Description, price = @Price, stockquantity = @StockQuantity, modifieddate = clock_timestamp()\n        WHERE productid = @ProductId;\n    INSERT INTO productmanagement_dbo.producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate)\n    VALUES (@ProductId, 'UPDATE', @OldPrice, @Price, @OldStock, @StockQuantity, clock_timestamp());\n    UPDATE productmanagement_dbo.productstats\n    SET averageprice = (averageprice * totalproducts - @OldPrice + @Price) / totalproducts, lastupdated = clock_timestamp()\n        WHERE statid = 1;\nEND;",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-07T12:22:47.535574\"}",
+      "dms_failure_reason": null
+    },
+    {
+      "original_statement": "DECLARE @OldPrice DECIMAL(18, 2);\nDECLARE @OldStock INT;\nSELECT @OldPrice = Price, @OldStock = StockQuantity FROM dbo.Products WHERE ProductId = @ProductId;\nINSERT INTO dbo.ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate) VALUES (@ProductId, 'DELETE', @OldPrice, NULL, @OldStock, NULL, GETDATE());\nDELETE FROM dbo.Products WHERE ProductId = @ProductId;\nUPDATE dbo.ProductStats SET TotalProducts = TotalProducts - 1, AveragePrice = CASE WHEN TotalProducts > 1 THEN (AveragePrice * TotalProducts - @OldPrice) / (TotalProducts - 1) ELSE 0 END, LastUpdated = GETDATE() WHERE StatId = 1;",
+      "converted_statement": "DECLARE\n    var_OldPrice NUMERIC(18, 2);\n    var_OldStock INTEGER;\nBEGIN\n    SELECT\n        price AS var_OldPrice, stockquantity AS var_OldStock\n        FROM productmanagement_dbo.products\n        WHERE productid = @ProductId;\n    INSERT INTO productmanagement_dbo.producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate)\n    VALUES (@ProductId, 'DELETE', @OldPrice, NULL, @OldStock, NULL, clock_timestamp());\n    DELETE FROM productmanagement_dbo.products\n        WHERE productid = @ProductId;\n    UPDATE productmanagement_dbo.productstats\n    SET totalproducts = totalproducts - 1, averageprice =\n    CASE\n        WHEN totalproducts > 1 THEN (averageprice * totalproducts - @OldPrice) / (totalproducts - 1)\n        ELSE 0\n    END, lastupdated = clock_timestamp()\n        WHERE statid = 1;\nEND;",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-07T12:23:02.412160\"}",
+      "dms_failure_reason": null
+    },
+    {
+      "original_statement": "WITH RankedProducts AS (\n    SELECT p.*, RANK() OVER (ORDER BY p.Price) AS PriceRank,\n           PERCENT_RANK() OVER (ORDER BY p.Price) AS PricePercentile\n    FROM dbo.Products AS p\n    WHERE p.Price BETWEEN @MinPrice AND @MaxPrice\n)\nSELECT rp.*,\n    CASE WHEN rp.PricePercentile <= 0.25 THEN 'Budget'\n         WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range'\n         ELSE 'Premium' END AS PriceSegment\nFROM RankedProducts AS rp\nORDER BY rp.PriceRank;",
+      "converted_statement": "WITH rankedproducts\nAS (SELECT\n    p.*, RANK() OVER (ORDER BY p.price) AS pricerank, percent_rank() OVER (ORDER BY p.price) AS pricepercentile\n    FROM productmanagement_dbo.products AS p\n    WHERE p.price BETWEEN @MinPrice AND @MaxPrice)\nSELECT\n    rp.*,\n    CASE\n        WHEN rp.pricepercentile <= 0.25 THEN 'Budget'\n        WHEN rp.pricepercentile <= 0.75 THEN 'Mid-Range'\n        ELSE 'Premium'\n    END AS pricesegment\n    FROM rankedproducts AS rp\n    ORDER BY rp.pricerank NULLS FIRST;",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-07T12:23:18.918592\"}",
+      "dms_failure_reason": null
+    },
+    {
+      "original_statement": "WITH StockAnalysis AS (\n    SELECT p.*, AVG(StockQuantity) OVER () AS AvgStock, MIN(StockQuantity) OVER () AS MinStock,\n           MAX(StockQuantity) OVER () AS MaxStock\n    FROM dbo.Products AS p\n)\nSELECT sa.*,\n    CASE WHEN StockQuantity <= @Threshold THEN 'Critical'\n         WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low'\n         ELSE 'Adequate' END AS StockStatus,\n    ROUND((StockQuantity / AvgStock) * 100, 2) AS StockPercentageOfAverage\nFROM StockAnalysis AS sa\nWHERE StockQuantity <= @Threshold\nORDER BY StockQuantity;",
+      "converted_statement": "WITH stockanalysis\nAS (SELECT\n    p.*, AVG(stockquantity) OVER () AS avgstock, MIN(stockquantity) OVER () AS minstock, MAX(stockquantity) OVER () AS maxstock\n    FROM productmanagement_dbo.products AS p)\nSELECT\n    sa.*,\n    CASE\n        WHEN stockquantity <= @Threshold THEN 'Critical'\n        WHEN stockquantity <= avgstock * 0.5 THEN 'Low'\n        ELSE 'Adequate'\n    END AS stockstatus, ROUND((stockquantity / avgstock) * 100, 2) AS stockpercentageofaverage\n    FROM stockanalysis AS sa\n    WHERE stockquantity <= @Threshold\n    ORDER BY stockquantity NULLS FIRST;",
+      "conversion_method": "DMS_TOOL",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-07T12:23:33.065290\"}",
+      "dms_failure_reason": null
+    }
+  ]
+}
