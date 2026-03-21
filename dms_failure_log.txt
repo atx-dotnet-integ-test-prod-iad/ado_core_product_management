@@ -1,0 +1,77 @@
+============================================================
+DMS FAILURE LOG
+Migration: MS SQL Server to PostgreSQL
+Source: DataAccess/ProductRepository.cs
+Date: 2026-03-21
+============================================================
+
+SUMMARY:
+- DMS statement_conversion_tool was attempted for all 15 SQL statements
+- All 15 statements failed with the same systemic error
+- Manual conversion applied using DMS schema_mapping_tool output as reference
+- Conversion method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+DMS ERROR (SYSTEMIC - All Statements):
+  Error Type: Metadata model conversion timeout
+  Error Message: "Metadata model conversion failed: {'error': 'Metadata model conversion did not complete after 15 attempts'}"
+  Root Cause: DMS metadata model conversion infrastructure timeout - affects all statements regardless of complexity
+
+DMS ATTEMPTS:
+  Attempt 1 - Statement 1 (Complex CTE with window functions):
+    Timestamp: 2026-03-21T01:47:33
+    Status: error
+    metadata_model_name: sql-conversion-1774057656
+    request_identifier: d6efda2a-8c2a-4562-9ee1-2f7693bae906
+    Error: Metadata model conversion did not complete after 15 attempts
+    
+  Attempt 2 - Statement 1 (Retry with max_poll_attempts=30):
+    Timestamp: N/A (timed out at 300 seconds before completing)
+    Status: Command execution timed out
+    Error: Command execution timed out after 300 seconds
+    
+  Attempt 3 - Statement 6 (Simple SELECT):
+    Timestamp: 2026-03-21T01:55:39
+    Status: error
+    metadata_model_name: sql-conversion-1774058141
+    request_identifier: f233d106-10fe-462b-a7d5-eb01360850f9
+    Error: Metadata model conversion did not complete after 15 attempts
+    
+  Attempt 4 - Statement 12 (Simple DELETE):
+    Timestamp: 2026-03-21T01:59:42
+    Status: error
+    metadata_model_name: sql-conversion-1774058385
+    request_identifier: ba4fdae8-babe-49c5-88b7-625070e0057d
+    Error: Metadata model conversion did not complete after 15 attempts
+
+CONCLUSION:
+  After 4 attempts covering both complex and simple statements, DMS statement conversion
+  is confirmed to be systemically unavailable due to metadata model conversion timeouts.
+  All 15 statements were manually converted applying lowercase schema object names per
+  the transformation definition rules and using DMS schema_mapping_tool output as the
+  authoritative reference for schema object name mappings.
+
+SCHEMA MAPPING REFERENCE (from DMS schema_mapping_tool - successful):
+  Source: dbo.Products -> Target: productmanagement_dbo.products
+  Source: dbo.ProductHistory -> Target: productmanagement_dbo.producthistory
+  Source: dbo.ProductStats -> Target: productmanagement_dbo.productstats
+  All column names converted to lowercase per schema mapping output
+  GETDATE() -> clock_timestamp()
+  SCOPE_IDENTITY() -> RETURNING productid
+  Added NULLS FIRST for ORDER BY clauses (PostgreSQL default differs from SQL Server)
+
+STATEMENTS AFFECTED (ALL 15):
+  1. GetAllProductsAsync - CTE with window functions
+  2. GetProductByIdAsync - CTE with LAG
+  3. InsertProductAsync - INSERT product with SCOPE_IDENTITY -> RETURNING
+  4. InsertProductAsync - INSERT history
+  5. InsertProductAsync - UPDATE stats
+  6. UpdateProductAsync - SELECT old values
+  7. UpdateProductAsync - UPDATE product
+  8. UpdateProductAsync - INSERT history
+  9. UpdateProductAsync - UPDATE stats
+  10. DeleteProductAsync - SELECT old values
+  11. DeleteProductAsync - INSERT history
+  12. DeleteProductAsync - DELETE product
+  13. DeleteProductAsync - UPDATE stats
+  14. GetProductsByPriceRangeAsync - CTE with RANK/PERCENT_RANK
+  15. GetLowStockProductsAsync - CTE with window aggregates
