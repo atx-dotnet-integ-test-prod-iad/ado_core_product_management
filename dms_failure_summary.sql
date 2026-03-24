@@ -1,0 +1,25 @@
+-- ============================================
+-- DMS FAILURE SUMMARY
+-- ============================================
+-- All 7 SQL statements were passed through the DMS MCP tool.
+-- All 7 failed with the same error.
+-- 
+-- DMS Error: "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+-- Multiple retry attempts were made with increased polling parameters (15, 20, 25 attempts).
+-- All attempts failed with the same metadata model creation timeout.
+-- 
+-- Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+-- Database: ProductManagement
+-- Schema: dbo
+-- 
+-- Resolution: Manual conversion applied with lowercase schema object names per
+-- transformation definition guidelines (DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA)
+-- 
+-- Key Conversions Applied:
+-- 1. All schema object names converted to lowercase (Products → products, ProductId → productid, etc.)
+-- 2. SCOPE_IDENTITY() → RETURNING clause with currval()
+-- 3. GETDATE() → NOW()
+-- 4. DECLARE @var → PostgreSQL DO blocks with DECLARE v_var
+-- 5. BEGIN TRANSACTION/COMMIT → Managed by C# ADO.NET or PostgreSQL BEGIN/COMMIT
+-- 6. Integer division in ROUND() → CAST to DECIMAL for proper division
+-- ============================================
