@@ -1,0 +1,188 @@
+{
+  "number_of_statements_processed": 20,
+  "number_of_statements_equivalent": 0,
+  "number_of_statements_non_equivalent": 0,
+  "number_of_statements_with_equivalency_error": 20,
+  "statement_details": [
+    {
+      "original_statement": "WITH ProductStats AS (\n    SELECT \n        ProductId,\n        AVG(Price) OVER() as AvgPrice,\n        COUNT(*) OVER() as TotalProducts\n    FROM Products\n)\nSELECT \n    p.ProductId,\n    p.Name,\n    p.Description,\n    p.Price,\n    p.StockQuantity,\n    p.CreatedDate,\n    p.ModifiedDate,\n    CASE \n        WHEN p.Price > ps.AvgPrice THEN 'Above Average'\n        WHEN p.Price < ps.AvgPrice THEN 'Below Average'\n        ELSE 'Average'\n    END as PriceCategory,\n    ROUND((p.Price / ps.AvgPrice) * 100, 2) as PricePercentageOfAverage\nFROM Products p\nINNER JOIN ProductStats ps ON p.ProductId = ps.ProductId\nORDER BY \n    CASE \n        WHEN p.Price > ps.AvgPrice THEN 1\n        ELSE 2\n    END,\n    p.Name",
+      "converted_statement": "WITH productstats AS (\n    SELECT \n        productid,\n        AVG(price) OVER() as avgprice,\n        COUNT(*) OVER() as totalproducts\n    FROM products\n)\nSELECT \n    p.productid,\n    p.name,\n    p.description,\n    p.price,\n    p.stockquantity,\n    p.createddate,\n    p.modifieddate,\n    CASE \n        WHEN p.price > ps.avgprice THEN 'Above Average'\n        WHEN p.price < ps.avgprice THEN 'Below Average'\n        ELSE 'Average'\n    END as pricecategory,\n    ROUND((p.price / ps.avgprice) * 100, 2) as pricepercentageofaverage\nFROM products p\nINNER JOIN productstats ps ON p.productid = ps.productid\nORDER BY \n    CASE \n        WHEN p.price > ps.avgprice THEN 1\n        ELSE 2\n    END,\n    p.name",
+      "source": "DataAccess/ProductRepository.cs - GetAllProductsAsync",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-24T03:41:47.237515\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+    },
+    {
+      "original_statement": "WITH ProductHistory AS (\n    SELECT \n        ProductId,\n        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,\n        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock\n    FROM Products\n    WHERE ProductId = @ProductId\n)\nSELECT \n    p.ProductId,\n    p.Name,\n    p.Description,\n    p.Price,\n    p.StockQuantity,\n    p.CreatedDate,\n    p.ModifiedDate,\n    ph.PreviousPrice,\n    ph.PreviousStock,\n    CASE \n        WHEN ph.PreviousPrice IS NOT NULL THEN \n            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)\n        ELSE NULL\n    END as PriceChangePercentage\nFROM Products p\nLEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId\nWHERE p.ProductId = @ProductId",
+      "converted_statement": "WITH producthistory AS (\n    SELECT \n        productid,\n        LAG(price) OVER (ORDER BY modifieddate) as previousprice,\n        LAG(stockquantity) OVER (ORDER BY modifieddate) as previousstock\n    FROM products\n    WHERE productid = @ProductId\n)\nSELECT \n    p.productid,\n    p.name,\n    p.description,\n    p.price,\n    p.stockquantity,\n    p.createddate,\n    p.modifieddate,\n    ph.previousprice,\n    ph.previousstock,\n    CASE \n        WHEN ph.previousprice IS NOT NULL THEN \n            ROUND(((p.price - ph.previousprice) / ph.previousprice) * 100, 2)\n        ELSE NULL\n    END as pricechangepercentage\nFROM products p\nLEFT JOIN producthistory ph ON p.productid = ph.productid\nWHERE p.productid = @ProductId",
+      "source": "DataAccess/ProductRepository.cs - GetProductByIdAsync",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-24T03:42:02.100098\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+    },
+    {
+      "original_statement": "DECLARE @NewProductId INT;\nBEGIN TRANSACTION;\n    INSERT INTO Products (Name, Description, Price, StockQuantity)\n    VALUES (@Name, @Description, @Price, @StockQuantity);\n    SET @NewProductId = SCOPE_IDENTITY();\n    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)\n    VALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, GETDATE());\n    UPDATE ProductStats\n    SET TotalProducts = TotalProducts + 1,\n        AveragePrice = (AveragePrice * TotalProducts + @Price) / (TotalProducts + 1),\n        LastUpdated = GETDATE()\n    WHERE StatId = 1;\nCOMMIT;\nSELECT @NewProductId;",
+      "converted_statement": "WITH new_product AS (\n    INSERT INTO products (name, description, price, stockquantity)\n    VALUES (@Name, @Description, @Price, @StockQuantity)\n    RETURNING productid\n),\nlog_insertion AS (\n    INSERT INTO producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate)\n    SELECT productid, 'INSERT', NULL, @Price, NULL, @StockQuantity, NOW()\n    FROM new_product\n),\nupdate_stats AS (\n    UPDATE productstats\n    SET totalproducts = totalproducts + 1,\n        averageprice = (averageprice * totalproducts + @Price) / (totalproducts + 1),\n        lastupdated = NOW()\n    WHERE statid = 1\n)\nSELECT productid FROM new_product;",
+      "source": "DataAccess/ProductRepository.cs - InsertProductAsync",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-24T03:42:19.830606\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+    },
+    {
+      "original_statement": "BEGIN TRANSACTION;\n    DECLARE @OldPrice DECIMAL(18,2);\n    DECLARE @OldStock INT;\n    SELECT @OldPrice = Price, @OldStock = StockQuantity FROM Products WHERE ProductId = @ProductId;\n    UPDATE Products SET Name = @Name, Description = @Description, Price = @Price, StockQuantity = @StockQuantity, ModifiedDate = GETDATE() WHERE ProductId = @ProductId;\n    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate) VALUES (@ProductId, 'UPDATE', @OldPrice, @Price, @OldStock, @StockQuantity, GETDATE());\n    UPDATE ProductStats SET AveragePrice = (AveragePrice * TotalProducts - @OldPrice + @Price) / TotalProducts, LastUpdated = GETDATE() WHERE StatId = 1;\nCOMMIT;",
+      "converted_statement": "WITH old_values AS (\n    SELECT price as oldprice, stockquantity as oldstock FROM products WHERE productid = @ProductId\n),\ndo_update AS (\n    UPDATE products SET name = @Name, description = @Description, price = @Price, stockquantity = @StockQuantity, modifieddate = NOW() WHERE productid = @ProductId RETURNING productid\n),\nlog_changes AS (\n    INSERT INTO producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate) SELECT @ProductId, 'UPDATE', ov.oldprice, @Price, ov.oldstock, @StockQuantity, NOW() FROM old_values ov\n)\nUPDATE productstats SET averageprice = (averageprice * totalproducts - (SELECT oldprice FROM old_values) + @Price) / totalproducts, lastupdated = NOW() WHERE statid = 1;",
+      "source": "DataAccess/ProductRepository.cs - UpdateProductAsync",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-24T03:42:37.025482\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+    },
+    {
+      "original_statement": "BEGIN TRANSACTION;\n    DECLARE @OldPrice DECIMAL(18,2);\n    DECLARE @OldStock INT;\n    SELECT @OldPrice = Price, @OldStock = StockQuantity FROM Products WHERE ProductId = @ProductId;\n    INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate) VALUES (@ProductId, 'DELETE', @OldPrice, NULL, @OldStock, NULL, GETDATE());\n    DELETE FROM Products WHERE ProductId = @ProductId;\n    UPDATE ProductStats SET TotalProducts = TotalProducts - 1, AveragePrice = CASE WHEN TotalProducts > 1 THEN (AveragePrice * TotalProducts - @OldPrice) / (TotalProducts - 1) ELSE 0 END, LastUpdated = GETDATE() WHERE StatId = 1;\nCOMMIT;",
+      "converted_statement": "WITH old_values AS (\n    SELECT price as oldprice, stockquantity as oldstock FROM products WHERE productid = @ProductId\n),\nlog_deletion AS (\n    INSERT INTO producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate) SELECT @ProductId, 'DELETE', ov.oldprice, NULL, ov.oldstock, NULL, NOW() FROM old_values ov\n),\ndo_delete AS (\n    DELETE FROM products WHERE productid = @ProductId\n)\nUPDATE productstats SET totalproducts = totalproducts - 1, averageprice = CASE WHEN totalproducts > 1 THEN (averageprice * totalproducts - (SELECT oldprice FROM old_values)) / (totalproducts - 1) ELSE 0 END, lastupdated = NOW() WHERE statid = 1;",
+      "source": "DataAccess/ProductRepository.cs - DeleteProductAsync",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-24T03:42:52.974868\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+    },
+    {
+      "original_statement": "WITH RankedProducts AS (\n    SELECT p.*, RANK() OVER (ORDER BY p.Price) as PriceRank, PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile FROM Products p WHERE p.Price BETWEEN @MinPrice AND @MaxPrice\n)\nSELECT rp.*, CASE WHEN rp.PricePercentile <= 0.25 THEN 'Budget' WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range' ELSE 'Premium' END as PriceSegment FROM RankedProducts rp ORDER BY rp.PriceRank",
+      "converted_statement": "WITH rankedproducts AS (\n    SELECT p.*, RANK() OVER (ORDER BY p.price) as pricerank, PERCENT_RANK() OVER (ORDER BY p.price) as pricepercentile FROM products p WHERE p.price BETWEEN @MinPrice AND @MaxPrice\n)\nSELECT rp.*, CASE WHEN rp.pricepercentile <= 0.25 THEN 'Budget' WHEN rp.pricepercentile <= 0.75 THEN 'Mid-Range' ELSE 'Premium' END as pricesegment FROM rankedproducts rp ORDER BY rp.pricerank",
+      "source": "DataAccess/ProductRepository.cs - GetProductsByPriceRangeAsync",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-24T03:43:06.709016\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+    },
+    {
+      "original_statement": "WITH StockAnalysis AS (\n    SELECT p.*, AVG(StockQuantity) OVER() as AvgStock, MIN(StockQuantity) OVER() as MinStock, MAX(StockQuantity) OVER() as MaxStock FROM Products p\n)\nSELECT sa.*, CASE WHEN StockQuantity <= @Threshold THEN 'Critical' WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low' ELSE 'Adequate' END as StockStatus, ROUND((StockQuantity / AvgStock) * 100, 2) as StockPercentageOfAverage FROM StockAnalysis sa WHERE StockQuantity <= @Threshold ORDER BY StockQuantity",
+      "converted_statement": "WITH stockanalysis AS (\n    SELECT p.*, AVG(stockquantity) OVER() as avgstock, MIN(stockquantity) OVER() as minstock, MAX(stockquantity) OVER() as maxstock FROM products p\n)\nSELECT sa.*, CASE WHEN stockquantity <= @Threshold THEN 'Critical' WHEN stockquantity <= avgstock * 0.5 THEN 'Low' ELSE 'Adequate' END as stockstatus, ROUND((stockquantity::numeric / avgstock) * 100, 2) as stockpercentageofaverage FROM stockanalysis sa WHERE stockquantity <= @Threshold ORDER BY stockquantity",
+      "source": "DataAccess/ProductRepository.cs - GetLowStockProductsAsync",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-24T03:43:21.465881\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+    },
+    {
+      "original_statement": "CREATE TABLE [dbo].[Products](\n    [ProductId] [int] IDENTITY(1,1) PRIMARY KEY,\n    [Name] [nvarchar](100) NOT NULL,\n    [Description] [nvarchar](500) NULL,\n    [Price] [decimal](18, 2) NOT NULL,\n    [StockQuantity] [int] NOT NULL,\n    [CreatedDate] [datetime] NOT NULL DEFAULT GETDATE(),\n    [ModifiedDate] [datetime] NULL\n)",
+      "converted_statement": "CREATE TABLE IF NOT EXISTS products(\n    productid SERIAL PRIMARY KEY,\n    name VARCHAR(100) NOT NULL,\n    description VARCHAR(500) NULL,\n    price NUMERIC(18, 2) NOT NULL,\n    stockquantity INT NOT NULL,\n    createddate TIMESTAMP NOT NULL DEFAULT NOW(),\n    modifieddate TIMESTAMP NULL\n)",
+      "source": "Scripts/01_InitialSetup.sql - CREATE TABLE Products (simple)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-24T03:53:39.949918\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+    },
+    {
+      "original_statement": "CREATE OR ALTER PROCEDURE [dbo].[sp_GetAllProducts]\nAS\nBEGIN\n    SET NOCOUNT ON;\n    SELECT ProductId, Name, Description, Price, StockQuantity, CreatedDate, ModifiedDate\n    FROM Products\n    ORDER BY Name;\nEND",
+      "converted_statement": "CREATE OR REPLACE FUNCTION sp_getallproducts()\nRETURNS TABLE (\n    productid INT, name VARCHAR(100), description VARCHAR(500),\n    price NUMERIC(18, 2), stockquantity INT, createddate TIMESTAMP, modifieddate TIMESTAMP\n) AS $$\nBEGIN\n    RETURN QUERY\n    SELECT p.productid, p.name, p.description, p.price, p.stockquantity, p.createddate, p.modifieddate\n    FROM products p ORDER BY p.name;\nEND;\n$$ LANGUAGE plpgsql;",
+      "source": "Scripts/01_InitialSetup.sql - sp_GetAllProducts",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-24T03:53:53.299796\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+    },
+    {
+      "original_statement": "CREATE OR ALTER PROCEDURE [dbo].[sp_GetProductById]\n    @ProductId INT\nAS\nBEGIN\n    SET NOCOUNT ON;\n    SELECT ProductId, Name, Description, Price, StockQuantity, CreatedDate, ModifiedDate\n    FROM Products\n    WHERE ProductId = @ProductId;\nEND",
+      "converted_statement": "CREATE OR REPLACE FUNCTION sp_getproductbyid(p_productid INT)\nRETURNS TABLE (\n    productid INT, name VARCHAR(100), description VARCHAR(500),\n    price NUMERIC(18, 2), stockquantity INT, createddate TIMESTAMP, modifieddate TIMESTAMP\n) AS $$\nBEGIN\n    RETURN QUERY\n    SELECT p.productid, p.name, p.description, p.price, p.stockquantity, p.createddate, p.modifieddate\n    FROM products p WHERE p.productid = p_productid;\nEND;\n$$ LANGUAGE plpgsql;",
+      "source": "Scripts/01_InitialSetup.sql - sp_GetProductById",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-24T03:54:33.922627\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+    },
+    {
+      "original_statement": "CREATE OR ALTER PROCEDURE [dbo].[sp_InsertProduct]\n    @Name NVARCHAR(100),\n    @Description NVARCHAR(500),\n    @Price DECIMAL(18,2),\n    @StockQuantity INT\nAS\nBEGIN\n    SET NOCOUNT ON;\n    INSERT INTO Products (Name, Description, Price, StockQuantity)\n    VALUES (@Name, @Description, @Price, @StockQuantity);\n    SELECT SCOPE_IDENTITY() AS ProductId;\nEND",
+      "converted_statement": "CREATE OR REPLACE FUNCTION sp_insertproduct(p_name VARCHAR(100), p_description VARCHAR(500), p_price NUMERIC(18,2), p_stockquantity INT)\nRETURNS INT AS $$\nDECLARE v_productid INT;\nBEGIN\n    INSERT INTO products (name, description, price, stockquantity)\n    VALUES (p_name, p_description, p_price, p_stockquantity)\n    RETURNING products.productid INTO v_productid;\n    RETURN v_productid;\nEND;\n$$ LANGUAGE plpgsql;",
+      "source": "Scripts/01_InitialSetup.sql - sp_InsertProduct",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-24T03:54:09.260041\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+    },
+    {
+      "original_statement": "CREATE OR ALTER PROCEDURE [dbo].[sp_UpdateProduct]\n    @ProductId INT, @Name NVARCHAR(100), @Description NVARCHAR(500), @Price DECIMAL(18,2), @StockQuantity INT\nAS\nBEGIN\n    SET NOCOUNT ON;\n    UPDATE Products SET Name = @Name, Description = @Description, Price = @Price, StockQuantity = @StockQuantity, ModifiedDate = GETDATE() WHERE ProductId = @ProductId;\nEND",
+      "converted_statement": "CREATE OR REPLACE FUNCTION sp_updateproduct(p_productid INT, p_name VARCHAR(100), p_description VARCHAR(500), p_price NUMERIC(18,2), p_stockquantity INT)\nRETURNS VOID AS $$\nBEGIN\n    UPDATE products SET name = p_name, description = p_description, price = p_price, stockquantity = p_stockquantity, modifieddate = NOW() WHERE productid = p_productid;\nEND;\n$$ LANGUAGE plpgsql;",
+      "source": "Scripts/01_InitialSetup.sql - sp_UpdateProduct",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-24T03:54:22.069863\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+    },
+    {
+      "original_statement": "CREATE OR ALTER PROCEDURE [dbo].[sp_DeleteProduct]\n    @ProductId INT\nAS\nBEGIN\n    SET NOCOUNT ON;\n    DELETE FROM Products WHERE ProductId = @ProductId;\nEND",
+      "converted_statement": "CREATE OR REPLACE FUNCTION sp_deleteproduct(p_productid INT)\nRETURNS VOID AS $$\nBEGIN\n    DELETE FROM products WHERE productid = p_productid;\nEND;\n$$ LANGUAGE plpgsql;",
+      "source": "Scripts/01_InitialSetup.sql - sp_DeleteProduct",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-24T03:54:44.724729\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+    },
+    {
+      "original_statement": "CREATE TABLE [dbo].[Categories](\n    [CategoryId] [int] IDENTITY(1,1) PRIMARY KEY,\n    [Name] [nvarchar](50) NOT NULL,\n    [Description] [nvarchar](200) NULL,\n    [ParentCategoryId] [int] NULL,\n    [CreatedDate] [datetime] NOT NULL DEFAULT GETDATE()\n)",
+      "converted_statement": "CREATE TABLE categories(\n    categoryid SERIAL PRIMARY KEY,\n    name VARCHAR(50) NOT NULL,\n    description VARCHAR(200) NULL,\n    parentcategoryid INT NULL,\n    createddate TIMESTAMP NOT NULL DEFAULT NOW()\n)",
+      "source": "Database/Scripts/01_InitialSetup.sql - CREATE TABLE Categories",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-24T03:54:55.808938\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+    },
+    {
+      "original_statement": "CREATE TABLE [dbo].[Suppliers](\n    [SupplierId] [int] IDENTITY(1,1) PRIMARY KEY,\n    [Name] [nvarchar](100) NOT NULL,\n    [ContactName] [nvarchar](100) NULL,\n    [Email] [nvarchar](100) NULL,\n    [Phone] [nvarchar](20) NULL,\n    [Address] [nvarchar](200) NULL,\n    [Country] [nvarchar](50) NULL,\n    [IsActive] [bit] NOT NULL DEFAULT 1,\n    [CreatedDate] [datetime] NOT NULL DEFAULT GETDATE()\n)",
+      "converted_statement": "CREATE TABLE suppliers(\n    supplierid SERIAL PRIMARY KEY,\n    name VARCHAR(100) NOT NULL,\n    contactname VARCHAR(100) NULL,\n    email VARCHAR(100) NULL,\n    phone VARCHAR(20) NULL,\n    address VARCHAR(200) NULL,\n    country VARCHAR(50) NULL,\n    isactive BOOLEAN NOT NULL DEFAULT TRUE,\n    createddate TIMESTAMP NOT NULL DEFAULT NOW()\n)",
+      "source": "Database/Scripts/01_InitialSetup.sql - CREATE TABLE Suppliers",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-24T03:55:06.941776\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+    },
+    {
+      "original_statement": "CREATE TABLE [dbo].[Products](\n    [ProductId] [int] IDENTITY(1,1) PRIMARY KEY,\n    [Name] [nvarchar](100) NOT NULL,\n    [Description] [nvarchar](500) NULL,\n    [Price] [decimal](18, 2) NOT NULL,\n    [StockQuantity] [int] NOT NULL,\n    [CategoryId] [int] NULL,\n    [SupplierId] [int] NULL,\n    [SKU] [nvarchar](50) NULL,\n    [Weight] [decimal](10, 2) NULL,\n    [Dimensions] [nvarchar](50) NULL,\n    [IsDiscontinued] [bit] NOT NULL DEFAULT 0,\n    [ReorderLevel] [int] NOT NULL DEFAULT 10,\n    [CreatedDate] [datetime] NOT NULL DEFAULT GETDATE(),\n    [ModifiedDate] [datetime] NULL\n)",
+      "converted_statement": "CREATE TABLE products(\n    productid SERIAL PRIMARY KEY,\n    name VARCHAR(100) NOT NULL,\n    description VARCHAR(500) NULL,\n    price NUMERIC(18, 2) NOT NULL,\n    stockquantity INT NOT NULL,\n    categoryid INT NULL,\n    supplierid INT NULL,\n    sku VARCHAR(50) NULL,\n    weight NUMERIC(10, 2) NULL,\n    dimensions VARCHAR(50) NULL,\n    isdiscontinued BOOLEAN NOT NULL DEFAULT FALSE,\n    reorderlevel INT NOT NULL DEFAULT 10,\n    createddate TIMESTAMP NOT NULL DEFAULT NOW(),\n    modifieddate TIMESTAMP NULL\n)",
+      "source": "Database/Scripts/01_InitialSetup.sql - CREATE TABLE Products (full)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-24T03:55:19.047820\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+    },
+    {
+      "original_statement": "CREATE TABLE [dbo].[ProductHistory](\n    [HistoryId] [int] IDENTITY(1,1) PRIMARY KEY,\n    [ProductId] [int] NOT NULL,\n    [Action] [varchar](10) NOT NULL,\n    [OldPrice] [decimal](18, 2) NULL,\n    [NewPrice] [decimal](18, 2) NULL,\n    [OldStock] [int] NULL,\n    [NewStock] [int] NULL,\n    [ActionDate] [datetime] NOT NULL DEFAULT GETDATE(),\n    [ModifiedBy] [nvarchar](100) NULL\n)",
+      "converted_statement": "CREATE TABLE producthistory(\n    historyid SERIAL PRIMARY KEY,\n    productid INT NOT NULL,\n    action VARCHAR(10) NOT NULL,\n    oldprice NUMERIC(18, 2) NULL,\n    newprice NUMERIC(18, 2) NULL,\n    oldstock INT NULL,\n    newstock INT NULL,\n    actiondate TIMESTAMP NOT NULL DEFAULT NOW(),\n    modifiedby VARCHAR(100) NULL\n)",
+      "source": "Database/Scripts/01_InitialSetup.sql - CREATE TABLE ProductHistory",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-24T03:55:29.728343\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+    },
+    {
+      "original_statement": "CREATE TABLE [dbo].[ProductStats](\n    [StatId] [int] PRIMARY KEY DEFAULT 1,\n    [TotalProducts] [int] NOT NULL DEFAULT 0,\n    [AveragePrice] [decimal](18, 2) NOT NULL DEFAULT 0,\n    [TotalStockValue] [decimal](18, 2) NOT NULL DEFAULT 0,\n    [LowStockCount] [int] NOT NULL DEFAULT 0,\n    [DiscontinuedCount] [int] NOT NULL DEFAULT 0,\n    [LastUpdated] [datetime] NOT NULL DEFAULT GETDATE()\n)",
+      "converted_statement": "CREATE TABLE productstats(\n    statid INT PRIMARY KEY DEFAULT 1,\n    totalproducts INT NOT NULL DEFAULT 0,\n    averageprice NUMERIC(18, 2) NOT NULL DEFAULT 0,\n    totalstockvalue NUMERIC(18, 2) NOT NULL DEFAULT 0,\n    lowstockcount INT NOT NULL DEFAULT 0,\n    discontinuedcount INT NOT NULL DEFAULT 0,\n    lastupdated TIMESTAMP NOT NULL DEFAULT NOW()\n)",
+      "source": "Database/Scripts/01_InitialSetup.sql - CREATE TABLE ProductStats",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-24T03:55:40.401180\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+    },
+    {
+      "original_statement": "CREATE TRIGGER [dbo].[trg_Products_History] ON [dbo].[Products] AFTER INSERT, UPDATE, DELETE AS BEGIN SET NOCOUNT ON; IF EXISTS (SELECT 1 FROM inserted) AND NOT EXISTS (SELECT 1 FROM deleted) BEGIN INSERT INTO ProductHistory (ProductId, Action, NewPrice, NewStock, ModifiedBy) SELECT ProductId, 'INSERT', Price, StockQuantity, SYSTEM_USER FROM inserted; END IF EXISTS (SELECT 1 FROM inserted) AND EXISTS (SELECT 1 FROM deleted) BEGIN INSERT INTO ProductHistory (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ModifiedBy) SELECT i.ProductId, 'UPDATE', d.Price, i.Price, d.StockQuantity, i.StockQuantity, SYSTEM_USER FROM inserted i INNER JOIN deleted d ON i.ProductId = d.ProductId WHERE i.Price <> d.Price OR i.StockQuantity <> d.StockQuantity; END IF NOT EXISTS (SELECT 1 FROM inserted) AND EXISTS (SELECT 1 FROM deleted) BEGIN INSERT INTO ProductHistory (ProductId, Action, OldPrice, OldStock, ModifiedBy) SELECT ProductId, 'DELETE', Price, StockQuantity, SYSTEM_USER FROM deleted; END END",
+      "converted_statement": "CREATE OR REPLACE FUNCTION trg_products_history_func() RETURNS TRIGGER AS $$ BEGIN IF TG_OP = 'INSERT' THEN INSERT INTO producthistory (productid, action, newprice, newstock, modifiedby) VALUES (NEW.productid, 'INSERT', NEW.price, NEW.stockquantity, current_user); RETURN NEW; END IF; IF TG_OP = 'UPDATE' THEN IF NEW.price <> OLD.price OR NEW.stockquantity <> OLD.stockquantity THEN INSERT INTO producthistory (productid, action, oldprice, newprice, oldstock, newstock, modifiedby) VALUES (NEW.productid, 'UPDATE', OLD.price, NEW.price, OLD.stockquantity, NEW.stockquantity, current_user); END IF; RETURN NEW; END IF; IF TG_OP = 'DELETE' THEN INSERT INTO producthistory (productid, action, oldprice, oldstock, modifiedby) VALUES (OLD.productid, 'DELETE', OLD.price, OLD.stockquantity, current_user); RETURN OLD; END IF; RETURN NULL; END; $$ LANGUAGE plpgsql; CREATE TRIGGER trg_products_history AFTER INSERT OR UPDATE OR DELETE ON products FOR EACH ROW EXECUTE FUNCTION trg_products_history_func();",
+      "source": "Database/Scripts/01_InitialSetup.sql - Trigger trg_Products_History",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-24T03:55:58.276547\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+    },
+    {
+      "original_statement": "UPDATE ProductStats SET TotalProducts = (SELECT COUNT(*) FROM Products), AveragePrice = (SELECT AVG(Price) FROM Products), TotalStockValue = (SELECT SUM(Price * StockQuantity) FROM Products), LowStockCount = (SELECT COUNT(*) FROM Products WHERE StockQuantity <= ReorderLevel), DiscontinuedCount = (SELECT COUNT(*) FROM Products WHERE IsDiscontinued = 1), LastUpdated = GETDATE() WHERE StatId = 1",
+      "converted_statement": "UPDATE productstats SET totalproducts = (SELECT COUNT(*) FROM products), averageprice = (SELECT AVG(price) FROM products), totalstockvalue = (SELECT SUM(price * stockquantity) FROM products), lowstockcount = (SELECT COUNT(*) FROM products WHERE stockquantity <= reorderlevel), discontinuedcount = (SELECT COUNT(*) FROM products WHERE isdiscontinued = TRUE), lastupdated = NOW() WHERE statid = 1",
+      "source": "Database/Scripts/01_InitialSetup.sql - UPDATE ProductStats (initial statistics)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-24T03:56:11.909304\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+    }
+  ]
+}
