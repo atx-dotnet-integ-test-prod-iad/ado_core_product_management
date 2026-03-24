@@ -1,0 +1,150 @@
+{
+  "migration_report": {
+    "title": "SQL Server to PostgreSQL Migration Report - AdoCore Application",
+    "generated_at": "2026-03-24",
+    "status": "COMPLETED",
+    "build_status": "Build succeeded (0 errors, 10 pre-existing warnings)"
+  },
+  "sql_statement_summary": {
+    "total_statements_processed": 7,
+    "successfully_converted_by_dms": 0,
+    "requiring_manual_intervention": 7,
+    "manual_intervention_reason": "DMS statement_conversion_tool consistently timed out (metadata model conversion did not complete). DMS schema_mapping_tool succeeded and was used for target schema names.",
+    "validated_as_equivalent": 0,
+    "validated_as_non_equivalent": 0,
+    "equivalency_validation_errors": 7,
+    "equivalency_error_reason": "SQL Equivalency tool returned ERROR status for all 7 pairs (consistent 'uniqueID' infrastructure error)"
+  },
+  "conversion_details": {
+    "dms_schema_mapping_results": {
+      "Products": {
+        "target_name": "products",
+        "target_schema": "productmanagement_dbo",
+        "status": "SUCCESS"
+      },
+      "ProductHistory": {
+        "target_name": "producthistory",
+        "target_schema": "productmanagement_dbo",
+        "status": "SUCCESS"
+      },
+      "ProductStats": {
+        "target_name": "productstats",
+        "target_schema": "productmanagement_dbo",
+        "status": "SUCCESS"
+      }
+    },
+    "key_sql_conversions": [
+      "GETDATE() -> clock_timestamp()",
+      "SCOPE_IDENTITY() -> RETURNING productid",
+      "DECLARE @var / variable assignment -> Separate NpgsqlCommand calls within app-level transaction",
+      "BEGIN TRANSACTION / COMMIT -> NpgsqlTransaction via BeginTransactionAsync()",
+      "Table/column names -> All lowercase per DMS schema mapping",
+      "CTE names -> Adjusted to avoid conflicts (ProductStats -> productstats_cte, ProductHistory -> producthistory_cte)",
+      "ROUND with integer division -> Added CAST(... AS NUMERIC) for PostgreSQL",
+      "nvarchar -> varchar",
+      "bit -> boolean",
+      "IDENTITY(1,1) -> GENERATED ALWAYS AS IDENTITY",
+      "CREATE OR ALTER PROCEDURE -> CREATE OR REPLACE FUNCTION",
+      "Triggers -> PostgreSQL trigger function + CREATE TRIGGER pattern",
+      "SYSTEM_USER -> current_user",
+      "GO statements -> Removed",
+      "IF NOT EXISTS (sys.objects) -> DROP TABLE IF EXISTS / CREATE TABLE IF NOT EXISTS"
+    ]
+  },
+  "files_modified": [
+    {
+      "file": "sourceCode/DataAccess/ProductRepository.cs",
+      "changes": [
+        "using Microsoft.Data.SqlClient -> using Npgsql",
+        "SqlConnection -> NpgsqlConnection",
+        "SqlCommand -> NpgsqlCommand",
+        "SqlDataReader -> NpgsqlDataReader",
+        "All 7 SQL statements converted to PostgreSQL",
+        "Transaction methods refactored to use app-level NpgsqlTransaction",
+        "MapProductFromReader column name references updated to lowercase (ProductId->productid, Name->name, etc.) to match PostgreSQL lowercase column naming"
+      ]
+    },
+    {
+      "file": "sourceCode/AdoCore.csproj",
+      "changes": [
+        "Microsoft.Data.SqlClient 5.1.4 -> Npgsql 8.0.6"
+      ]
+    },
+    {
+      "file": "sourceCode/appsettings.json",
+      "changes": [
+        "Connection strings updated from SQL Server format to PostgreSQL format",
+        "Server= -> Host=",
+        "Removed: Trusted_Connection, MultipleActiveResultSets, TrustServerCertificate",
+        "Added: Username=postgres, Password=postgres"
+      ]
+    },
+    {
+      "file": "sourceCode/Scripts/01_InitialSetup.sql",
+      "changes": [
+        "Full conversion to PostgreSQL DDL and function syntax"
+      ]
+    },
+    {
+      "file": "sourceCode/Database/Scripts/01_InitialSetup.sql",
+      "changes": [
+        "Full conversion to PostgreSQL DDL, functions, triggers, indexes, sample data"
+      ]
+    }
+  ],
+  "artifacts_generated": [
+    "sourceCode/extracted_statements.sql - Catalog of all 7 original SQL statements",
+    "sourceCode/converted_statements.sql - Catalog of all 7 converted PostgreSQL statements",
+    "sourceCode/sql_equivalency_validation_report.json - Comprehensive equivalency report (7 entries)"
+  ],
+  "package_dependency_changes": {
+    "removed": "Microsoft.Data.SqlClient 5.1.4",
+    "added": "Npgsql 8.0.6",
+    "unchanged": [
+      "Microsoft.Extensions.Configuration 8.0.0",
+      "Microsoft.Extensions.Configuration.Json 8.0.0",
+      "Microsoft.Extensions.DependencyInjection 8.0.0"
+    ]
+  },
+  "connection_string_changes": {
+    "before": "Server=localhost;Database=ProductManagement;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True",
+    "after": "Host=localhost;Database=ProductManagement;Username=postgres;Password=postgres"
+  },
+  "statements_requiring_manual_review": [
+    {
+      "statement_id": 1,
+      "method": "GetAllProductsAsync",
+      "reason": "DMS conversion timed out; manual conversion with lowercase schema applied; Equivalency tool returned ERROR"
+    },
+    {
+      "statement_id": 2,
+      "method": "GetProductByIdAsync",
+      "reason": "DMS conversion timed out; manual conversion with lowercase schema applied; Equivalency tool returned ERROR"
+    },
+    {
+      "statement_id": 3,
+      "method": "InsertProductAsync",
+      "reason": "DMS conversion timed out; Refactored from single T-SQL batch to multiple commands with RETURNING; Equivalency tool returned ERROR"
+    },
+    {
+      "statement_id": 4,
+      "method": "UpdateProductAsync",
+      "reason": "DMS conversion timed out; Refactored from T-SQL DECLARE/variable pattern to multiple commands; Equivalency tool returned ERROR"
+    },
+    {
+      "statement_id": 5,
+      "method": "DeleteProductAsync",
+      "reason": "DMS conversion timed out; Refactored from T-SQL DECLARE/variable pattern to multiple commands; Equivalency tool returned ERROR"
+    },
+    {
+      "statement_id": 6,
+      "method": "GetProductsByPriceRangeAsync",
+      "reason": "DMS conversion timed out; manual conversion with lowercase schema applied; Equivalency tool returned ERROR"
+    },
+    {
+      "statement_id": 7,
+      "method": "GetLowStockProductsAsync",
+      "reason": "DMS conversion timed out; manual conversion with lowercase schema applied; Added CAST for integer division; Equivalency tool returned ERROR"
+    }
+  ]
+}
