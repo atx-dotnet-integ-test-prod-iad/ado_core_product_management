@@ -1,0 +1,35 @@
+-- ============================================================================
+-- DMS Conversion Failure Log
+-- ============================================================================
+-- All 7 SQL statements were submitted to the DMS MCP tool for conversion.
+-- The DMS tool failed for ALL statements with the following errors:
+--
+-- Statement 1 (GetAllProductsAsync): 
+--   Error: "Metadata model conversion failed: {'error': 'Metadata model conversion did not complete after 15 attempts'}"
+--   Attempted with increased poll attempts (30) and interval (15s) - timed out after 300s
+--
+-- Statement 2 (GetProductByIdAsync):
+--   Error: DMS tool timed out (same metadata model conversion failure)
+--
+-- Statement 3 (InsertProductAsync):
+--   Error: DMS tool timed out (same metadata model conversion failure)
+--
+-- Statement 4 (UpdateProductAsync):
+--   Error: DMS tool timed out (same metadata model conversion failure)
+--
+-- Statement 5 (DeleteProductAsync):
+--   Error: DMS tool timed out (same metadata model conversion failure)
+--
+-- Statement 6 (GetProductsByPriceRangeAsync):
+--   Error: DMS tool timed out (same metadata model conversion failure)
+--
+-- Statement 7 (GetLowStockProductsAsync):
+--   Error: DMS tool timed out (same metadata model conversion failure)
+--
+-- A simple test query "SELECT ProductId, Name, Price FROM Products WHERE ProductId = @ProductId"
+-- was also submitted and failed with:
+--   "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+--
+-- Resolution: All statements manually converted with DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+-- All schema object names (tables, columns) converted to lowercase per the transformation definition.
+-- ============================================================================
