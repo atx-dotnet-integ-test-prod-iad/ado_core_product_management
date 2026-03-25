@@ -1,0 +1,38 @@
+DMS CONVERSION FAILURE LOG
+==========================
+
+All 7 SQL statements were passed to the DMS MCP statement_conversion_tool.
+All 7 attempts failed with the same error pattern.
+
+DMS Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Database: ProductManagement
+Schema: dbo
+Server: 172.31.94.132
+
+DMS Error for all statements:
+- Attempt 1 (Complex CTE query): "Metadata model conversion failed: {'error': 'Metadata model conversion did not complete after 15 attempts'}"
+- Attempt 2 (Complex CTE query, 30 poll attempts, 15s interval): Timed out after 300 seconds
+- Attempt 3 (Simple SELECT): "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+- Attempt 4 (Simplest SELECT, 25 poll attempts): "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 25 attempts'}"
+
+Root Cause: DMS metadata model creation/conversion service consistently timing out.
+
+Schema Mapping Tool: WORKING - Successfully retrieved schema mappings for all 3 tables (Products, ProductHistory, ProductStats).
+
+Manual Conversion Applied: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+All schema object names converted to lowercase per DMS schema mapping tool output:
+- Products -> products (columns: productid, name, description, price, stockquantity, createddate, modifieddate)
+- ProductHistory -> producthistory (columns: historyid, productid, action, oldprice, newprice, oldstock, newstock, actiondate)
+- ProductStats -> productstats (columns: statid, totalproducts, averageprice, lastupdated)
+- GETDATE() -> clock_timestamp()
+- SCOPE_IDENTITY() -> RETURNING clause
+- T-SQL transaction blocks -> Restructured for app-level transaction management
+
+Statements Converted:
+1. GetAllProductsAsync - CTE with window functions (AVG, COUNT OVER)
+2. GetProductByIdAsync - CTE with LAG window function
+3. InsertProductAsync - Transaction block with INSERT, SCOPE_IDENTITY, GETDATE
+4. UpdateProductAsync - Transaction block with DECLARE, SELECT into vars, UPDATE
+5. DeleteProductAsync - Transaction block with DECLARE, DELETE, CASE
+6. GetProductsByPriceRangeAsync - CTE with RANK, PERCENT_RANK
+7. GetLowStockProductsAsync - CTE with AVG, MIN, MAX window functions
