@@ -1,0 +1,82 @@
+===============================================================================
+DMS Conversion Failures Log
+===============================================================================
+Date: 2026-03-25
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Database: ProductManagement
+Schema: dbo
+Region: us-east-1
+===============================================================================
+
+SUMMARY:
+- Total statements attempted: 7
+- DMS successful: 0
+- DMS failed: 7
+- Failure type: Metadata model creation/conversion timeout (consistent across all)
+- Resolution: Manual conversion with lowercase schema names per DMS schema_mapping_tool
+
+NOTE: The DMS schema_mapping_tool successfully provided schema mappings for all 3 tables
+(Products, ProductHistory, ProductStats) which were used to determine the correct lowercase
+schema object names for the PostgreSQL target.
+
+===============================================================================
+Attempt 1: Statement 1 (GetAllProductsAsync) - CTE with window functions
+===============================================================================
+DMS Error: Metadata model conversion failed: {'error': 'Metadata model conversion did not complete after 15 attempts'}
+DMS Status: error
+DMS Workflow: create_metadata_model (completed) -> convert_metadata_model (started, never completed)
+Manual Conversion Applied: Yes (lowercase schema objects per DMS schema mapping)
+
+===============================================================================
+Attempt 2: Simplified test - "SELECT SCOPE_IDENTITY()"
+===============================================================================
+DMS Error: Metadata model creation failed: {'error': 'Metadata model creation did not complete after 20 attempts'}
+DMS Status: error
+DMS Workflow: create_metadata_model (started, never completed)
+Manual Conversion Applied: N/A (test only)
+
+===============================================================================
+Attempt 3: Simplified test - "SELECT ProductId, Name, Price FROM Products WHERE ProductId = @ProductId"
+===============================================================================
+DMS Error: Command execution timed out after 300 seconds
+DMS Status: timeout
+Manual Conversion Applied: N/A (test only)
+
+===============================================================================
+Resolution Applied to All 7 Statements:
+===============================================================================
+All 7 statements were manually converted using the DMS schema_mapping_tool output
+as the authoritative source for schema object name mappings:
+
+Schema Mapping Reference (from DMS schema_mapping_tool):
+- dbo.Products -> productmanagement_dbo.products
+  - ProductId -> productid
+  - Name -> name
+  - Description -> description
+  - Price -> price
+  - StockQuantity -> stockquantity
+  - CreatedDate -> createddate
+  - ModifiedDate -> modifieddate
+
+- dbo.ProductHistory -> productmanagement_dbo.producthistory
+  - HistoryId -> historyid
+  - ProductId -> productid
+  - Action -> action
+  - OldPrice -> oldprice
+  - NewPrice -> newprice
+  - OldStock -> oldstock
+  - NewStock -> newstock
+  - ActionDate -> actiondate
+
+- dbo.ProductStats -> productmanagement_dbo.productstats
+  - StatId -> statid
+  - TotalProducts -> totalproducts
+  - AveragePrice -> averageprice
+  - LastUpdated -> lastupdated
+
+Function Mappings Applied:
+- GETDATE() -> clock_timestamp() (per DMS schema default values)
+- SCOPE_IDENTITY() -> RETURNING clause
+- DECLARE @var -> Refactored to separate SQL commands with C# variable passing
+- BEGIN TRANSACTION/COMMIT -> Managed via C# NpgsqlTransaction
+===============================================================================
