@@ -1,0 +1,162 @@
+{
+  "migration_report": {
+    "title": "Microsoft SQL Server to PostgreSQL Migration Report",
+    "generated_at": "2026-03-27",
+    "source_database": "Microsoft SQL Server 2019",
+    "target_database": "PostgreSQL 13",
+    "application_framework": ".NET 9.0 ADO.NET",
+    "original_package": "Microsoft.Data.SqlClient 5.1.4",
+    "target_package": "Npgsql 8.0.0"
+  },
+  "sql_statement_processing": {
+    "total_statements_processed": 7,
+    "dms_conversion_successes": 0,
+    "dms_conversion_failures": 7,
+    "manual_conversions_required": 7,
+    "dms_error": "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}",
+    "dms_migration_project_arn": "arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU",
+    "conversion_method_for_all": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA"
+  },
+  "equivalency_validation": {
+    "total_pairs_validated": 7,
+    "equivalent": 0,
+    "not_equivalent": 0,
+    "error": 7,
+    "equivalency_tool_error": "'uniqueID'",
+    "note": "All equivalency statuses determined solely by sql-equivalency___validate_sql_equivalence tool. No agent judgment was used."
+  },
+  "statement_conversions": [
+    {
+      "id": 1,
+      "method": "GetAllProductsAsync",
+      "original_sql_summary": "CTE with AVG(Price) OVER(), COUNT(*) OVER() window functions, CASE expression, ROUND, INNER JOIN",
+      "conversion_changes": "All schema objects lowercased (Products->products, ProductId->productid, etc.)",
+      "dms_attempted": true,
+      "dms_result": "FAILED",
+      "equivalency_status": "ERROR"
+    },
+    {
+      "id": 2,
+      "method": "GetProductByIdAsync",
+      "original_sql_summary": "CTE with LAG() window function, LEFT JOIN, CASE, ROUND",
+      "conversion_changes": "All schema objects lowercased",
+      "dms_attempted": true,
+      "dms_result": "FAILED",
+      "equivalency_status": "ERROR"
+    },
+    {
+      "id": 3,
+      "method": "InsertProductAsync",
+      "original_sql_summary": "DECLARE @var, BEGIN TRANSACTION, INSERT, SCOPE_IDENTITY(), INSERT history, UPDATE stats, COMMIT, SELECT @var",
+      "conversion_changes": "Restructured as data-modifying CTE: INSERT...RETURNING + CTE chain for history and stats. GETDATE()->NOW(), SCOPE_IDENTITY()->RETURNING. All schema objects lowercased.",
+      "dms_attempted": true,
+      "dms_result": "FAILED",
+      "equivalency_status": "ERROR"
+    },
+    {
+      "id": 4,
+      "method": "UpdateProductAsync",
+      "original_sql_summary": "BEGIN TRANSACTION, DECLARE @vars, SELECT INTO @vars, UPDATE, INSERT history, UPDATE stats, COMMIT",
+      "conversion_changes": "Restructured as multi-statement batch: INSERT history first (capture old values via SELECT), then UPDATE, then UPDATE stats. GETDATE()->NOW(). DECLARE removed. All schema objects lowercased.",
+      "dms_attempted": true,
+      "dms_result": "FAILED",
+      "equivalency_status": "ERROR"
+    },
+    {
+      "id": 5,
+      "method": "DeleteProductAsync",
+      "original_sql_summary": "BEGIN TRANSACTION, DECLARE @vars, SELECT INTO @vars, INSERT history, DELETE, UPDATE stats with CASE, COMMIT",
+      "conversion_changes": "Restructured as multi-statement batch: INSERT history first (capture old values via SELECT), then DELETE, then UPDATE stats with COALESCE. GETDATE()->NOW(). DECLARE removed. All schema objects lowercased.",
+      "dms_attempted": true,
+      "dms_result": "FAILED",
+      "equivalency_status": "ERROR"
+    },
+    {
+      "id": 6,
+      "method": "GetProductsByPriceRangeAsync",
+      "original_sql_summary": "CTE with RANK(), PERCENT_RANK() window functions, BETWEEN, CASE",
+      "conversion_changes": "All schema objects lowercased",
+      "dms_attempted": true,
+      "dms_result": "FAILED",
+      "equivalency_status": "ERROR"
+    },
+    {
+      "id": 7,
+      "method": "GetLowStockProductsAsync",
+      "original_sql_summary": "CTE with AVG, MIN, MAX window functions, CASE, ROUND with integer division",
+      "conversion_changes": "All schema objects lowercased. Added CAST(stockquantity AS DECIMAL) for proper decimal division in ROUND().",
+      "dms_attempted": true,
+      "dms_result": "FAILED",
+      "equivalency_status": "ERROR"
+    }
+  ],
+  "files_modified": [
+    {
+      "file": "sourceCode/DataAccess/ProductRepository.cs",
+      "changes": [
+        "Replaced 7 SQL statements with PostgreSQL equivalents",
+        "Updated column name references in MapProductFromReader to lowercase",
+        "Replaced using Microsoft.Data.SqlClient with using Npgsql",
+        "Replaced SqlConnection with NpgsqlConnection",
+        "Replaced SqlCommand with NpgsqlCommand (7 instances)",
+        "Replaced SqlDataReader with NpgsqlDataReader"
+      ]
+    },
+    {
+      "file": "sourceCode/AdoCore.csproj",
+      "changes": [
+        "Replaced Microsoft.Data.SqlClient 5.1.4 with Npgsql 8.0.0"
+      ]
+    },
+    {
+      "file": "sourceCode/appsettings.json",
+      "changes": [
+        "Updated DevConnection from SQL Server format to PostgreSQL format",
+        "Updated ProdConnection from SQL Server format to PostgreSQL format",
+        "Removed SQL Server-specific parameters (Trusted_Connection, MultipleActiveResultSets, TrustServerCertificate)",
+        "Added PostgreSQL parameters (Host, Username, Password)"
+      ]
+    },
+    {
+      "file": "sourceCode/Scripts/01_InitialSetup.sql",
+      "changes": [
+        "Converted from T-SQL to PostgreSQL syntax",
+        "IDENTITY -> SERIAL",
+        "NVARCHAR -> VARCHAR",
+        "GETDATE() -> NOW()",
+        "Removed GO statements",
+        "CREATE OR ALTER PROCEDURE -> CREATE OR REPLACE FUNCTION",
+        "Converted IF NOT EXISTS pattern to PostgreSQL equivalent"
+      ]
+    },
+    {
+      "file": "sourceCode/Database/Scripts/01_InitialSetup.sql",
+      "changes": [
+        "Full conversion from T-SQL to PostgreSQL syntax",
+        "IDENTITY -> SERIAL",
+        "NVARCHAR -> VARCHAR",
+        "BIT -> BOOLEAN",
+        "GETDATE() -> NOW()",
+        "Removed GO statements and [dbo]. prefixes",
+        "Removed square bracket quoting",
+        "Converted trigger to PostgreSQL trigger function syntax",
+        "Converted stored procedures to PostgreSQL functions",
+        "Converted IF NOT EXISTS patterns",
+        "SYSTEM_USER -> current_user"
+      ]
+    }
+  ],
+  "artifacts_created": [
+    "sourceCode/extracted_statements.sql - All 7 original MS SQL statements",
+    "sourceCode/converted_statements.sql - All 7 PostgreSQL-converted statements",
+    "sourceCode/dms_failure_summary.txt - Detailed DMS failure documentation",
+    "sourceCode/sql_equivalency_validation_report.json - Equivalency validation for all 7 pairs",
+    "sourceCode/migration_report.json - This comprehensive migration report"
+  ],
+  "build_status": {
+    "final_build": "SUCCESS",
+    "errors": 0,
+    "warnings": 10,
+    "warnings_note": "All warnings are pre-existing nullable reference warnings, not introduced by migration"
+  }
+}

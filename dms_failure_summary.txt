@@ -1,0 +1,34 @@
+== DMS CONVERSION FAILURE SUMMARY ==
+All 7 SQL statements were submitted to DMS MCP tool (dms-mcp___statement_conversion_tool)
+and all failed with the same error.
+
+DMS Configuration:
+  - Migration Project ARN: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+  - Database: ProductManagement
+  - Schema: dbo
+  - Region: us-east-1
+  - Server: 172.31.94.132
+
+Error for ALL statements:
+  Status: error
+  Error: Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}
+
+Conversion Method Applied: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+Manual Conversion Rules Applied:
+  1. All schema object names (tables, columns, aliases) converted to lowercase
+  2. SCOPE_IDENTITY() -> RETURNING clause
+  3. GETDATE() -> NOW()
+  4. DECLARE @var / SET @var patterns -> PostgreSQL DO $$ block with DECLARE/INTO
+  5. BEGIN TRANSACTION / COMMIT -> handled via C# transaction management (NpgsqlTransaction)
+  6. Integer division in ROUND() -> CAST to DECIMAL for proper decimal division in PostgreSQL
+  7. Window functions (AVG OVER, COUNT OVER, LAG, RANK, PERCENT_RANK) -> Compatible, only lowercase applied
+
+Statement-by-Statement DMS Attempts:
+  Statement 1 (GetAllProductsAsync): DMS FAILED - Metadata model creation timeout
+  Statement 2 (GetProductByIdAsync): DMS FAILED - Metadata model creation timeout
+  Statement 3 (InsertProductAsync): DMS FAILED - Metadata model creation timeout
+  Statement 4 (UpdateProductAsync): DMS FAILED - Metadata model creation timeout
+  Statement 5 (DeleteProductAsync): DMS FAILED - Metadata model creation timeout
+  Statement 6 (GetProductsByPriceRangeAsync): DMS FAILED - Metadata model creation timeout
+  Statement 7 (GetLowStockProductsAsync): DMS FAILED - Metadata model creation timeout
