@@ -1,0 +1,80 @@
+{
+  "number_of_statements_processed": 9,
+  "number_of_statements_equivalent": 0,
+  "number_of_statements_non_equivalent": 0,
+  "number_of_statements_with_equivalency_error": 9,
+  "statement_details": [
+    {
+      "original_statement": "WITH ProductStats AS (\n    SELECT \n        ProductId,\n        AVG(Price) OVER() as AvgPrice,\n        COUNT(*) OVER() as TotalProducts\n    FROM [dbo].[Products]\n)\nSELECT \n    p.ProductId,\n    p.Name,\n    p.Description,\n    p.Price,\n    p.StockQuantity,\n    p.CreatedDate,\n    p.ModifiedDate,\n    CASE \n        WHEN p.Price > ps.AvgPrice THEN 'Above Average'\n        WHEN p.Price < ps.AvgPrice THEN 'Below Average'\n        ELSE 'Average'\n    END as PriceCategory,\n    ROUND((p.Price / ps.AvgPrice) * 100, 2) as PricePercentageOfAverage\nFROM [dbo].[Products] p\nINNER JOIN ProductStats ps ON p.ProductId = ps.ProductId\nORDER BY \n    CASE \n        WHEN p.Price > ps.AvgPrice THEN 1\n        ELSE 2\n    END,\n    p.Name",
+      "converted_statement": "WITH productstats AS (\n    SELECT \n        productid,\n        AVG(price) OVER() as avgprice,\n        COUNT(*) OVER() as totalproducts\n    FROM products\n)\nSELECT \n    p.productid,\n    p.name,\n    p.description,\n    p.price,\n    p.stockquantity,\n    p.createddate,\n    p.modifieddate,\n    CASE \n        WHEN p.price > ps.avgprice THEN 'Above Average'\n        WHEN p.price < ps.avgprice THEN 'Below Average'\n        ELSE 'Average'\n    END as pricecategory,\n    ROUND(CAST((p.price / ps.avgprice) * 100 AS NUMERIC), 2) as pricepercentageofaverage\nFROM products p\nINNER JOIN productstats ps ON p.productid = ps.productid\nORDER BY \n    CASE \n        WHEN p.price > ps.avgprice THEN 1\n        ELSE 2\n    END,\n    p.name",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-27T00:25:33.161608\"}",
+      "dms_failure_reason": "Metadata model creation failed: Metadata model creation did not complete after 15 attempts"
+    },
+    {
+      "original_statement": "WITH ProductHistory AS (\n    SELECT \n        ProductId,\n        LAG(Price) OVER (ORDER BY ModifiedDate) as PreviousPrice,\n        LAG(StockQuantity) OVER (ORDER BY ModifiedDate) as PreviousStock\n    FROM [dbo].[Products]\n    WHERE ProductId = @ProductId\n)\nSELECT \n    p.ProductId,\n    p.Name,\n    p.Description,\n    p.Price,\n    p.StockQuantity,\n    p.CreatedDate,\n    p.ModifiedDate,\n    ph.PreviousPrice,\n    ph.PreviousStock,\n    CASE \n        WHEN ph.PreviousPrice IS NOT NULL THEN \n            ROUND(((p.Price - ph.PreviousPrice) / ph.PreviousPrice) * 100, 2)\n        ELSE NULL\n    END as PriceChangePercentage\nFROM [dbo].[Products] p\nLEFT JOIN ProductHistory ph ON p.ProductId = ph.ProductId\nWHERE p.ProductId = @ProductId",
+      "converted_statement": "WITH producthistory AS (\n    SELECT \n        productid,\n        LAG(price) OVER (ORDER BY modifieddate) as previousprice,\n        LAG(stockquantity) OVER (ORDER BY modifieddate) as previousstock\n    FROM products\n    WHERE productid = @ProductId\n)\nSELECT \n    p.productid,\n    p.name,\n    p.description,\n    p.price,\n    p.stockquantity,\n    p.createddate,\n    p.modifieddate,\n    ph.previousprice,\n    ph.previousstock,\n    CASE \n        WHEN ph.previousprice IS NOT NULL THEN \n            ROUND(CAST(((p.price - ph.previousprice) / ph.previousprice) * 100 AS NUMERIC), 2)\n        ELSE NULL\n    END as pricechangepercentage\nFROM products p\nLEFT JOIN producthistory ph ON p.productid = ph.productid\nWHERE p.productid = @ProductId",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-27T00:25:50.576275\"}",
+      "dms_failure_reason": "Metadata model creation failed: Metadata model creation did not complete after 15 attempts"
+    },
+    {
+      "original_statement": "BEGIN TRANSACTION;\n\nDECLARE @NewProductId INT;\n\nINSERT INTO [dbo].[Products] (Name, Description, Price, StockQuantity)\nVALUES (@Name, @Description, @Price, @StockQuantity);\n\nSET @NewProductId = SCOPE_IDENTITY();\n\nINSERT INTO [dbo].[ProductHistory] (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)\nVALUES (@NewProductId, 'INSERT', NULL, @Price, NULL, @StockQuantity, GETDATE());\n\nUPDATE [dbo].[ProductStats]\nSET \n    TotalProducts = TotalProducts + 1,\n    AveragePrice = (AveragePrice * TotalProducts + @Price) / (TotalProducts + 1),\n    LastUpdated = GETDATE()\nWHERE StatId = 1;\n\nCOMMIT TRANSACTION;\n\nSELECT @NewProductId;",
+      "converted_statement": "BEGIN;\n\nINSERT INTO products (name, description, price, stockquantity)\nVALUES (@Name, @Description, @Price, @StockQuantity);\n\nINSERT INTO producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate)\nVALUES (currval(pg_get_serial_sequence('products', 'productid')), 'INSERT', NULL, @Price, NULL, @StockQuantity, NOW());\n\nUPDATE productstats\nSET \n    totalproducts = totalproducts + 1,\n    averageprice = (averageprice * totalproducts + @Price) / (totalproducts + 1),\n    lastupdated = NOW()\nWHERE statid = 1;\n\nCOMMIT;\n\nSELECT currval(pg_get_serial_sequence('products', 'productid'));",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-27T00:26:07.146659\"}",
+      "dms_failure_reason": "Metadata model creation failed: Metadata model creation did not complete after 15 attempts"
+    },
+    {
+      "original_statement": "BEGIN TRANSACTION;\n\nDECLARE @OldPrice DECIMAL(18,2);\nDECLARE @OldStock INT;\n\nSELECT @OldPrice = Price, @OldStock = StockQuantity\nFROM [dbo].[Products]\nWHERE ProductId = @ProductId;\n\nINSERT INTO [dbo].[ProductHistory] (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)\nVALUES (@ProductId, 'UPDATE', @OldPrice, @Price, @OldStock, @StockQuantity, GETDATE());\n\nUPDATE [dbo].[ProductStats]\nSET \n    AveragePrice = (AveragePrice * TotalProducts - @OldPrice + @Price) / TotalProducts,\n    LastUpdated = GETDATE()\nWHERE StatId = 1;\n\nUPDATE [dbo].[Products]\nSET \n    Name = @Name,\n    Description = @Description,\n    Price = @Price,\n    StockQuantity = @StockQuantity,\n    ModifiedDate = GETDATE()\nWHERE ProductId = @ProductId;\n\nCOMMIT TRANSACTION;",
+      "converted_statement": "BEGIN;\n\nINSERT INTO producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate)\nSELECT productid, 'UPDATE', price, @Price, stockquantity, @StockQuantity, NOW()\nFROM products\nWHERE productid = @ProductId;\n\nUPDATE productstats\nSET \n    averageprice = (averageprice * totalproducts - (SELECT price FROM products WHERE productid = @ProductId) + @Price) / totalproducts,\n    lastupdated = NOW()\nWHERE statid = 1;\n\nUPDATE products\nSET \n    name = @Name,\n    description = @Description,\n    price = @Price,\n    stockquantity = @StockQuantity,\n    modifieddate = NOW()\nWHERE productid = @ProductId;\n\nCOMMIT;",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-27T00:26:22.733196\"}",
+      "dms_failure_reason": "Metadata model creation failed: Metadata model creation did not complete after 15 attempts"
+    },
+    {
+      "original_statement": "BEGIN TRANSACTION;\n\nDECLARE @OldPrice DECIMAL(18,2);\nDECLARE @OldStock INT;\n\nSELECT @OldPrice = Price, @OldStock = StockQuantity\nFROM [dbo].[Products]\nWHERE ProductId = @ProductId;\n\nINSERT INTO [dbo].[ProductHistory] (ProductId, Action, OldPrice, NewPrice, OldStock, NewStock, ActionDate)\nVALUES (@ProductId, 'DELETE', @OldPrice, NULL, @OldStock, NULL, GETDATE());\n\nUPDATE [dbo].[ProductStats]\nSET \n    TotalProducts = TotalProducts - 1,\n    AveragePrice = CASE \n        WHEN TotalProducts > 1 \n        THEN (AveragePrice * TotalProducts - @OldPrice) / (TotalProducts - 1)\n        ELSE 0\n    END,\n    LastUpdated = GETDATE()\nWHERE StatId = 1;\n\nDELETE FROM [dbo].[Products]\nWHERE ProductId = @ProductId;\n\nCOMMIT TRANSACTION;",
+      "converted_statement": "BEGIN;\n\nINSERT INTO producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate)\nSELECT productid, 'DELETE', price, NULL, stockquantity, NULL, NOW()\nFROM products\nWHERE productid = @ProductId;\n\nUPDATE productstats\nSET \n    totalproducts = totalproducts - 1,\n    averageprice = CASE \n        WHEN totalproducts > 1 \n        THEN (averageprice * totalproducts - (SELECT price FROM products WHERE productid = @ProductId)) / (totalproducts - 1)\n        ELSE 0\n    END,\n    lastupdated = NOW()\nWHERE statid = 1;\n\nDELETE FROM products\nWHERE productid = @ProductId;\n\nCOMMIT;",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-27T00:26:39.364287\"}",
+      "dms_failure_reason": "Metadata model creation failed: Metadata model creation did not complete after 15 attempts"
+    },
+    {
+      "original_statement": "WITH RankedProducts AS (\n    SELECT \n        p.*,\n        RANK() OVER (ORDER BY p.Price) as PriceRank,\n        PERCENT_RANK() OVER (ORDER BY p.Price) as PricePercentile\n    FROM [dbo].[Products] p\n    WHERE p.Price BETWEEN @MinPrice AND @MaxPrice\n)\nSELECT \n    rp.*,\n    CASE \n        WHEN rp.PricePercentile <= 0.25 THEN 'Budget'\n        WHEN rp.PricePercentile <= 0.75 THEN 'Mid-Range'\n        ELSE 'Premium'\n    END as PriceSegment\nFROM RankedProducts rp\nORDER BY rp.PriceRank",
+      "converted_statement": "WITH rankedproducts AS (\n    SELECT \n        p.*,\n        RANK() OVER (ORDER BY p.price) as pricerank,\n        PERCENT_RANK() OVER (ORDER BY p.price) as pricepercentile\n    FROM products p\n    WHERE p.price BETWEEN @MinPrice AND @MaxPrice\n)\nSELECT \n    rp.*,\n    CASE \n        WHEN rp.pricepercentile <= 0.25 THEN 'Budget'\n        WHEN rp.pricepercentile <= 0.75 THEN 'Mid-Range'\n        ELSE 'Premium'\n    END as pricesegment\nFROM rankedproducts rp\nORDER BY rp.pricerank",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-27T00:26:57.035936\"}",
+      "dms_failure_reason": "Metadata model creation failed: Metadata model creation did not complete after 15 attempts"
+    },
+    {
+      "original_statement": "WITH StockAnalysis AS (\n    SELECT \n        p.*,\n        AVG(StockQuantity) OVER() as AvgStock,\n        MIN(StockQuantity) OVER() as MinStock,\n        MAX(StockQuantity) OVER() as MaxStock\n    FROM [dbo].[Products] p\n)\nSELECT \n    sa.*,\n    CASE \n        WHEN StockQuantity <= @Threshold THEN 'Critical'\n        WHEN StockQuantity <= AvgStock * 0.5 THEN 'Low'\n        ELSE 'Adequate'\n    END as StockStatus,\n    ROUND(CAST(StockQuantity AS NUMERIC) / CAST(AvgStock AS NUMERIC) * 100, 2) as StockPercentageOfAverage\nFROM StockAnalysis sa\nWHERE StockQuantity <= @Threshold\nORDER BY StockQuantity",
+      "converted_statement": "WITH stockanalysis AS (\n    SELECT \n        p.*,\n        AVG(stockquantity) OVER() as avgstock,\n        MIN(stockquantity) OVER() as minstock,\n        MAX(stockquantity) OVER() as maxstock\n    FROM products p\n)\nSELECT \n    sa.*,\n    CASE \n        WHEN stockquantity <= @Threshold THEN 'Critical'\n        WHEN stockquantity <= avgstock * 0.5 THEN 'Low'\n        ELSE 'Adequate'\n    END as stockstatus,\n    ROUND(CAST(stockquantity AS NUMERIC) / CAST(avgstock AS NUMERIC) * 100, 2) as stockpercentageofaverage\nFROM stockanalysis sa\nWHERE stockquantity <= @Threshold\nORDER BY stockquantity",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-27T00:27:11.095821\"}",
+      "dms_failure_reason": "Metadata model creation failed: Metadata model creation did not complete after 15 attempts"
+    },
+    {
+      "original_statement": "CREATE TABLE [dbo].[Products](\n    [ProductId] [int] IDENTITY(1,1) PRIMARY KEY,\n    [Name] [nvarchar](100) NOT NULL,\n    [Description] [nvarchar](500) NULL,\n    [Price] [decimal](18, 2) NOT NULL,\n    [StockQuantity] [int] NOT NULL,\n    [CreatedDate] [datetime] NOT NULL DEFAULT GETDATE(),\n    [ModifiedDate] [datetime] NULL\n);",
+      "converted_statement": "CREATE TABLE IF NOT EXISTS products (\n    productid SERIAL PRIMARY KEY,\n    name VARCHAR(100) NOT NULL,\n    description VARCHAR(500) NULL,\n    price DECIMAL(18, 2) NOT NULL,\n    stockquantity INT NOT NULL,\n    createddate TIMESTAMP NOT NULL DEFAULT NOW(),\n    modifieddate TIMESTAMP NULL\n);",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-27T00:27:24.737212\"}",
+      "dms_failure_reason": "Metadata model creation failed: Metadata model creation did not complete after 15 attempts"
+    },
+    {
+      "original_statement": "SELECT p.ProductId, p.Name, p.Description, p.Price, p.StockQuantity, p.CreatedDate, p.ModifiedDate\nFROM [dbo].[Products] p\nORDER BY p.Name",
+      "converted_statement": "SELECT p.productid, p.name, p.description, p.price, p.stockquantity, p.createddate, p.modifieddate\nFROM products p\nORDER BY p.name",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-03-27T00:27:37.343088\"}",
+      "dms_failure_reason": "Metadata model creation failed: Metadata model creation did not complete after 15 attempts"
+    }
+  ]
+}
