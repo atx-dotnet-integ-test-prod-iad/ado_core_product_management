@@ -1,0 +1,56 @@
+============================================================================
+DMS CONVERSION FAILURE SUMMARY
+============================================================================
+Date: 2026-03-28
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Database: ProductManagement
+Schema: dbo
+Region: us-east-1
+
+ALL 7 STATEMENTS FAILED DMS CONVERSION
+Error: "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+
+Manual Conversion Applied: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+============================================================================
+
+Statement 1: GetAllProductsAsync
+- DMS Attempt Timestamp: 2026-03-28T11:02:23 (first attempt), 2026-03-28T11:02:47 (second attempt)
+- DMS Status: error
+- DMS Error: Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}
+- Manual Conversion: Applied lowercase schema object names, SQL syntax already PostgreSQL-compatible (CTEs, window functions)
+
+Statement 2: GetProductByIdAsync
+- DMS Attempt Timestamp: 2026-03-28T11:30:22
+- DMS Status: error
+- DMS Error: Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}
+- Manual Conversion: Applied lowercase schema object names, LAG window function is PostgreSQL-compatible
+
+Statement 3: InsertProductAsync
+- DMS Attempt Timestamp: 2026-03-28T11:16:23
+- DMS Status: error
+- DMS Error: Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}
+- Manual Conversion: SCOPE_IDENTITY() -> RETURNING clause (for INSERT), GETDATE() -> NOW(), DECLARE block restructured for C# ADO.NET execution
+
+Statement 4: UpdateProductAsync
+- DMS Attempt Timestamp: 2026-03-28T11:19:10
+- DMS Status: error
+- DMS Error: Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}
+- Manual Conversion: GETDATE() -> NOW(), DECLARE block restructured, lowercase schema objects
+
+Statement 5: DeleteProductAsync
+- DMS Attempt Timestamp: 2026-03-28T11:21:59
+- DMS Status: error
+- DMS Error: Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}
+- Manual Conversion: GETDATE() -> NOW(), DECLARE block restructured, lowercase schema objects
+
+Statement 6: GetProductsByPriceRangeAsync
+- DMS Attempt Timestamp: 2026-03-28T11:24:44
+- DMS Status: error
+- DMS Error: Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}
+- Manual Conversion: Applied lowercase schema object names, RANK/PERCENT_RANK already PostgreSQL-compatible
+
+Statement 7: GetLowStockProductsAsync
+- DMS Attempt Timestamp: 2026-03-28T11:27:31
+- DMS Status: error
+- DMS Error: Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}
+- Manual Conversion: Applied lowercase schema object names, added CAST for integer division in ROUND, AVG/MIN/MAX compatible
