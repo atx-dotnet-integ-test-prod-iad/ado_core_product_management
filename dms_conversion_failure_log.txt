@@ -1,0 +1,56 @@
+================================================================================
+DMS CONVERSION FAILURE LOG
+================================================================================
+Date: 2026-03-28
+All 7 SQL statements were attempted through the DMS MCP tool (dms-mcp___statement_conversion_tool).
+All 7 statements FAILED with metadata model creation/conversion timeout errors.
+Manual conversion was applied using DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA rules.
+
+================================================================================
+Statement 1: GetAllProductsAsync
+DMS Error: "Metadata model conversion failed: {'error': 'Metadata model conversion did not complete after 15 attempts'}"
+DMS Timestamp: 2026-03-28T07:00:20.623470
+Manual Conversion: Lowercase all schema objects (table names, column names, aliases)
+================================================================================
+
+Statement 2: GetProductByIdAsync
+DMS Error: "Command execution timed out after 300 seconds" (attempted with max_poll_attempts=30)
+DMS Timestamp: 2026-03-28 (timed out)
+Manual Conversion: Lowercase all schema objects
+================================================================================
+
+Statement 3: InsertProductAsync
+DMS Error: "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+DMS Timestamp: 2026-03-28T07:12:27.281550
+Manual Conversion: SCOPE_IDENTITY() -> RETURNING productid, GETDATE() -> NOW(), DECLARE removed, transaction restructured
+================================================================================
+
+Statement 4: UpdateProductAsync
+DMS Error: "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+DMS Timestamp: 2026-03-28T07:15:14.127795
+Manual Conversion: GETDATE() -> NOW(), DECLARE -> PostgreSQL DO block variables, lowercase schema objects
+================================================================================
+
+Statement 5: DeleteProductAsync
+DMS Error: "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+DMS Timestamp: 2026-03-28T07:17:59.892903
+Manual Conversion: GETDATE() -> NOW(), DECLARE -> PostgreSQL DO block variables, lowercase schema objects
+================================================================================
+
+Statement 6: GetProductsByPriceRangeAsync
+DMS Error: "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+DMS Timestamp: 2026-03-28T07:20:46.336073
+Manual Conversion: Lowercase all schema objects
+================================================================================
+
+Statement 7: GetLowStockProductsAsync
+DMS Error: "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+DMS Timestamp: 2026-03-28T07:23:34.204159
+Manual Conversion: Lowercase all schema objects, added CAST for integer division fix
+================================================================================
+
+SQL EQUIVALENCY TOOL RESULTS
+All 7 statement pairs were validated through the sql-equivalency___validate_sql_equivalence tool.
+All 7 returned ERROR with message: "'uniqueID'"
+This appears to be a tool-side infrastructure issue, not a statement-specific problem.
+================================================================================
