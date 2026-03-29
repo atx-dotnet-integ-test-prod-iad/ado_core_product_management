@@ -1,0 +1,93 @@
+================================================================================
+DMS CONVERSION FAILURE SUMMARY LOG
+Date: 2026-03-29
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+================================================================================
+
+OVERVIEW:
+All 7 SQL statements from DataAccess/ProductRepository.cs were submitted to the 
+DMS MCP Statement Conversion Tool. All 7 failed with the same error:
+"Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+
+The DMS Schema Mapping Tool was successfully used to retrieve table mappings:
+- Products -> productmanagement_dbo.products
+- ProductHistory -> productmanagement_dbo.producthistory  
+- ProductStats -> productmanagement_dbo.productstats
+
+Manual conversions were applied using these schema mappings with lowercase naming
+as specified by the transformation definition (DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA).
+
+SQL Equivalency Tool also returned ERROR for all 7 statement pairs with error: "'uniqueID'"
+
+================================================================================
+STATEMENT 1: GetAllProductsAsync
+================================================================================
+DMS Attempt Timestamp: 2026-03-29T11:28:42 (first attempt), 2026-03-29T11:31:29 (timeout)
+DMS Error: Metadata model conversion failed: {'error': 'Metadata model conversion did not complete after 15 attempts'}
+Manual Conversion: Applied lowercase schema mapping using DMS schema mapping results
+Key Changes:
+  - Products -> productmanagement_dbo.products (lowercase columns)
+  - CTE alias renamed from ProductStats to productstats_cte to avoid conflict with physical table
+
+================================================================================
+STATEMENT 2: GetProductByIdAsync
+================================================================================
+DMS Attempt Timestamp: 2026-03-29T11:44:27
+DMS Error: Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}
+Manual Conversion: Applied lowercase schema mapping
+Key Changes:
+  - Products -> productmanagement_dbo.products
+  - CTE alias renamed from ProductHistory to producthistory_cte to avoid conflict
+
+================================================================================
+STATEMENT 3: InsertProductAsync
+================================================================================
+DMS Attempt Timestamp: 2026-03-29T11:47:14
+DMS Error: Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}
+Manual Conversion: Restructured from single batch to multiple app-level statements
+Key Changes:
+  - SCOPE_IDENTITY() -> RETURNING clause
+  - GETDATE() -> clock_timestamp()
+  - BEGIN TRANSACTION/COMMIT -> app-level transaction management
+  - DECLARE @var / SET @var -> C# variable after RETURNING
+
+================================================================================
+STATEMENT 4: UpdateProductAsync
+================================================================================
+DMS Attempt Timestamp: 2026-03-29T11:50:00
+DMS Error: Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}
+Manual Conversion: Restructured from single batch to multiple app-level statements
+Key Changes:
+  - DECLARE @OldPrice / @OldStock -> C# variables via reader
+  - GETDATE() -> clock_timestamp()
+  - BEGIN TRANSACTION/COMMIT -> app-level transaction management
+
+================================================================================
+STATEMENT 5: DeleteProductAsync
+================================================================================
+DMS Attempt Timestamp: 2026-03-29T11:52:47
+DMS Error: Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}
+Manual Conversion: Restructured from single batch to multiple app-level statements
+Key Changes:
+  - DECLARE @OldPrice / @OldStock -> C# variables via reader
+  - GETDATE() -> clock_timestamp()
+  - BEGIN TRANSACTION/COMMIT -> app-level transaction management
+
+================================================================================
+STATEMENT 6: GetProductsByPriceRangeAsync
+================================================================================
+DMS Attempt Timestamp: 2026-03-29T11:55:33
+DMS Error: Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}
+Manual Conversion: Applied lowercase schema mapping
+Key Changes:
+  - Products -> productmanagement_dbo.products
+
+================================================================================
+STATEMENT 7: GetLowStockProductsAsync
+================================================================================
+DMS Attempt Timestamp: 2026-03-29T11:58:20
+DMS Error: Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}
+Manual Conversion: Applied lowercase schema mapping
+Key Changes:
+  - Products -> productmanagement_dbo.products
+  - Added CAST(stockquantity AS NUMERIC) for integer division
