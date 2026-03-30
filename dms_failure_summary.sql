@@ -1,0 +1,31 @@
+-- =====================================================
+-- DMS Conversion Failure Summary
+-- All 7 statements were attempted through DMS MCP tool
+-- All failed with: "Metadata model creation did not complete after N attempts"
+-- Manual conversion applied with lowercase schema object names
+-- =====================================================
+
+-- DMS Tool Attempts Log:
+-- Attempt 1: Statement 1 (GetAllProductsAsync) - max_poll_attempts=15, poll_interval=10s
+--   Error: "Metadata model conversion failed: Metadata model conversion did not complete after 15 attempts"
+-- Attempt 2: Statement 1 (GetAllProductsAsync) - max_poll_attempts=30, poll_interval=15s  
+--   Error: "Command execution timed out after 300 seconds"
+-- Attempt 3: Statement 1 (GetAllProductsAsync) - max_poll_attempts=15, poll_interval=10s (compact SQL)
+--   Error: "Metadata model creation failed: Metadata model creation did not complete after 15 attempts"
+-- Attempt 4: Simple test query - max_poll_attempts=25, poll_interval=12s
+--   Error: "Metadata model creation failed: Metadata model creation did not complete after 25 attempts"
+-- Attempt 5: Simple test query with explicit database_name and server_name - max_poll_attempts=25, poll_interval=12s
+--   Error: "Command execution timed out after 300 seconds"
+
+-- Conclusion: DMS MCP tool is consistently failing to create/convert metadata models.
+-- All 7 statements converted manually using DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA method.
+
+-- Schema mapping rules applied:
+-- 1. All table names converted to lowercase (Products -> products, ProductHistory -> producthistory, ProductStats -> productstats)
+-- 2. All column names converted to lowercase (ProductId -> productid, StockQuantity -> stockquantity, etc.)
+-- 3. SCOPE_IDENTITY() replaced with RETURNING clause
+-- 4. GETDATE() replaced with NOW()
+-- 5. BEGIN TRANSACTION replaced with BEGIN
+-- 6. DECLARE @var TYPE replaced with PostgreSQL variable declarations where needed
+-- 7. Integer division handled with ::numeric cast for ROUND operations
+-- 8. SQL Server DECIMAL(18,2) mapped to NUMERIC(18,2) in variable declarations
