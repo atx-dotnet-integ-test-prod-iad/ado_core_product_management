@@ -1,0 +1,47 @@
+-- ============================================================================
+-- DMS Conversion Failure Summary
+-- ============================================================================
+-- All 7 SQL statements from ProductRepository.cs were submitted to the DMS MCP
+-- statement conversion tool (dms-mcp___statement_conversion_tool) for conversion.
+--
+-- DMS Tool Configuration:
+--   migration_project_identifier: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+--   database_name: ProductManagement
+--   schema_name: dbo
+--   region: us-east-1
+--   server_name: 172.31.94.132 (auto-detected)
+--
+-- DMS Error (consistent across all attempts):
+--   Attempt 1 (Statement 1 - GetAllProductsAsync, default settings):
+--     Status: error
+--     Error: "Metadata model conversion failed: {'error': 'Metadata model conversion did not complete after 15 attempts'}"
+--     Step reached: create_metadata_model completed, convert_metadata_model started but timed out
+--
+--   Attempt 2 (Statement 1 - GetAllProductsAsync, max_poll_attempts=30, poll_interval_seconds=15):
+--     Status: error
+--     Error: "Command execution timed out after 300 seconds"
+--
+--   Attempt 3 (Simple test: SELECT ProductId, Name, Price FROM Products WHERE ProductId = @ProductId):
+--     Status: error
+--     Error: "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+--
+--   Attempt 4 (Simplest test: SELECT ProductId, Name FROM Products, max_poll_attempts=25):
+--     Status: error
+--     Error: "Command execution timed out after 300 seconds"
+--
+-- Resolution: Per transformation definition, when DMS fails, manual conversion
+-- is applied with lowercase schema object names for PostgreSQL compatibility.
+-- Conversion method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+--
+-- All 7 statements were manually converted with the following rules:
+--   1. All schema object names (tables, columns, aliases) converted to lowercase
+--   2. SCOPE_IDENTITY() replaced with currval(pg_get_serial_sequence()) 
+--   3. GETDATE() replaced with CURRENT_TIMESTAMP
+--   4. DECLARE/SET variable patterns replaced with subqueries or CTEs
+--   5. BEGIN TRANSACTION/COMMIT replaced with BEGIN/COMMIT
+--   6. Integer division in ROUND() cast to numeric for precision
+--   7. Window functions (LAG, AVG, COUNT, RANK, PERCENT_RANK, MIN, MAX) preserved (PostgreSQL compatible)
+--   8. CTE syntax preserved (PostgreSQL compatible)
+--   9. CASE expressions preserved (PostgreSQL compatible)
+--  10. Parameter syntax (@param) preserved for ADO.NET/Npgsql compatibility
+-- ============================================================================
