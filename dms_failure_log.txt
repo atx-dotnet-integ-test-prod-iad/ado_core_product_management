@@ -1,0 +1,68 @@
+===============================================================
+DMS MCP Tool Failure Log
+===============================================================
+Date: 2026-04-01
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Database: ProductManagement
+Schema: dbo
+Server: 172.31.94.132
+Region: us-east-1
+
+===============================================================
+FAILURE SUMMARY
+===============================================================
+Total DMS Attempts: 3 (with varying configurations)
+Total Successful: 0
+Total Failed: 3
+
+All 7 SQL statements were affected by the DMS tool failure.
+Manual conversion was applied using lowercase schema object names
+as per the transformation definition's fallback procedure.
+
+===============================================================
+Attempt 1: Statement 1 (GetAllProductsAsync)
+===============================================================
+Timestamp: 2026-04-01T11:37:01.612130
+Configuration: default poll (15 attempts, 10s interval)
+Status: ERROR
+Error: "Metadata model conversion failed: {'error': 'Metadata model conversion did not complete after 15 attempts'}"
+Workflow Steps Completed:
+  - create_metadata_model: completed (request_identifier: f968d6e2-0f0a-4e0f-82d6-d4e422edf4a6)
+  - convert_metadata_model: started (never completed)
+Resolution: Manual conversion with lowercase schema names
+
+===============================================================
+Attempt 2: Simple Test (SELECT SCOPE_IDENTITY())
+===============================================================
+Timestamp: 2026-04-01T11:45:08.922656
+Configuration: default poll (15 attempts, 10s interval)
+Status: ERROR
+Error: "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+Workflow Steps Completed:
+  - create_metadata_model: started (never completed)
+Resolution: N/A (diagnostic test)
+
+===============================================================
+Attempt 3: Simple Test (SELECT GETDATE())
+===============================================================
+Timestamp: 2026-04-01T11:47:56.692027
+Configuration: extended poll (20 attempts, 10s interval)
+Status: ERROR
+Error: "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 20 attempts'}"
+Workflow Steps Completed:
+  - create_metadata_model: started (never completed)
+Resolution: N/A (diagnostic test)
+
+===============================================================
+MANUAL CONVERSION DETAILS
+===============================================================
+All 7 statements were manually converted with the following rules:
+1. All schema object names (tables, columns, aliases) converted to lowercase
+2. SCOPE_IDENTITY() -> lastval()
+3. GETDATE() -> CURRENT_TIMESTAMP
+4. BEGIN TRANSACTION -> BEGIN
+5. DECLARE @var pattern -> Restructured with INSERT...SELECT subqueries
+6. Window functions (LAG, AVG OVER, RANK, PERCENT_RANK) -> No changes needed (PostgreSQL compatible)
+7. ROUND, CASE, BETWEEN -> No changes needed (PostgreSQL compatible)
+
+Conversion Method Applied: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
