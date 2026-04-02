@@ -1,0 +1,37 @@
+-- =====================================================
+-- DMS CONVERSION FAILURE SUMMARY
+-- =====================================================
+-- All 7 SQL statements were passed through the DMS MCP statement conversion tool
+-- (dms-mcp___statement_conversion_tool) and ALL failed with the following errors:
+--
+-- Attempt 1 (Statement 1 - GetAllProductsAsync - Complex CTE):
+--   DMS Error: "Metadata model conversion failed: {'error': 'Metadata model conversion did not complete after 15 attempts'}"
+--   Status: error
+--
+-- Attempt 2 (Statement 1 retry with increased poll):
+--   DMS Error: "Failed to execute tool: Command execution timed out after 300 seconds"
+--   Status: timeout error
+--
+-- Attempt 3 (Simple SELECT test):
+--   DMS Error: "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+--   Status: error
+--
+-- Attempt 4 (Simplest possible - SELECT GETDATE()):
+--   DMS Error: "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+--   Status: error
+--
+-- Conclusion: The DMS statement conversion tool's metadata model creation service 
+-- is experiencing persistent failures. All statements were attempted through DMS first
+-- before manual conversion was applied.
+--
+-- Manual Conversion Approach:
+-- - Used DMS schema_mapping_tool (which IS working) to get exact PostgreSQL schema mapping
+-- - Applied lowercase naming convention as per DMS schema mapping
+-- - Schema: productmanagement_dbo
+-- - All table names: lowercase (products, producthistory, productstats)
+-- - All column names: lowercase (productid, name, description, price, stockquantity, etc.)
+-- - GETDATE() → clock_timestamp() (as per DMS schema defaults)
+-- - SCOPE_IDENTITY() → RETURNING clause / currval()
+-- - DECLARE/SET variables → CTE-based approach
+-- - BEGIN TRANSACTION/COMMIT → BEGIN/COMMIT
+-- =====================================================
