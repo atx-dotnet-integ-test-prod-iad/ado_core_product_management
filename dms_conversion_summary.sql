@@ -1,0 +1,38 @@
+-- =====================================================
+-- DMS CONVERSION FAILURE SUMMARY
+-- All 7 statements failed DMS conversion due to timeout
+-- Manual conversion applied with lowercase schema mapping
+-- =====================================================
+
+-- DMS Tool Attempts:
+-- Attempt 1: Statement 1 (GetAllProductsAsync) - Full SQL
+--   Error: "Metadata model conversion failed: Metadata model conversion did not complete after 15 attempts"
+--   DMS Config: max_poll_attempts=15, poll_interval_seconds=10
+--
+-- Attempt 2: Statement 1 (GetAllProductsAsync) - Full SQL (retry)
+--   Error: "Command execution timed out after 300 seconds"
+--   DMS Config: max_poll_attempts=30, poll_interval_seconds=15
+--
+-- Attempt 3: Simple test query (SELECT SCOPE_IDENTITY())
+--   Error: "Metadata model creation failed: Metadata model creation did not complete after 20 attempts"  
+--   DMS Config: max_poll_attempts=20, poll_interval_seconds=10
+--
+-- Attempt 4: Simple test query (SELECT from Products with window functions)
+--   Error: "Metadata model creation failed: Metadata model creation did not complete after 25 attempts"
+--   DMS Config: max_poll_attempts=25, poll_interval_seconds=10
+
+-- Conclusion: DMS MCP tool consistently fails with metadata model creation/conversion timeouts.
+-- All 7 statements manually converted with reason: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+-- Manual Conversion Rules Applied:
+-- 1. All schema object names (tables, columns, aliases) converted to lowercase
+-- 2. SCOPE_IDENTITY() -> lastval() with INSERT...RETURNING pattern
+-- 3. GETDATE() -> NOW()
+-- 4. BEGIN TRANSACTION/COMMIT -> BEGIN/COMMIT  
+-- 5. DECLARE @variable pattern -> eliminated (use subqueries, INSERT...RETURNING, or reordered operations)
+-- 6. ROUND() function preserved (compatible)
+-- 7. Window functions (AVG OVER, COUNT OVER, LAG, RANK, PERCENT_RANK, MIN OVER, MAX OVER) preserved (compatible)
+-- 8. CTE (WITH...AS) syntax preserved (compatible)
+-- 9. CASE/WHEN expressions preserved (compatible)
+-- 10. BETWEEN preserved (compatible)
+-- 11. Integer division: added ::numeric cast where needed for proper decimal results
