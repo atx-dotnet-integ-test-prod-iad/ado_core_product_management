@@ -1,0 +1,46 @@
+== DMS Conversion Summary Log ==
+Date: 2026-04-04
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+
+== DMS Statement Conversion Tool Status ==
+Status: FAILED for all statements
+Error: "Metadata model creation did not complete after N attempts" (timeout)
+Attempts Made: 4 total attempts with varying configurations:
+  - Attempt 1: max_poll_attempts=15, poll_interval_seconds=10 -> Metadata model conversion timeout
+  - Attempt 2: max_poll_attempts=30, poll_interval_seconds=15 -> Command execution timed out (300s)
+  - Attempt 3: max_poll_attempts=25, poll_interval_seconds=10 -> Metadata model creation timeout
+  - Attempt 4: max_poll_attempts=25, poll_interval_seconds=10 -> Metadata model creation timeout
+
+== DMS Schema Mapping Tool Status ==
+Status: SUCCESS for all tables
+Tables mapped:
+  - Products -> products (schema: productmanagement_dbo)
+  - ProductHistory -> producthistory (schema: productmanagement_dbo)
+  - ProductStats -> productstats (schema: productmanagement_dbo)
+
+== Manual Conversion Applied ==
+Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Schema mappings used from DMS schema_mapping_tool output.
+
+All 7 SQL statements manually converted with the following rules:
+1. All table names lowercased (Products -> products, ProductHistory -> producthistory, ProductStats -> productstats)
+2. All column names lowercased (ProductId -> productid, Name -> name, Price -> price, etc.)
+3. SCOPE_IDENTITY() replaced with INSERT...RETURNING clause
+4. GETDATE() replaced with NOW()
+5. DECLARE @var TYPE + BEGIN TRANSACTION/COMMIT replaced with CTE-based approach
+6. CTE names renamed to avoid conflicts with table names (ProductStats -> productstats_cte, ProductHistory -> producthistory_cte)
+7. Integer division in ROUND() addressed with CAST(... AS NUMERIC) where needed
+
+== SQL Equivalency Validation Status ==
+Tool Status: ERROR for all 7 statements
+Error: "'uniqueID'" - consistent infrastructure/configuration issue
+Note: Every statement pair was submitted to the tool; all returned the same error.
+
+== Statements Processed ==
+1. GetAllProductsAsync - DMS: FAILED, Manual: CONVERTED, Equivalency: ERROR
+2. GetProductByIdAsync - DMS: FAILED, Manual: CONVERTED, Equivalency: ERROR
+3. InsertProductAsync - DMS: FAILED, Manual: CONVERTED, Equivalency: ERROR
+4. UpdateProductAsync - DMS: FAILED, Manual: CONVERTED, Equivalency: ERROR
+5. DeleteProductAsync - DMS: FAILED, Manual: CONVERTED, Equivalency: ERROR
+6. GetProductsByPriceRangeAsync - DMS: FAILED, Manual: CONVERTED, Equivalency: ERROR
+7. GetLowStockProductsAsync - DMS: FAILED, Manual: CONVERTED, Equivalency: ERROR
