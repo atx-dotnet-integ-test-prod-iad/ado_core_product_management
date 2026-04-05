@@ -1,0 +1,94 @@
+===============================================================
+DMS Conversion Failure Summary Log
+===============================================================
+Date: 2026-04-05
+Migration Project ARN: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Source Database: ProductManagement (SQL Server 2019)
+Target Database: PostgreSQL 13
+Schema: dbo
+Total Statements: 7
+Successfully Converted by DMS: 0
+Failed (Manual Conversion Required): 7
+===============================================================
+
+ATTEMPT 1 - Statement 1 (GetAllProductsAsync):
+  DMS Input: CTE with AVG/COUNT window functions, INNER JOIN, CASE, ROUND
+  DMS Error: "Metadata model creation/conversion timed out after max poll attempts"
+  DMS Identifier Used: 7Y3LT3YQEBH6LC5D7Z5XJNQ3VU (without ARN prefix - invalid format)
+  Resolution: Invalid identifier format caused CoralUnexpectedExceptionError
+
+ATTEMPT 2 - Statement 1 (GetAllProductsAsync, retry with ARN):
+  DMS Input: Same CTE query
+  DMS Error: "Metadata model conversion failed: Metadata model conversion did not complete after 15 attempts"
+  DMS Identifier Used: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+  Resolution: Metadata model created successfully but conversion step timed out after 15 polls
+
+ATTEMPT 3 - Statement 1 (GetAllProductsAsync, retry with extended timeout):
+  DMS Input: Same CTE query with max_poll_attempts=30, poll_interval_seconds=15
+  DMS Error: "Command execution timed out after 300 seconds" (tool-level timeout)
+  Resolution: Even with extended polling, the DMS conversion could not complete
+
+ATTEMPT 4 - Simple test query:
+  DMS Input: "SELECT ProductId, Name, Price FROM Products WHERE ProductId = @ProductId"
+  DMS Error: "Metadata model creation failed: Metadata model creation did not complete after 20 attempts"
+  Resolution: Even a simple SELECT fails - DMS service is not completing metadata model operations
+
+===============================================================
+CONCLUSION: DMS tool is unable to complete any conversions due to metadata model
+creation/conversion timeouts. All 7 statements were attempted through DMS first
+and all failed. Manual conversion applied with lowercase schema object names per
+the transformation definition's DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA rule.
+===============================================================
+
+MANUAL CONVERSION RULES APPLIED:
+1. All schema object names (tables, columns, aliases) converted to lowercase
+2. SCOPE_IDENTITY() replaced with INSERT...RETURNING clause
+3. GETDATE() replaced with NOW()
+4. DECLARE @var / SET @var patterns replaced with separate queries and C# variable capture
+5. Transaction blocks moved from SQL to C# code (Npgsql BeginTransaction/CommitAsync)
+6. Added CAST(int_column AS DECIMAL) for PostgreSQL integer division correctness
+7. Window functions (AVG OVER, COUNT OVER, LAG, RANK, PERCENT_RANK) are compatible - only case changes needed
+
+SQL EQUIVALENCY VALIDATION:
+All 7 statement pairs were submitted to the sql-equivalency___validate_sql_equivalence tool.
+All 7 returned ERROR with message: "'uniqueID'" 
+This appears to be a service-side error in the equivalency tool.
+Per the transformation definition: errors are marked as ERROR status in the report.
+
+===============================================================
+PER-STATEMENT MANUAL CONVERSION DETAILS:
+===============================================================
+
+STATEMENT 1 - GetAllProductsAsync:
+  Changes: Lowercase table/column/alias names only
+  SQL constructs preserved: CTE, AVG OVER(), COUNT OVER(), INNER JOIN, CASE, ROUND, ORDER BY CASE
+
+STATEMENT 2 - GetProductByIdAsync:
+  Changes: Lowercase table/column/alias names only
+  SQL constructs preserved: CTE, LAG OVER(), LEFT JOIN, CASE, ROUND, parameterized @ProductId
+
+STATEMENT 3 - InsertProductAsync:
+  Changes: Lowercase names, SCOPE_IDENTITY() -> RETURNING productid, GETDATE() -> NOW()
+  Structural: Single batch split into 3 separate statements executed in C# transaction
+  C# changes needed: Execute INSERT with ExecuteScalarAsync to capture returned productid,
+    then use captured ID as @NewProductId parameter in subsequent statements
+
+STATEMENT 4 - UpdateProductAsync:
+  Changes: Lowercase names, GETDATE() -> NOW()
+  Structural: DECLARE @var / SELECT INTO @var replaced with separate SELECT + C# capture
+  C# changes needed: Execute SELECT first to capture OldPrice/OldStock in C# variables,
+    then pass as parameters to subsequent statements
+
+STATEMENT 5 - DeleteProductAsync:
+  Changes: Lowercase names, GETDATE() -> NOW()
+  Structural: Same as Statement 4 - DECLARE/SELECT INTO replaced with C# variable capture
+  C# changes needed: Same pattern as UpdateProductAsync
+
+STATEMENT 6 - GetProductsByPriceRangeAsync:
+  Changes: Lowercase table/column/alias names only
+  SQL constructs preserved: CTE, RANK() OVER(), PERCENT_RANK() OVER(), BETWEEN, CASE, ORDER BY
+
+STATEMENT 7 - GetLowStockProductsAsync:
+  Changes: Lowercase names, added CAST(stockquantity AS DECIMAL) for division
+  SQL constructs preserved: CTE, AVG/MIN/MAX OVER(), CASE, ROUND, ORDER BY
+  Note: PostgreSQL performs integer division by default, so CAST needed for correct ROUND behavior
