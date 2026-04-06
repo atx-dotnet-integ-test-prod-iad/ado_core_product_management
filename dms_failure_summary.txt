@@ -1,0 +1,86 @@
+=====================================================================
+DMS CONVERSION FAILURE SUMMARY
+=====================================================================
+
+Migration Project ARN: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Database: ProductManagement
+Schema: dbo
+Region: us-east-1
+Server: 172.31.94.132
+
+=====================================================================
+FAILURE DETAILS
+=====================================================================
+All 7 SQL statements failed with the same DMS error:
+Error Type: Metadata model creation/conversion timeout
+Error Message: "Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}"
+
+Total DMS Attempts: 8 (including 1 retry with increased poll attempts)
+- Statement 1 (GetAllProducts): 2 attempts (1 regular, 1 with max_poll_attempts=30)
+- Statement 2 (GetProductById): 1 attempt
+- Statement 3 (InsertProduct): 1 attempt 
+- Statement 4 (UpdateProduct): 1 attempt
+- Statement 5 (DeleteProduct): 1 attempt
+- Statement 6 (GetProductsByPriceRange): 1 attempt
+- Statement 7 (GetLowStockProducts): 1 attempt
+- Additional test with simple "SELECT SCOPE_IDENTITY()": 1 attempt - also failed
+
+=====================================================================
+MANUAL CONVERSION APPLIED
+=====================================================================
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+Key Conversions Applied:
+1. All schema object names (tables, columns, CTE names) → lowercase
+2. SCOPE_IDENTITY() → RETURNING clause with CTE pattern
+3. GETDATE() → NOW()
+4. DECLARE @variable / SET @variable → CTE subquery patterns
+5. BEGIN TRANSACTION / COMMIT → Handled at application level (removed from SQL)
+6. Integer division in ROUND → CAST to DECIMAL for proper division
+7. Transaction-based multi-statement blocks → CTE-based writeable CTEs
+
+=====================================================================
+STATEMENT-BY-STATEMENT DMS OUTPUT
+=====================================================================
+
+--- Statement 1: GetAllProductsAsync ---
+DMS Status: error
+DMS Error: Metadata model conversion failed: {'error': 'Metadata model conversion did not complete after 15 attempts'}
+Timestamp: 2026-04-06T12:31:32 - 2026-04-06T12:34:14
+Workflow: create_metadata_model (completed) → convert_metadata_model (failed)
+
+--- Statement 2: GetProductByIdAsync ---
+DMS Status: error  
+DMS Error: Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}
+Timestamp: 2026-04-06T12:47:40 - 2026-04-06T12:50:12
+Workflow: create_metadata_model (failed)
+
+--- Statement 3: InsertProductAsync ---
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}
+Timestamp: 2026-04-06T12:50:23 - 2026-04-06T12:52:55
+Workflow: create_metadata_model (failed)
+
+--- Statement 4: UpdateProductAsync ---
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}
+Timestamp: 2026-04-06T12:53:07 - 2026-04-06T12:55:39
+Workflow: create_metadata_model (failed)
+
+--- Statement 5: DeleteProductAsync ---
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}
+Timestamp: 2026-04-06T12:55:50 - 2026-04-06T12:58:23
+Workflow: create_metadata_model (failed)
+
+--- Statement 6: GetProductsByPriceRangeAsync ---
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}
+Timestamp: 2026-04-06T12:58:35 - 2026-04-06T13:01:06
+Workflow: create_metadata_model (failed)
+
+--- Statement 7: GetLowStockProductsAsync ---
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Metadata model creation did not complete after 15 attempts'}
+Timestamp: 2026-04-06T13:01:19 - 2026-04-06T13:03:51
+Workflow: create_metadata_model (failed)

@@ -1,0 +1,161 @@
+=====================================================================
+FINAL MIGRATION REPORT
+Microsoft SQL Server to PostgreSQL Migration for .NET ADO Application
+=====================================================================
+Date: 2026-04-06
+Application: AdoCore (.NET 9.0 Console Application)
+Source Database: Microsoft SQL Server 2019
+Target Database: PostgreSQL 13
+
+=====================================================================
+1. SQL STATEMENT PROCESSING SUMMARY
+=====================================================================
+Total SQL Statements Processed: 7
+Statements Successfully Converted by DMS MCP Tool: 0
+Statements Requiring Manual Intervention After DMS Failure: 7
+DMS Failure Reason: Metadata model creation/conversion timeout (all 7)
+
+Conversion Method Applied: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+=====================================================================
+2. SQL EQUIVALENCY VALIDATION SUMMARY
+=====================================================================
+Total Statement Pairs Validated: 7
+Statements Validated as EQUIVALENT: 0
+Statements Validated as NOT_EQUIVALENT: 0
+Statements with Equivalency Validation ERROR: 7
+Equivalency Error Details: Internal tool error "'uniqueID'" for all statements
+
+Note: All equivalency statuses are from the SQL Equivalency MCP tool output.
+No agent judgment was used to determine equivalency.
+
+=====================================================================
+3. SQL CONVERSION DETAILS
+=====================================================================
+
+Statement 1: GetAllProductsAsync
+  Type: CTE with Window Functions (AVG OVER, COUNT OVER)
+  Conversion: Schema names lowercased; SQL logic unchanged
+  PostgreSQL Compatible: Yes
+
+Statement 2: GetProductByIdAsync
+  Type: CTE with LAG Window Function
+  Conversion: Schema names lowercased; SQL logic unchanged
+  PostgreSQL Compatible: Yes
+
+Statement 3: InsertProductAsync
+  Type: Transaction with SCOPE_IDENTITY() and GETDATE()
+  Conversion: Major restructure
+  - SCOPE_IDENTITY() → Writeable CTE with INSERT...RETURNING
+  - GETDATE() → NOW()
+  - DECLARE @var / SET @var → Eliminated via CTE pattern
+  - BEGIN TRANSACTION / COMMIT → Implicit single-statement transaction
+  PostgreSQL Compatible: Yes (uses PostgreSQL-specific writeable CTEs)
+
+Statement 4: UpdateProductAsync
+  Type: Transaction with DECLARE variables and GETDATE()
+  Conversion: Major restructure
+  - DECLARE variables → CTE subqueries (old_values CTE)
+  - GETDATE() → NOW()
+  - Multi-statement transaction → Single writeable CTE chain
+  PostgreSQL Compatible: Yes
+
+Statement 5: DeleteProductAsync
+  Type: Transaction with DECLARE variables, CASE, and GETDATE()
+  Conversion: Major restructure
+  - DECLARE variables → CTE subqueries (old_values CTE)
+  - GETDATE() → NOW()
+  - CASE expression → Preserved (PostgreSQL compatible)
+  - Multi-statement transaction → Single writeable CTE chain
+  PostgreSQL Compatible: Yes
+
+Statement 6: GetProductsByPriceRangeAsync
+  Type: CTE with RANK() and PERCENT_RANK()
+  Conversion: Schema names lowercased; SQL logic unchanged
+  PostgreSQL Compatible: Yes
+
+Statement 7: GetLowStockProductsAsync
+  Type: CTE with AVG/MIN/MAX OVER
+  Conversion: Schema names lowercased; Added CAST for integer division
+  PostgreSQL Compatible: Yes
+
+=====================================================================
+4. PACKAGE AND DEPENDENCY CHANGES
+=====================================================================
+Removed:
+  - Microsoft.Data.SqlClient Version="5.1.4"
+
+Added:
+  - Npgsql Version="8.0.6"
+
+Unchanged:
+  - Microsoft.Extensions.Configuration Version="8.0.0"
+  - Microsoft.Extensions.Configuration.Json Version="8.0.0"
+  - Microsoft.Extensions.DependencyInjection Version="8.0.0"
+
+=====================================================================
+5. CODE CLASS REFERENCE CHANGES
+=====================================================================
+File: DataAccess/ProductRepository.cs
+  - using Microsoft.Data.SqlClient → using Npgsql
+  - SqlConnection → NpgsqlConnection (3 occurrences: field, method return, constructor)
+  - SqlCommand → NpgsqlCommand (7 occurrences: one per SQL method)
+  - SqlDataReader → NpgsqlDataReader (1 occurrence: MapProductFromReader parameter)
+
+No other files contained SQL Server client references.
+
+=====================================================================
+6. CONNECTION STRING CHANGES
+=====================================================================
+File: appsettings.json
+
+DevConnection:
+  Before: Server=localhost;Database=ProductManagement;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True
+  After:  Host=localhost;Database=ProductManagement;Username=postgres;Password=postgres
+
+ProdConnection:
+  Before: Server=localhost;Database=ProductManagement;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True
+  After:  Host=localhost;Database=ProductManagement;Username=postgres;Password=postgres
+
+Parameter Mapping:
+  - Server → Host
+  - Trusted_Connection → Removed (replaced with Username/Password)
+  - MultipleActiveResultSets → Removed (not applicable to PostgreSQL)
+  - TrustServerCertificate → Removed (not applicable to PostgreSQL)
+
+=====================================================================
+7. BUILD VERIFICATION
+=====================================================================
+Final Build Status: SUCCESS
+Errors: 0
+Warnings: 10 (all pre-existing nullable reference warnings, not introduced by migration)
+
+=====================================================================
+8. FILES MODIFIED
+=====================================================================
+1. sourceCode/AdoCore.csproj - Package reference update
+2. sourceCode/DataAccess/ProductRepository.cs - SQL statements + class references
+3. sourceCode/appsettings.json - Connection strings
+
+=====================================================================
+9. ARTIFACTS GENERATED
+=====================================================================
+1. sourceCode/extracted_statements.sql - All 7 original MS SQL statements
+2. sourceCode/converted_statements.sql - All 7 converted PostgreSQL statements
+3. sourceCode/sql_equivalency_validation_report.json - Equivalency validation report
+4. sourceCode/dms_failure_summary.txt - DMS tool failure documentation
+5. sourceCode/migration_report.txt - This final migration report
+
+=====================================================================
+10. STATEMENTS REQUIRING MANUAL REVIEW
+=====================================================================
+All 7 statements require manual review because:
+1. DMS MCP tool failed for all statements (metadata model timeout)
+2. SQL Equivalency tool returned ERROR for all statements (internal error)
+3. Manual conversion was applied with lowercase schema naming convention
+4. Transaction-based statements (3, 4, 5) were significantly restructured
+   to use PostgreSQL writeable CTEs instead of SQL Server DECLARE/SET patterns
+
+Recommendation: Thoroughly test all 7 database operations against a live 
+PostgreSQL database to validate the converted SQL statements produce 
+correct results.
