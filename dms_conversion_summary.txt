@@ -1,0 +1,92 @@
+============================================================
+DMS Conversion Failure Summary
+============================================================
+
+DMS Tool: dms-mcp___statement_conversion_tool
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Schema: dbo
+Region: us-east-1
+
+============================================================
+DMS Schema Mapping Tool (WORKING) Results:
+============================================================
+The schema_mapping_tool successfully returned schema mappings:
+- Products -> products (schema: productmanagement_dbo)
+- ProductHistory -> producthistory (schema: productmanagement_dbo)
+- ProductStats -> productstats (schema: productmanagement_dbo)
+- Categories -> categories (schema: productmanagement_dbo)
+- Suppliers -> suppliers (schema: productmanagement_dbo)
+
+Key column mappings (all lowercase):
+- ProductId -> productid
+- Name -> name
+- Description -> description
+- Price -> price
+- StockQuantity -> stockquantity
+- CreatedDate -> createddate
+- ModifiedDate -> modifieddate
+- ActionDate -> actiondate
+- StatId -> statid
+- TotalProducts -> totalproducts
+- AveragePrice -> averageprice
+- LastUpdated -> lastupdated
+
+Key type mappings:
+- GETDATE() -> clock_timestamp()
+- IDENTITY(1,1) -> GENERATED ALWAYS AS IDENTITY
+- nvarchar -> VARCHAR
+- decimal -> NUMERIC
+- bit -> NUMERIC(1,0)
+- datetime -> TIMESTAMP WITHOUT TIME ZONE
+
+============================================================
+Statement Conversion Attempts and Failures:
+============================================================
+
+Statement 1: GetAllProductsAsync
+- DMS Attempt: FAILED
+- DMS Error: "Metadata model conversion failed: Metadata model conversion did not complete after 15 attempts"
+- Manual Conversion: Applied with DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+Statement 2: GetProductByIdAsync
+- DMS Attempt: FAILED
+- DMS Error: "Metadata model creation failed: Metadata model creation did not complete after 10 attempts"
+- Manual Conversion: Applied with DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+Statement 3: InsertProductAsync
+- DMS Attempt: FAILED
+- DMS Error: "Metadata model creation failed: Metadata model creation did not complete after 20 attempts"
+- Manual Conversion: Applied with DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+- Key changes: SCOPE_IDENTITY() -> RETURNING productid, GETDATE() -> clock_timestamp()
+
+Statement 4: UpdateProductAsync
+- DMS Attempt: FAILED
+- DMS Error: "Metadata model creation failed: Metadata model creation did not complete"
+- Manual Conversion: Applied with DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+- Key changes: DECLARE/SET variables -> PostgreSQL compatible, GETDATE() -> clock_timestamp()
+
+Statement 5: DeleteProductAsync
+- DMS Attempt: FAILED
+- DMS Error: "Metadata model creation failed: Metadata model creation did not complete"
+- Manual Conversion: Applied with DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+- Key changes: DECLARE/SET variables -> PostgreSQL compatible, GETDATE() -> clock_timestamp()
+
+Statement 6: GetProductsByPriceRangeAsync
+- DMS Attempt: FAILED
+- DMS Error: "Metadata model creation failed: Metadata model creation did not complete"
+- Manual Conversion: Applied with DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+Statement 7: GetLowStockProductsAsync
+- DMS Attempt: FAILED
+- DMS Error: "Metadata model creation failed: Metadata model creation did not complete"
+- Manual Conversion: Applied with DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+- Key changes: ROUND with integer division -> CAST to NUMERIC
+
+============================================================
+Conversion Approach:
+============================================================
+Since the DMS statement_conversion_tool consistently failed with metadata model
+creation/conversion timeouts, all 7 statements were manually converted following
+the DMS schema mappings obtained from the schema_mapping_tool. All schema object
+names were converted to lowercase per the DMS schema mapping results. SQL Server
+specific functions were converted to PostgreSQL equivalents.

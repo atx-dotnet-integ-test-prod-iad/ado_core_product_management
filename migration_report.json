@@ -1,0 +1,150 @@
+{
+  "migration_summary": {
+    "title": "SQL Server to PostgreSQL Migration Report",
+    "date": "2026-04-06",
+    "source": {
+      "database": "Microsoft SQL Server 2019",
+      "package": "Microsoft.Data.SqlClient 5.1.4",
+      "framework": ".NET 9.0 (ADO.NET)"
+    },
+    "target": {
+      "database": "PostgreSQL 13",
+      "package": "Npgsql 8.0.6",
+      "framework": ".NET 9.0 (ADO.NET)"
+    }
+  },
+  "sql_statement_processing": {
+    "total_statements_processed": 7,
+    "statements_converted_by_dms": 0,
+    "statements_manually_converted": 7,
+    "dms_tool_status": "FAILED - All DMS statement_conversion_tool calls failed with metadata model creation/conversion timeouts",
+    "dms_schema_mapping_status": "SUCCESS - schema_mapping_tool returned valid schema mappings for all tables",
+    "conversion_method_used": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+    "statements": [
+      {
+        "name": "GetAllProductsAsync",
+        "type": "SELECT with CTE, window functions, JOIN",
+        "dms_status": "FAILED",
+        "key_conversions": "Lowercase schema objects, CTE renamed to productstats_cte"
+      },
+      {
+        "name": "GetProductByIdAsync", 
+        "type": "SELECT with CTE, LAG window function, JOIN",
+        "dms_status": "FAILED",
+        "key_conversions": "Lowercase schema objects, CTE renamed to producthistory_cte"
+      },
+      {
+        "name": "InsertProductAsync",
+        "type": "Transaction with INSERT, SCOPE_IDENTITY, INSERT, UPDATE",
+        "dms_status": "FAILED",
+        "key_conversions": "SCOPE_IDENTITY() -> RETURNING clause with writable CTE, GETDATE() -> clock_timestamp(), BEGIN TRANSACTION/COMMIT -> writable CTE for atomicity"
+      },
+      {
+        "name": "UpdateProductAsync",
+        "type": "Transaction with DECLARE, SELECT, UPDATE, INSERT, UPDATE",
+        "dms_status": "FAILED",
+        "key_conversions": "DECLARE/SET -> writable CTE with subquery, GETDATE() -> clock_timestamp(), variable references -> CTE references"
+      },
+      {
+        "name": "DeleteProductAsync",
+        "type": "Transaction with DECLARE, SELECT, INSERT, DELETE, UPDATE",
+        "dms_status": "FAILED",
+        "key_conversions": "DECLARE/SET -> writable CTE with subquery, GETDATE() -> clock_timestamp(), variable references -> CTE references"
+      },
+      {
+        "name": "GetProductsByPriceRangeAsync",
+        "type": "SELECT with CTE, RANK, PERCENT_RANK window functions",
+        "dms_status": "FAILED",
+        "key_conversions": "Lowercase schema objects"
+      },
+      {
+        "name": "GetLowStockProductsAsync",
+        "type": "SELECT with CTE, AVG/MIN/MAX window functions",
+        "dms_status": "FAILED",
+        "key_conversions": "Lowercase schema objects, CAST(stockquantity AS NUMERIC) for ROUND division"
+      }
+    ]
+  },
+  "equivalency_validation": {
+    "total_pairs_validated": 7,
+    "equivalent": 0,
+    "not_equivalent": 0,
+    "errors": 7,
+    "tool_status": "ERROR - SQL Equivalency tool returned 'uniqueID' error for all 7 statement pairs (systemic tool issue)",
+    "note": "All equivalency statuses come from the sql-equivalency___validate_sql_equivalence tool, not agent judgment"
+  },
+  "code_changes": {
+    "files_modified": [
+      {
+        "file": "DataAccess/ProductRepository.cs",
+        "changes": [
+          "7 SQL statements converted from MS SQL to PostgreSQL",
+          "using Microsoft.Data.SqlClient -> using Npgsql",
+          "SqlConnection -> NpgsqlConnection",
+          "SqlCommand -> NpgsqlCommand",
+          "SqlDataReader -> NpgsqlDataReader"
+        ]
+      },
+      {
+        "file": "AdoCore.csproj",
+        "changes": [
+          "Microsoft.Data.SqlClient 5.1.4 -> Npgsql 8.0.6"
+        ]
+      },
+      {
+        "file": "appsettings.json",
+        "changes": [
+          "Connection strings updated from SQL Server to PostgreSQL format",
+          "Server=localhost -> Host=localhost",
+          "Removed: Trusted_Connection, MultipleActiveResultSets, TrustServerCertificate",
+          "Added: Username=postgres;Password=postgres"
+        ]
+      },
+      {
+        "file": "Scripts/01_InitialSetup.sql",
+        "changes": [
+          "Converted from T-SQL to PostgreSQL",
+          "CREATE TABLE with GENERATED ALWAYS AS IDENTITY",
+          "Stored procedures -> PostgreSQL functions",
+          "GETDATE() -> clock_timestamp()"
+        ]
+      },
+      {
+        "file": "Database/Scripts/01_InitialSetup.sql",
+        "changes": [
+          "Full schema conversion to PostgreSQL",
+          "All tables converted with lowercase names and PostgreSQL types",
+          "Trigger converted from T-SQL to PL/pgSQL",
+          "Stored procedures converted to PostgreSQL functions",
+          "Indexes converted to PostgreSQL syntax"
+        ]
+      }
+    ]
+  },
+  "artifacts_generated": [
+    "extracted_statements.sql - All 7 original MS SQL statements",
+    "converted_statements.sql - All 7 converted PostgreSQL statements",
+    "sql_equivalency_validation_report.json - Comprehensive equivalency report",
+    "dms_conversion_summary.txt - DMS failure documentation",
+    "migration_report.json - This final migration report"
+  ],
+  "build_status": {
+    "final_build": "SUCCESS",
+    "errors": 0,
+    "warnings": 10,
+    "warning_details": "All warnings are pre-existing nullable reference type warnings (CS8601, CS8618, CS8600, CS8603, CS8625) - not introduced by migration"
+  },
+  "schema_mapping_from_dms": {
+    "dbo.Products": "productmanagement_dbo.products",
+    "dbo.ProductHistory": "productmanagement_dbo.producthistory",
+    "dbo.ProductStats": "productmanagement_dbo.productstats",
+    "dbo.Categories": "productmanagement_dbo.categories",
+    "dbo.Suppliers": "productmanagement_dbo.suppliers"
+  },
+  "known_issues_and_manual_review_needed": [
+    "DMS statement_conversion_tool consistently failed - all 7 statements manually converted",
+    "SQL Equivalency tool returned ERROR for all 7 pairs - systemic tool issue with 'uniqueID' error",
+    "Connection string uses placeholder credentials (postgres/postgres) - should be configured per environment",
+    "The writable CTE approach for INSERT/UPDATE/DELETE may need testing with actual PostgreSQL database to verify atomicity behavior"
+  ]
+}
