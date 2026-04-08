@@ -1,0 +1,130 @@
+================================================================================
+                    SQL SERVER TO POSTGRESQL MIGRATION SUMMARY
+                            Final Migration Report
+================================================================================
+
+Migration Date: 2026-04-08
+Source: Microsoft SQL Server (ProductManagement database)
+Target: PostgreSQL (postgres database)
+Application: AdoCore (.NET 9.0 ADO.NET Application)
+
+================================================================================
+1. SQL STATEMENT CONVERSION SUMMARY
+================================================================================
+
+Total SQL statements processed:          7
+Successfully converted by DMS MCP tool:  0
+Requiring manual intervention:           7
+  Reason: DMS statement_conversion_tool consistently failed with 
+          "Metadata model creation/conversion did not complete after 15 attempts"
+          (4 separate attempts across different statements and configurations)
+
+DMS Schema Mapping Tool: SUCCESSFUL
+  - Successfully retrieved target DDLs for Products, ProductHistory, ProductStats
+  - Schema mappings used as authoritative reference for manual conversion
+  - Target schema: productmanagement_dbo (all lowercase)
+
+Manual Conversion Approach:
+  - All schema object names (tables, columns) converted to lowercase per DMS schema mappings
+  - SCOPE_IDENTITY() -> RETURNING clause in writable CTE
+  - GETDATE() -> clock_timestamp() (matching DMS default mapping)
+  - DECLARE @var / SET @var -> restructured to writable CTEs
+  - BEGIN TRANSACTION / COMMIT -> writable CTE pattern (PostgreSQL)
+  - Window functions (LAG, RANK, PERCENT_RANK, AVG OVER) -> compatible, names lowercased
+  - Added ::NUMERIC cast for integer division in StockPercentageOfAverage calculation
+
+================================================================================
+2. SQL EQUIVALENCY VALIDATION SUMMARY
+================================================================================
+
+Total statement pairs validated:         7
+Validated as EQUIVALENT:                 0
+Validated as NOT_EQUIVALENT:             0
+Validated with EQUIVALENCY ERROR:        7
+  Error: All 7 calls returned ERROR with 'uniqueID' (systemic tool issue)
+  Note: Tool status was ERROR for ALL statements, not specific to any one statement
+
+IMPORTANT: All equivalency_status values come SOLELY from the 
+sql-equivalency___validate_sql_equivalence tool. No agent judgment was used.
+
+================================================================================
+3. CONVERTED SQL STATEMENTS
+================================================================================
+
+| # | Method                      | Key Conversions                                |
+|---|----------------------------|------------------------------------------------|
+| 1 | GetAllProductsAsync        | CTE name, table/column lowercase               |
+| 2 | GetProductByIdAsync        | CTE name, table/column lowercase               |
+| 3 | InsertProductAsync         | SCOPE_IDENTITY->RETURNING, GETDATE->clock_ts   |
+| 4 | UpdateProductAsync         | DECLARE->CTE, GETDATE->clock_timestamp()       |
+| 5 | DeleteProductAsync         | DECLARE->CTE, GETDATE->clock_timestamp()       |
+| 6 | GetProductsByPriceRangeAsync| Table/column lowercase                          |
+| 7 | GetLowStockProductsAsync   | ::NUMERIC cast, table/column lowercase          |
+
+================================================================================
+4. CODE TRANSFORMATION SUMMARY
+================================================================================
+
+Package Changes:
+  - Removed: Microsoft.Data.SqlClient 5.1.4
+  - Added:   Npgsql 8.0.1
+
+Type Replacements (ProductRepository.cs):
+  - using Microsoft.Data.SqlClient -> using Npgsql
+  - SqlConnection -> NpgsqlConnection (3 occurrences: field, return type, constructor)
+  - SqlCommand -> NpgsqlCommand (7 occurrences: one per SQL method)
+  - SqlDataReader -> NpgsqlDataReader (1 occurrence: MapProductFromReader parameter)
+
+Connection String Changes (appsettings.json):
+  - Server=localhost -> Host=localhost
+  - Added Port=5432
+  - Database=ProductManagement -> Database=postgres (per DMS target)
+  - Removed: Trusted_Connection=True, MultipleActiveResultSets=true, TrustServerCertificate=True
+  - Added: Username=postgres, Password=postgres
+
+================================================================================
+5. FILES MODIFIED
+================================================================================
+
+1. sourceCode/DataAccess/ProductRepository.cs
+   - All 7 SQL statements converted to PostgreSQL
+   - All ADO.NET types replaced with Npgsql equivalents
+   - Reader column references updated to lowercase
+
+2. sourceCode/AdoCore.csproj
+   - Microsoft.Data.SqlClient -> Npgsql package reference
+
+3. sourceCode/appsettings.json
+   - Connection strings converted to PostgreSQL format
+
+4. sourceCode/extracted_statements.sql (NEW)
+   - Catalog of all 7 original MS SQL statements
+
+5. sourceCode/converted_statements.sql (NEW)
+   - Catalog of all 7 converted PostgreSQL statements
+
+6. sourceCode/sql_equivalency_validation_report.json (NEW)
+   - Comprehensive equivalency report for all 7 statement pairs
+
+================================================================================
+6. BUILD STATUS
+================================================================================
+
+Final build: SUCCESS
+Errors: 0
+Warnings: 12 (all pre-existing nullable reference warnings, not introduced by migration)
+
+================================================================================
+7. STATEMENTS REQUIRING MANUAL REVIEW
+================================================================================
+
+All 7 statements require manual review due to:
+1. DMS statement conversion tool failures (manual conversion applied)
+2. SQL equivalency tool systemic errors (tool returned ERROR for all pairs)
+
+Specific attention recommended for:
+- Statement 3 (InsertProductAsync): Major restructuring from SCOPE_IDENTITY() to writable CTE with RETURNING
+- Statement 4 (UpdateProductAsync): Major restructuring from DECLARE variables to writable CTE pattern
+- Statement 5 (DeleteProductAsync): Major restructuring from DECLARE variables to writable CTE pattern
+
+================================================================================
