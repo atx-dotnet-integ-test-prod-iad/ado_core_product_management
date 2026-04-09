@@ -1,0 +1,131 @@
+===============================================================================
+FINAL MIGRATION SUMMARY REPORT
+Microsoft SQL Server to PostgreSQL - .NET ADO Application Migration
+===============================================================================
+Date: 2026-04-09
+Project: AdoCore (.NET 9.0)
+Source Database: Microsoft SQL Server 2019
+Target Database: PostgreSQL 13
+
+===============================================================================
+1. SQL STATEMENT CONVERSION SUMMARY
+===============================================================================
+Total SQL statements processed: 7
+Statements successfully converted by DMS MCP tool: 0
+Statements manually converted (DMS failure): 7
+  - Conversion method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+  - DMS error: "Metadata model creation failed: Unknown metadata model creation status: RECEIVED"
+  - Migration project ARN: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+
+Manual conversion rules applied:
+  - All schema object names (tables, columns, CTEs) converted to lowercase
+  - SCOPE_IDENTITY() -> RETURNING clause with CTE chain
+  - GETDATE() -> NOW()
+  - DECLARE @var / SET @var -> PostgreSQL CTE-based approach
+  - Transaction blocks (BEGIN TRANSACTION/COMMIT) -> Writable CTEs
+  - Integer division -> CAST to NUMERIC for decimal results
+
+===============================================================================
+2. SQL EQUIVALENCY VALIDATION SUMMARY
+===============================================================================
+Total statement pairs validated: 7
+Equivalent: 0
+Non-equivalent: 0
+Equivalency errors: 7
+  - Tool error: "'uniqueID'" (persistent tool error for all calls)
+  - All statuses recorded as ERROR per transformation rules
+  - NO agent judgment used for equivalency determination
+
+===============================================================================
+3. CONVERTED STATEMENTS DETAIL
+===============================================================================
+Statement 1 (GetAllProductsAsync):
+  - Type: CTE with AVG/COUNT OVER window functions, CASE, ROUND, INNER JOIN
+  - Key changes: Table/column names lowercased, SQL syntax compatible with PostgreSQL
+
+Statement 2 (GetProductByIdAsync):
+  - Type: CTE with LAG window function, CASE with ROUND, LEFT JOIN
+  - Key changes: Table/column names lowercased
+
+Statement 3 (InsertProductAsync):
+  - Type: Transaction with INSERT, SCOPE_IDENTITY(), INSERT to history, UPDATE stats
+  - Key changes: SCOPE_IDENTITY() -> INSERT...RETURNING with CTE chain, GETDATE() -> NOW()
+
+Statement 4 (UpdateProductAsync):
+  - Type: Transaction with DECLARE/SELECT INTO vars, UPDATE, INSERT history, UPDATE stats
+  - Key changes: Variables -> CTE old_values, GETDATE() -> NOW()
+
+Statement 5 (DeleteProductAsync):
+  - Type: Transaction with DECLARE/SELECT INTO vars, INSERT history, DELETE, UPDATE stats with CASE
+  - Key changes: Variables -> CTE old_values, GETDATE() -> NOW()
+
+Statement 6 (GetProductsByPriceRangeAsync):
+  - Type: CTE with RANK(), PERCENT_RANK(), BETWEEN, CASE
+  - Key changes: Table/column names lowercased
+
+Statement 7 (GetLowStockProductsAsync):
+  - Type: CTE with AVG/MIN/MAX OVER, CASE, ROUND
+  - Key changes: Table/column names lowercased, CAST(stockquantity AS NUMERIC) for integer division
+
+===============================================================================
+4. FILES MODIFIED DURING MIGRATION
+===============================================================================
+sourceCode/DataAccess/ProductRepository.cs
+  - All 7 SQL string literals converted to PostgreSQL syntax
+  - using Microsoft.Data.SqlClient -> using Npgsql
+  - SqlConnection -> NpgsqlConnection
+  - SqlCommand -> NpgsqlCommand (7 instances)
+  - SqlDataReader -> NpgsqlDataReader
+  - Column reader references lowercased (ProductId -> productid, etc.)
+
+sourceCode/AdoCore.csproj
+  - Microsoft.Data.SqlClient 5.1.4 -> Npgsql 8.0.6
+
+sourceCode/appsettings.json
+  - Server=localhost;...;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True
+    -> Host=localhost;Database=ProductManagement;Username=postgres;Password=postgres
+
+===============================================================================
+5. FILES NOT MODIFIED (verified unchanged)
+===============================================================================
+sourceCode/Program.cs - No SQL Server dependencies
+sourceCode/Business/ProductService.cs - No SQL Server dependencies
+sourceCode/CLI/CommandLineInterface.cs - No SQL Server dependencies
+sourceCode/CLI/InteractiveMenu.cs - No SQL Server dependencies
+sourceCode/Models/Product.cs - No SQL Server dependencies
+
+===============================================================================
+6. MIGRATION ARTIFACTS
+===============================================================================
+sourceCode/extracted_statements.sql - Catalog of all 7 original MS SQL statements
+sourceCode/converted_statements.sql - Catalog of all 7 converted PostgreSQL statements
+sourceCode/sql_equivalency_validation_report.json - Complete equivalency validation report
+
+===============================================================================
+7. BUILD STATUS
+===============================================================================
+Final build: SUCCESS (0 errors, 10 pre-existing nullable reference warnings)
+dotnet restore: SUCCESS
+All SQL Server references removed: VERIFIED
+All Npgsql references in place: VERIFIED
+
+===============================================================================
+8. ISSUES AND WARNINGS
+===============================================================================
+1. DMS MCP Tool Failure:
+   - All 7 DMS conversion attempts failed with metadata model creation error
+   - Root cause: Migration project identifier format/availability issue
+   - Resolution: Manual conversion with lowercase schema naming applied
+
+2. SQL Equivalency Tool Failure:
+   - All 7 equivalency validations returned ERROR with "'uniqueID'" error
+   - This appears to be a persistent tool infrastructure issue
+   - All results recorded as ERROR per transformation rules (no agent judgment)
+
+3. Connection String Credentials:
+   - Placeholder credentials (postgres/postgres) used per plan specification
+   - Should be replaced with environment variables or secure config in production
+
+===============================================================================
+END OF MIGRATION REPORT
+===============================================================================
