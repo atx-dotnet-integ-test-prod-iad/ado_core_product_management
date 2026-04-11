@@ -1,0 +1,126 @@
+================================================================================
+MIGRATION SUMMARY LOG
+SQL Server to PostgreSQL Migration for ADO.NET Core Application
+Date: 2026-04-11
+================================================================================
+
+1. MIGRATION OVERVIEW
+---------------------
+Source Database: Microsoft SQL Server 2019
+Target Database: PostgreSQL 13
+Application Framework: .NET 9.0 with ADO.NET
+Migration Tool: AWS DMS MCP (attempted), Manual conversion (applied)
+
+2. SQL STATEMENTS PROCESSED
+----------------------------
+Total statements: 7
+Successfully converted by DMS: 0 (DMS returned errors for all statements)
+Manually converted: 7 (with lowercase schema object naming)
+DMS Error: "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+
+Statement 1 - GetAllProductsAsync:
+  Type: SELECT with CTE, Window Functions (AVG OVER, COUNT OVER), CASE, ROUND, INNER JOIN
+  Conversion: Lowercase schema objects only (SQL syntax already PostgreSQL-compatible)
+
+Statement 2 - GetProductByIdAsync:
+  Type: SELECT with CTE, LAG Window Function, CASE, ROUND, LEFT JOIN
+  Conversion: Lowercase schema objects only
+  Parameters: @ProductId
+
+Statement 3 - InsertProductAsync:
+  Type: Transaction block with INSERT, SCOPE_IDENTITY(), GETDATE(), UPDATE
+  Conversion: SCOPE_IDENTITY() -> RETURNING; GETDATE() -> NOW(); 
+  Restructured from single SQL batch to multiple C# NpgsqlCommand calls within transaction
+  Parameters: @Name, @Description, @Price, @StockQuantity
+
+Statement 4 - UpdateProductAsync:
+  Type: Transaction block with DECLARE, SELECT INTO variables, UPDATE, INSERT, UPDATE
+  Conversion: GETDATE() -> NOW(); DECLARE variables -> C# variables
+  Restructured from single SQL batch to multiple C# NpgsqlCommand calls within transaction
+  Parameters: @ProductId, @Name, @Description, @Price, @StockQuantity
+
+Statement 5 - DeleteProductAsync:
+  Type: Transaction block with DECLARE, SELECT INTO variables, INSERT, DELETE, UPDATE with CASE
+  Conversion: GETDATE() -> NOW(); DECLARE variables -> C# variables
+  Restructured from single SQL batch to multiple C# NpgsqlCommand calls within transaction
+  Parameters: @ProductId
+
+Statement 6 - GetProductsByPriceRangeAsync:
+  Type: SELECT with CTE, RANK() OVER, PERCENT_RANK() OVER, BETWEEN, CASE
+  Conversion: Lowercase schema objects only
+  Parameters: @MinPrice, @MaxPrice
+
+Statement 7 - GetLowStockProductsAsync:
+  Type: SELECT with CTE, AVG/MIN/MAX OVER(), CASE, ROUND
+  Conversion: Lowercase schema objects; added ::numeric cast for integer division
+  Parameters: @Threshold
+
+3. SQL EQUIVALENCY VALIDATION
+-------------------------------
+Tool Used: sql-equivalency___validate_sql_equivalence
+Results: All 7 statement pairs returned ERROR (tool internal error: "'uniqueID'")
+Report: sql_equivalency_validation_report.json
+
+4. CODE CHANGES
+---------------
+
+4.1 ProductRepository.cs (sourceCode/DataAccess/ProductRepository.cs):
+  - using Microsoft.Data.SqlClient -> using Npgsql
+  - SqlConnection -> NpgsqlConnection (3 occurrences)
+  - SqlCommand -> NpgsqlCommand (15 occurrences)
+  - SqlDataReader -> NpgsqlDataReader (1 occurrence)
+  - 7 SQL Server SQL statements replaced with PostgreSQL equivalents
+  - Transaction methods restructured for PostgreSQL compatibility
+
+4.2 AdoCore.csproj (sourceCode/AdoCore.csproj):
+  - Removed: <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.4" />
+  - Added: <PackageReference Include="Npgsql" Version="8.0.1" />
+
+4.3 appsettings.json (sourceCode/appsettings.json):
+  - DevConnection: Server=localhost;Database=ProductManagement;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True
+    -> Host=localhost;Database=ProductManagement;Username=postgres;Password=postgres
+  - ProdConnection: Same transformation applied
+
+4.4 README.md (sourceCode/README.md):
+  - Updated all SQL Server references to PostgreSQL
+  - Updated prerequisites (PostgreSQL 13+, pgAdmin)
+  - Updated connection string examples
+  - Updated NuGet package list (Microsoft.Data.SqlClient -> Npgsql)
+  - Updated troubleshooting section
+
+5. FILES NOT CHANGED (no SQL Server specific code)
+---------------------------------------------------
+  - sourceCode/Program.cs
+  - sourceCode/Business/ProductService.cs
+  - sourceCode/Models/Product.cs
+  - sourceCode/CLI/CommandLineInterface.cs
+  - sourceCode/CLI/InteractiveMenu.cs
+
+6. ARTIFACTS GENERATED
+-----------------------
+  - sourceCode/extracted_statements.sql - Complete catalog of all original SQL statements
+  - sourceCode/converted_statements.sql - Complete catalog of all converted PostgreSQL statements
+  - sourceCode/sql_equivalency_validation_report.json - Comprehensive equivalency report
+  - sourceCode/migration_summary.log - This file
+
+7. KEY CONVERSION PATTERNS
+---------------------------
+  SQL Server               -> PostgreSQL
+  SCOPE_IDENTITY()         -> INSERT ... RETURNING productid
+  GETDATE()                -> NOW()
+  BEGIN TRANSACTION/COMMIT -> C# BeginTransactionAsync/CommitAsync
+  DECLARE @Variable        -> C# variable declarations
+  Products                 -> products (lowercase)
+  ProductId                -> productid (lowercase)
+  ProductHistory           -> producthistory (lowercase)
+  ProductStats             -> productstats (lowercase)
+  Microsoft.Data.SqlClient -> Npgsql
+  SqlConnection            -> NpgsqlConnection
+  SqlCommand               -> NpgsqlCommand
+  SqlDataReader            -> NpgsqlDataReader
+  Server=                  -> Host=
+  Trusted_Connection=True  -> Username=postgres;Password=postgres
+
+================================================================================
+END OF MIGRATION SUMMARY
+================================================================================
