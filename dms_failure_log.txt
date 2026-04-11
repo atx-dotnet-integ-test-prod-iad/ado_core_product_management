@@ -1,0 +1,112 @@
+============================================================
+DMS CONVERSION FAILURE LOG
+============================================================
+Date: 2026-04-11
+Project: AdoCore - SQL Server to PostgreSQL Migration
+DMS Tool: dms-mcp___statement_conversion_tool
+============================================================
+
+ALL 7 STATEMENTS FAILED DMS CONVERSION
+
+Common Error:
+  Status: error
+  Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+  Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+  Database: ProductManagement
+  Schema: dbo
+  Region: us-east-1
+  Server: 172.31.94.132
+
+============================================================
+STATEMENT 1: GetAllProductsAsync
+============================================================
+DMS Timestamp: 2026-04-11T06:36:53.923132
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Changes Applied:
+  - Table names: Products -> products, ProductStats -> productstats_cte (CTE alias)
+  - Column names: All lowercased (ProductId -> productid, Price -> price, etc.)
+  - Functions: ROUND syntax is compatible between SQL Server and PostgreSQL
+
+============================================================
+STATEMENT 2: GetProductByIdAsync
+============================================================
+DMS Timestamp: 2026-04-11T06:37:08.015004
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Changes Applied:
+  - Table names: Products -> products, ProductHistory -> producthistory_cte (CTE alias)
+  - Column names: All lowercased
+  - LAG window function: Compatible between SQL Server and PostgreSQL
+
+============================================================
+STATEMENT 3: InsertProductAsync
+============================================================
+DMS Timestamp: 2026-04-11T06:37:35.364367
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Changes Applied:
+  - Table names: Products -> products, ProductHistory -> producthistory, ProductStats -> productstats
+  - Column names: All lowercased
+  - SCOPE_IDENTITY() -> RETURNING productid clause
+  - GETDATE() -> NOW()
+  - Transaction block restructured: Single INSERT with RETURNING for product ID, 
+    followed by separate statements for history and stats updates
+
+============================================================
+STATEMENT 4: UpdateProductAsync
+============================================================
+DMS Timestamp: 2026-04-11T06:37:47.860940
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Changes Applied:
+  - Table names: Products -> products, ProductHistory -> producthistory, ProductStats -> productstats
+  - Column names: All lowercased
+  - DECLARE @var -> PostgreSQL variable approach using SELECT INTO within application code
+  - GETDATE() -> NOW()
+  - Transaction managed by application-level BeginTransaction
+
+============================================================
+STATEMENT 5: DeleteProductAsync
+============================================================
+DMS Timestamp: 2026-04-11T06:38:01.088742
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Changes Applied:
+  - Table names: Products -> products, ProductHistory -> producthistory, ProductStats -> productstats
+  - Column names: All lowercased
+  - DECLARE @var -> PostgreSQL variable approach using SELECT INTO within application code
+  - GETDATE() -> NOW()
+  - CASE expression: Compatible between SQL Server and PostgreSQL
+
+============================================================
+STATEMENT 6: GetProductsByPriceRangeAsync
+============================================================
+DMS Timestamp: 2026-04-11T06:38:17.277210
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Changes Applied:
+  - Table names: Products -> products
+  - Column names: All lowercased
+  - CTE name: RankedProducts -> rankedproducts
+  - RANK(), PERCENT_RANK(), BETWEEN: Compatible between SQL Server and PostgreSQL
+
+============================================================
+STATEMENT 7: GetLowStockProductsAsync
+============================================================
+DMS Timestamp: 2026-04-11T06:38:30.525627
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Changes Applied:
+  - Table names: Products -> products
+  - Column names: All lowercased
+  - CTE name: StockAnalysis -> stockanalysis
+  - AVG, MIN, MAX window functions: Compatible between SQL Server and PostgreSQL
+  - ROUND with CAST for integer division: Added explicit CAST for PostgreSQL integer division behavior
