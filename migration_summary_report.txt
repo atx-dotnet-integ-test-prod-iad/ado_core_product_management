@@ -1,0 +1,130 @@
+================================================================================
+FINAL MIGRATION SUMMARY REPORT
+SQL Server to PostgreSQL Migration for .NET ADO Application
+================================================================================
+Date: 2026-04-12
+Source Database: SQL Server 2019 (ProductManagement)
+Target Database: PostgreSQL 13
+
+================================================================================
+1. SQL STATEMENT CONVERSION SUMMARY
+================================================================================
+Total SQL Statements Processed: 7
+Successfully Converted by DMS Tool: 0
+Manually Converted (DMS Failure): 7
+DMS Error: "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+Statement Breakdown:
+1. GetAllProductsAsync - CTE with window functions (SELECT) - Manual conversion
+2. GetProductByIdAsync - CTE with LAG window function (SELECT) - Manual conversion
+3. InsertProductAsync - Transaction with SCOPE_IDENTITY (INSERT) - Manual conversion
+4. UpdateProductAsync - Transaction with DECLARE variables (UPDATE) - Manual conversion
+5. DeleteProductAsync - Transaction with DECLARE variables (DELETE) - Manual conversion
+6. GetProductsByPriceRangeAsync - CTE with RANK/PERCENT_RANK (SELECT) - Manual conversion
+7. GetLowStockProductsAsync - CTE with AVG/MIN/MAX window (SELECT) - Manual conversion
+
+================================================================================
+2. SQL EQUIVALENCY VALIDATION SUMMARY
+================================================================================
+Total Statement Pairs Validated: 7
+Equivalent: 0
+Non-Equivalent: 0
+Errors: 7
+Error Reason: All 7 validations returned {"equivalence_status": "ERROR", "error": "'uniqueID'"}
+Note: All equivalency errors are from the tool itself, not agent judgment.
+
+================================================================================
+3. KEY CONVERSION PATTERNS APPLIED
+================================================================================
+SQL Server -> PostgreSQL:
+- SCOPE_IDENTITY() -> INSERT...RETURNING productid
+- GETDATE() -> NOW()
+- BEGIN TRANSACTION...COMMIT -> C#-managed transaction with BeginTransactionAsync()
+- DECLARE @variable TYPE -> C# variables populated via separate SELECT
+- NVARCHAR(n) -> VARCHAR(n)
+- DATETIME -> TIMESTAMP
+- BIT -> BOOLEAN
+- IDENTITY(1,1) -> SERIAL
+- [dbo].[tablename] -> tablename (lowercase)
+- GO batch separators -> removed
+- IF NOT EXISTS (sys.objects/sys.databases) -> DROP IF EXISTS / CREATE IF NOT EXISTS
+- CREATE OR ALTER PROCEDURE -> CREATE OR REPLACE FUNCTION
+- SQL Server triggers (inserted/deleted) -> PostgreSQL trigger functions (NEW/OLD)
+- SYSTEM_USER -> current_user
+- SET NOCOUNT ON -> removed (not applicable in PostgreSQL)
+
+Schema Object Naming:
+- All table names lowercased: Products->products, ProductHistory->producthistory, etc.
+- All column names lowercased: ProductId->productid, StockQuantity->stockquantity, etc.
+- All alias names lowercased: AvgPrice->avgprice, PriceCategory->pricecategory, etc.
+
+================================================================================
+4. PACKAGE DEPENDENCY CHANGES
+================================================================================
+Removed: Microsoft.Data.SqlClient 5.1.4
+Added: Npgsql 8.0.6
+
+ADO.NET Class Mappings:
+- SqlConnection -> NpgsqlConnection
+- SqlCommand -> NpgsqlCommand
+- SqlDataReader -> NpgsqlDataReader
+- SqlTransaction -> NpgsqlTransaction
+
+================================================================================
+5. CONFIGURATION CHANGES
+================================================================================
+Connection Strings Updated:
+- Before: Server=localhost;Database=ProductManagement;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True
+- After:  Host=localhost;Database=ProductManagement;Username=postgres;Password=postgres;
+
+Parameters Changed:
+- Server -> Host
+- Trusted_Connection -> removed (replaced with Username/Password)
+- MultipleActiveResultSets -> removed (SQL Server specific)
+- TrustServerCertificate -> removed (SQL Server specific)
+
+================================================================================
+6. DATABASE SCRIPT CHANGES
+================================================================================
+Database/Scripts/01_InitialSetup.sql:
+- Converted to PostgreSQL syntax
+- All tables use lowercase names
+- IDENTITY -> SERIAL
+- NVARCHAR -> VARCHAR
+- DATETIME -> TIMESTAMP
+- BIT -> BOOLEAN
+- Triggers converted to PostgreSQL trigger functions
+- Stored procedures converted to PostgreSQL functions
+- GO separators removed
+- SQL Server system views replaced with PostgreSQL syntax
+
+Scripts/01_InitialSetup.sql:
+- Converted to PostgreSQL syntax (simplified version)
+- Same conversion patterns as above
+
+================================================================================
+7. FILES MODIFIED
+================================================================================
+- sourceCode/DataAccess/ProductRepository.cs (SQL statements + ADO.NET types)
+- sourceCode/AdoCore.csproj (package reference)
+- sourceCode/appsettings.json (connection strings)
+- sourceCode/Database/Scripts/01_InitialSetup.sql (full PostgreSQL conversion)
+- sourceCode/Scripts/01_InitialSetup.sql (simplified PostgreSQL conversion)
+- sourceCode/README.md (updated documentation)
+
+================================================================================
+8. BUILD STATUS
+================================================================================
+Final Build: SUCCEEDED
+Warnings: 10 (all pre-existing nullable reference warnings)
+Errors: 0
+
+================================================================================
+9. ARTIFACTS GENERATED
+================================================================================
+- extracted_statements.sql - All 7 original MS SQL statements
+- converted_statements.sql - All 7 converted PostgreSQL statements
+- dms_conversion_summary.log - DMS failure log with manual conversion details
+- sql_equivalency_validation_report.json - Comprehensive equivalency report
+- migration_summary_report.txt - This report

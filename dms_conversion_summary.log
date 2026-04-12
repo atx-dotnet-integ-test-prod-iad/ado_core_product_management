@@ -1,0 +1,105 @@
+================================================================================
+DMS Conversion Failure Summary
+================================================================================
+Date: 2026-04-12
+Source: ProductRepository.cs (DataAccess/ProductRepository.cs)
+DMS ARN: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Total Statements Attempted: 7
+Total DMS Failures: 7
+Failure Reason: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Conversion Method Used: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+================================================================================
+Statement 1: GetAllProductsAsync
+================================================================================
+DMS Attempt Timestamp: 2026-04-12T07:32:11
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion Applied: Yes
+Schema Objects Lowercased: Products->products, ProductId->productid, Price->price, 
+  Name->name, Description->description, StockQuantity->stockquantity, 
+  CreatedDate->createddate, ModifiedDate->modifieddate, AvgPrice->avgprice, 
+  TotalProducts->totalproducts, PriceCategory->pricecategory, 
+  PricePercentageOfAverage->pricepercentageofaverage, ProductStats->productstats
+SQL Server-specific syntax changes: None required (CTE, window functions, ROUND, CASE are PostgreSQL-compatible)
+
+================================================================================
+Statement 2: GetProductByIdAsync
+================================================================================
+DMS Attempt Timestamp: 2026-04-12T07:32:55
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion Applied: Yes
+Schema Objects Lowercased: Products->products, ProductId->productid, Price->price,
+  Name->name, Description->description, StockQuantity->stockquantity,
+  CreatedDate->createddate, ModifiedDate->modifieddate, PreviousPrice->previousprice,
+  PreviousStock->previousstock, PriceChangePercentage->pricechangepercentage,
+  ProductHistory->producthistory
+SQL Server-specific syntax changes: None required (LAG, ROUND, CASE are PostgreSQL-compatible)
+
+================================================================================
+Statement 3: InsertProductAsync
+================================================================================
+DMS Attempt Timestamp: 2026-04-12T07:33:09
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion Applied: Yes
+Schema Objects Lowercased: Products->products, ProductHistory->producthistory,
+  ProductStats->productstats, all column names lowercased
+SQL Server-specific syntax changes:
+  - SCOPE_IDENTITY() -> RETURNING productid
+  - GETDATE() -> NOW()
+  - BEGIN TRANSACTION -> BEGIN
+  - DECLARE @NewProductId INT -> removed (use RETURNING clause)
+  - Transaction block restructured for PostgreSQL (multi-statement batch split)
+
+================================================================================
+Statement 4: UpdateProductAsync
+================================================================================
+DMS Attempt Timestamp: 2026-04-12T07:33:24
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion Applied: Yes
+Schema Objects Lowercased: Products->products, ProductHistory->producthistory,
+  ProductStats->productstats, all column names lowercased
+SQL Server-specific syntax changes:
+  - GETDATE() -> NOW()
+  - BEGIN TRANSACTION -> BEGIN
+  - DECLARE statements handled via C# parameter approach
+
+================================================================================
+Statement 5: DeleteProductAsync
+================================================================================
+DMS Attempt Timestamp: 2026-04-12T07:33:37
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion Applied: Yes
+Schema Objects Lowercased: Products->products, ProductHistory->producthistory,
+  ProductStats->productstats, all column names lowercased
+SQL Server-specific syntax changes:
+  - GETDATE() -> NOW()
+  - BEGIN TRANSACTION -> BEGIN
+  - DECLARE statements handled via C# parameter approach
+
+================================================================================
+Statement 6: GetProductsByPriceRangeAsync
+================================================================================
+DMS Attempt Timestamp: 2026-04-12T07:33:51
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion Applied: Yes
+Schema Objects Lowercased: Products->products, all column names and aliases lowercased,
+  RankedProducts->rankedproducts
+SQL Server-specific syntax changes: None required (RANK, PERCENT_RANK, BETWEEN are PostgreSQL-compatible)
+
+================================================================================
+Statement 7: GetLowStockProductsAsync
+================================================================================
+DMS Attempt Timestamp: 2026-04-12T07:34:08
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion Applied: Yes
+Schema Objects Lowercased: Products->products, all column names and aliases lowercased,
+  StockAnalysis->stockanalysis
+SQL Server-specific syntax changes: 
+  - Added CAST(stockquantity AS DECIMAL) for proper division behavior in PostgreSQL
