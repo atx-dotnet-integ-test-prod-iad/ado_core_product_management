@@ -1,3 +1,10 @@
+-- ============================================================================
+-- NOTE: This script was originally written for Microsoft SQL Server.
+-- This application has been migrated to PostgreSQL.
+-- The SQL Server syntax below needs to be adapted for PostgreSQL.
+-- See Database/Scripts/01_InitialSetup.sql for the full setup script.
+-- ============================================================================
+
 -- Create ProductManagement Database
 IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'ProductManagement')
 BEGIN
