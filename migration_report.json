@@ -1,0 +1,169 @@
+{
+  "migration_summary": {
+    "project": "ADO.NET Core SQL Server to PostgreSQL Migration",
+    "source_database": "Microsoft SQL Server 2019",
+    "target_database": "PostgreSQL 13",
+    "migration_date": "2026-04-13",
+    "status": "COMPLETED"
+  },
+  "sql_statement_processing": {
+    "total_statements_extracted": 7,
+    "total_statements_converted": 7,
+    "dms_conversion_successes": 0,
+    "dms_conversion_failures": 7,
+    "manual_conversions": 7,
+    "dms_error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+    "dms_schema_mapping_successes": 3,
+    "dms_schema_mapping_used": true
+  },
+  "equivalency_validation": {
+    "total_pairs_validated": 7,
+    "equivalent": 0,
+    "not_equivalent": 0,
+    "error": 7,
+    "equivalency_tool_error": "'uniqueID'",
+    "note": "All equivalency validations returned ERROR due to service configuration issue. No agent judgment used."
+  },
+  "file_changes": {
+    "modified_files": [
+      {
+        "file": "DataAccess/ProductRepository.cs",
+        "changes": [
+          "Replaced 7 SQL statements with PostgreSQL equivalents",
+          "Replaced Microsoft.Data.SqlClient with Npgsql namespace",
+          "Replaced SqlConnection with NpgsqlConnection",
+          "Replaced SqlCommand with NpgsqlCommand",
+          "Replaced SqlDataReader with NpgsqlDataReader"
+        ]
+      },
+      {
+        "file": "AdoCore.csproj",
+        "changes": [
+          "Replaced Microsoft.Data.SqlClient 5.1.4 with Npgsql 8.0.6"
+        ]
+      },
+      {
+        "file": "appsettings.json",
+        "changes": [
+          "Updated connection strings from SQL Server to PostgreSQL format",
+          "Server=localhost -> Host=localhost",
+          "Added Port=5432",
+          "Database=ProductManagement -> Database=postgres",
+          "Removed Trusted_Connection, MultipleActiveResultSets, TrustServerCertificate",
+          "Added Username=postgres;Password=postgres"
+        ]
+      },
+      {
+        "file": "Database/Scripts/01_InitialSetup.sql",
+        "changes": [
+          "Converted all DDL from SQL Server to PostgreSQL syntax",
+          "IDENTITY -> GENERATED ALWAYS AS IDENTITY",
+          "nvarchar -> VARCHAR",
+          "bit -> BOOLEAN",
+          "datetime -> TIMESTAMP WITHOUT TIME ZONE",
+          "GETDATE() -> NOW()",
+          "Removed GO delimiters",
+          "Converted IF EXISTS patterns",
+          "Converted stored procedures to PostgreSQL functions",
+          "Converted trigger syntax to PostgreSQL",
+          "SYSTEM_USER -> current_user"
+        ]
+      },
+      {
+        "file": "Scripts/01_InitialSetup.sql",
+        "changes": [
+          "Converted DDL from SQL Server to PostgreSQL syntax",
+          "Converted stored procedures to PostgreSQL functions",
+          "Converted conditional sample data insertion"
+        ]
+      },
+      {
+        "file": "README.md",
+        "changes": [
+          "Updated all references from SQL Server to PostgreSQL",
+          "Updated prerequisites section",
+          "Updated connection string examples",
+          "Updated NuGet package references",
+          "Updated troubleshooting section"
+        ]
+      }
+    ],
+    "created_files": [
+      "extracted_statements.sql",
+      "converted_statements.sql",
+      "sql_equivalency_validation_report.json",
+      "dms_conversion_summary.txt",
+      "migration_report.json"
+    ]
+  },
+  "sql_conversion_details": [
+    {
+      "id": 1,
+      "method": "GetAllProductsAsync",
+      "type": "SELECT with CTE, window functions, CASE, ROUND, INNER JOIN",
+      "conversion": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "key_changes": ["Table/column names lowercase", "CTE alias renamed to avoid conflict with table name"]
+    },
+    {
+      "id": 2,
+      "method": "GetProductByIdAsync",
+      "type": "SELECT with CTE, LAG window function, parameterized",
+      "conversion": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "key_changes": ["Table/column names lowercase", "CTE alias renamed"]
+    },
+    {
+      "id": 3,
+      "method": "InsertProductAsync",
+      "type": "Transaction block with DECLARE, INSERT, SCOPE_IDENTITY(), GETDATE()",
+      "conversion": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "key_changes": ["SCOPE_IDENTITY() -> RETURNING clause", "GETDATE() -> NOW()", "DECLARE removed -> writable CTE", "Transaction block -> writable CTE"]
+    },
+    {
+      "id": 4,
+      "method": "UpdateProductAsync",
+      "type": "Transaction block with DECLARE, SELECT into variables, UPDATE",
+      "conversion": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "key_changes": ["DECLARE -> CTE subquery", "GETDATE() -> NOW()", "Transaction block -> writable CTE"]
+    },
+    {
+      "id": 5,
+      "method": "DeleteProductAsync",
+      "type": "Transaction block with DECLARE, DELETE, UPDATE stats with CASE",
+      "conversion": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "key_changes": ["DECLARE -> CTE subquery", "GETDATE() -> NOW()", "Transaction block -> writable CTE", "CASE preserved"]
+    },
+    {
+      "id": 6,
+      "method": "GetProductsByPriceRangeAsync",
+      "type": "SELECT with CTE, RANK/PERCENT_RANK, parameterized",
+      "conversion": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "key_changes": ["Table/column names lowercase"]
+    },
+    {
+      "id": 7,
+      "method": "GetLowStockProductsAsync",
+      "type": "SELECT with CTE, AVG/MIN/MAX window functions, ROUND",
+      "conversion": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "key_changes": ["Table/column names lowercase", "Added ::NUMERIC cast for integer division"]
+    }
+  ],
+  "dependency_changes": {
+    "removed": [
+      {"package": "Microsoft.Data.SqlClient", "version": "5.1.4"}
+    ],
+    "added": [
+      {"package": "Npgsql", "version": "8.0.6", "note": "Used 8.0.6 instead of 8.0.0 to address GHSA-x9vc-6hfv-hg8c vulnerability"}
+    ],
+    "unchanged": [
+      {"package": "Microsoft.Extensions.Configuration", "version": "8.0.0"},
+      {"package": "Microsoft.Extensions.Configuration.Json", "version": "8.0.0"},
+      {"package": "Microsoft.Extensions.DependencyInjection", "version": "8.0.0"}
+    ]
+  },
+  "build_status": {
+    "final_build": "SUCCESS",
+    "errors": 0,
+    "warnings": 10,
+    "warning_note": "All warnings are pre-existing nullable reference type warnings (CS8601, CS8618, CS8603, CS8600, CS8625)"
+  }
+}

@@ -1,0 +1,47 @@
+== DMS Conversion Failure Summary ==
+
+DMS Tool: dms-mcp___statement_conversion_tool
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Database: ProductManagement
+Schema: dbo
+
+== DMS Error ==
+All 5 DMS conversion attempts failed with the same error:
+Error: "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+The metadata model creation gets stuck in RECEIVED state and never progresses.
+
+== DMS Schema Mapping (Successful) ==
+The dms-mcp___schema_mapping_tool was successfully used to retrieve target schema mappings:
+- Products -> products (schema: productmanagement_dbo)
+- ProductHistory -> producthistory (schema: productmanagement_dbo)
+- ProductStats -> productstats (schema: productmanagement_dbo)
+- All column names converted to lowercase
+- IDENTITY -> GENERATED ALWAYS AS IDENTITY
+- nvarchar -> VARCHAR
+- decimal -> NUMERIC
+- datetime -> TIMESTAMP WITHOUT TIME ZONE
+- getdate() -> clock_timestamp()
+
+== Manual Conversion Applied ==
+All 7 statements were manually converted following the DMS schema mapping rules:
+1. All table names converted to lowercase
+2. All column names converted to lowercase
+3. GETDATE() -> NOW()
+4. SCOPE_IDENTITY() -> RETURNING clause
+5. DECLARE @var -> CTE subqueries
+6. Transaction blocks -> Writable CTEs
+7. Integer division -> ::NUMERIC cast added
+
+== SQL Equivalency Tool ==
+All 7 statement pairs were submitted to sql-equivalency___validate_sql_equivalence.
+All returned ERROR with: "'uniqueID'"
+This appears to be a service configuration issue, not related to the SQL content.
+
+== Statements Processed ==
+1. GetAllProductsAsync - DMS FAILED - Manual conversion applied
+2. GetProductByIdAsync - DMS FAILED - Manual conversion applied
+3. InsertProductAsync - DMS FAILED - Manual conversion applied
+4. UpdateProductAsync - DMS FAILED - Manual conversion applied
+5. DeleteProductAsync - DMS FAILED - Manual conversion applied
+6. GetProductsByPriceRangeAsync - DMS FAILED - Manual conversion applied
+7. GetLowStockProductsAsync - DMS FAILED - Manual conversion applied
