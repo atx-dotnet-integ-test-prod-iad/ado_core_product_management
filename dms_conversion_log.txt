@@ -1,0 +1,78 @@
+============================================================
+DMS Conversion Failure Log
+============================================================
+Date: 2026-04-14
+Migration Project ARN: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Region: us-east-1
+Schema: dbo
+Database: ProductManagement
+
+============================================================
+Error Details (Consistent across all 7 statements)
+============================================================
+DMS Status: error
+DMS Error Message: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Workflow Step Failed: create_metadata_model
+
+All 7 SQL statements were attempted through DMS with multiple retry configurations:
+- Attempt 1: default settings (15 attempts, 10s interval)
+- Attempt 2: extended settings (30 attempts, 15s interval) 
+- Attempt 3: max settings (40 attempts, 20s interval)
+
+All attempts returned the same error. The metadata model creation step is stuck in 'RECEIVED' status.
+
+NOTE: DMS schema_mapping_tool was successful and returned proper schema mappings:
+- Products -> productmanagement_dbo.products
+- ProductHistory -> productmanagement_dbo.producthistory
+- ProductStats -> productmanagement_dbo.productstats
+
+============================================================
+Conversion Approach Applied
+============================================================
+Per transformation definition: "ONLY IF DMS FAILS: Use your own judgment to convert the statement, 
+applying lowercase schema object names"
+
+Conversion method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Schema mapping: Applied from DMS schema_mapping_tool results (productmanagement_dbo.*)
+
+Key conversions applied:
+1. Table names: Products -> productmanagement_dbo.products, ProductHistory -> productmanagement_dbo.producthistory, ProductStats -> productmanagement_dbo.productstats
+2. Column names: All converted to lowercase (ProductId -> productid, Name -> name, etc.)
+3. SCOPE_IDENTITY() -> currval(pg_get_serial_sequence('productmanagement_dbo.products', 'productid'))
+4. GETDATE() -> NOW()
+5. BEGIN TRANSACTION -> BEGIN
+6. DECLARE @var / SET @var -> Replaced with subqueries or currval()
+7. CTE aliases renamed to avoid conflicts with table names (ProductStats -> productstats_cte, ProductHistory -> producthistory_cte)
+8. Integer division in ROUND -> Added ::numeric cast
+
+============================================================
+Statement-by-Statement Log
+============================================================
+
+Statement 1 (GetAllProductsAsync):
+  DMS Attempt: FAILED - Metadata model creation failed
+  Manual Conversion: Applied lowercase schema mapping + CTE alias rename
+
+Statement 2 (GetProductByIdAsync):
+  DMS Attempt: FAILED - Metadata model creation failed
+  Manual Conversion: Applied lowercase schema mapping + CTE alias rename
+
+Statement 3 (InsertProductAsync):
+  DMS Attempt: FAILED - Metadata model creation failed
+  Manual Conversion: SCOPE_IDENTITY() -> currval(), GETDATE() -> NOW(), removed DECLARE/SET
+
+Statement 4 (UpdateProductAsync):
+  DMS Attempt: FAILED - Metadata model creation failed
+  Manual Conversion: Removed DECLARE, used subqueries for old values, GETDATE() -> NOW()
+
+Statement 5 (DeleteProductAsync):
+  DMS Attempt: FAILED - Metadata model creation failed
+  Manual Conversion: Removed DECLARE, used subqueries for old values, GETDATE() -> NOW()
+
+Statement 6 (GetProductsByPriceRangeAsync):
+  DMS Attempt: FAILED - Metadata model creation failed
+  Manual Conversion: Applied lowercase schema mapping
+
+Statement 7 (GetLowStockProductsAsync):
+  DMS Attempt: FAILED - Metadata model creation failed
+  Manual Conversion: Applied lowercase schema mapping + numeric cast for ROUND
