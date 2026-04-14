@@ -1,0 +1,103 @@
+{
+  "migration_summary": {
+    "source_database": "Microsoft SQL Server 2019",
+    "target_database": "PostgreSQL 13",
+    "application_framework": ".NET 9.0 with ADO.NET",
+    "migration_date": "2026-04-14"
+  },
+  "sql_statement_processing": {
+    "total_statements_processed": 7,
+    "statements_converted_by_dms": 0,
+    "statements_requiring_manual_intervention": 7,
+    "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+    "manual_conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA"
+  },
+  "sql_equivalency_validation": {
+    "total_pairs_validated": 7,
+    "statements_validated_as_equivalent": 0,
+    "statements_validated_as_non_equivalent": 0,
+    "statements_with_equivalency_errors": 7,
+    "equivalency_tool_error": "'uniqueID'",
+    "note": "All equivalency statuses come directly from the sql-equivalency___validate_sql_equivalence tool. No agent judgment was used."
+  },
+  "files_modified": [
+    {
+      "file": "sourceCode/DataAccess/ProductRepository.cs",
+      "changes": [
+        "Replaced all 7 SQL statements with PostgreSQL equivalents",
+        "Restructured transaction blocks (Insert, Update, Delete) to use C#-managed transactions",
+        "Replaced using Microsoft.Data.SqlClient with using Npgsql",
+        "Replaced SqlConnection with NpgsqlConnection (3 occurrences)",
+        "Replaced SqlCommand with NpgsqlCommand (15 occurrences)",
+        "Replaced SqlDataReader with NpgsqlDataReader (1 occurrence)",
+        "Replaced SqlTransaction with NpgsqlTransaction (11 occurrences)",
+        "Updated column name references in MapProductFromReader to lowercase"
+      ]
+    },
+    {
+      "file": "sourceCode/AdoCore.csproj",
+      "changes": [
+        "Removed Microsoft.Data.SqlClient v5.1.4",
+        "Added Npgsql v8.0.0"
+      ]
+    },
+    {
+      "file": "sourceCode/appsettings.json",
+      "changes": [
+        "Converted connection strings from SQL Server to PostgreSQL format",
+        "Removed SQL Server-specific parameters (Trusted_Connection, MultipleActiveResultSets, TrustServerCertificate)",
+        "Added PostgreSQL parameters (Host, Username, Password)"
+      ]
+    },
+    {
+      "file": "sourceCode/Database/Scripts/01_InitialSetup.sql",
+      "changes": [
+        "Full conversion from SQL Server to PostgreSQL syntax",
+        "Tables, triggers, stored procedures all converted"
+      ]
+    },
+    {
+      "file": "sourceCode/Scripts/01_InitialSetup.sql",
+      "changes": [
+        "Full conversion from SQL Server to PostgreSQL syntax",
+        "Tables and stored procedures converted"
+      ]
+    },
+    {
+      "file": "sourceCode/README.md",
+      "changes": [
+        "Updated all references from SQL Server to PostgreSQL",
+        "Updated connection string examples, prerequisites, troubleshooting"
+      ]
+    }
+  ],
+  "package_dependency_changes": {
+    "removed": {
+      "package": "Microsoft.Data.SqlClient",
+      "version": "5.1.4"
+    },
+    "added": {
+      "package": "Npgsql",
+      "version": "8.0.0"
+    }
+  },
+  "connection_string_changes": {
+    "original_format": "Server=localhost;Database=ProductManagement;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True",
+    "converted_format": "Host=localhost;Database=ProductManagement;Username=postgres;Password=postgres",
+    "parameters_removed": ["Trusted_Connection", "MultipleActiveResultSets", "TrustServerCertificate"],
+    "parameters_added": ["Host", "Username", "Password"],
+    "parameters_renamed": {"Server": "Host"}
+  },
+  "transformation_artifacts": [
+    "sourceCode/extracted_statements.sql",
+    "sourceCode/converted_statements.sql",
+    "sourceCode/sql_equivalency_validation_report.json",
+    "sourceCode/migration_log.md",
+    "sourceCode/migration_report.json"
+  ],
+  "build_status": {
+    "final_build": "SUCCESS",
+    "errors": 0,
+    "warnings": "Pre-existing nullability warnings only"
+  }
+}
