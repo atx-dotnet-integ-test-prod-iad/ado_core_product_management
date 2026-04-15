@@ -1,0 +1,63 @@
+DMS MCP Tool Conversion Log
+============================
+Date: 2026-04-15
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Database: ProductManagement
+Schema: dbo
+Region: us-east-1
+
+SUMMARY: All 7 DMS conversion attempts FAILED with the same error.
+Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+All statements manually converted with lowercase schema object names per DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA protocol.
+
+=== Statement 1: GetAllProductsAsync ===
+DMS Attempt Timestamp: 2026-04-15T07:21:44
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: Applied lowercase schema objects, no SQL-Server-specific syntax changes needed
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+=== Statement 2: GetProductByIdAsync ===
+DMS Attempt Timestamp: 2026-04-15T07:22:15
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: Applied lowercase schema objects, no SQL-Server-specific syntax changes needed
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+=== Statement 3: InsertProductAsync ===
+DMS Attempt Timestamp: 2026-04-15T07:22:31
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: SCOPE_IDENTITY() -> INSERT...RETURNING with CTE; GETDATE() -> NOW(); 
+  BEGIN TRANSACTION/COMMIT -> writable CTE for atomicity; DECLARE/SET removed; lowercase schema objects
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+=== Statement 4: UpdateProductAsync ===
+DMS Attempt Timestamp: 2026-04-15T07:22:45
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: DECLARE/SET variables -> CTE subqueries; GETDATE() -> NOW(); 
+  BEGIN TRANSACTION/COMMIT -> writable CTE for atomicity; lowercase schema objects
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+=== Statement 5: DeleteProductAsync ===
+DMS Attempt Timestamp: 2026-04-15T07:23:03
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: DECLARE/SET variables -> CTE subqueries; GETDATE() -> NOW(); 
+  BEGIN TRANSACTION/COMMIT -> writable CTE for atomicity; lowercase schema objects
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+=== Statement 6: GetProductsByPriceRangeAsync ===
+DMS Attempt Timestamp: 2026-04-15T07:23:17
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: Applied lowercase schema objects, no SQL-Server-specific syntax changes needed
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+=== Statement 7: GetLowStockProductsAsync ===
+DMS Attempt Timestamp: 2026-04-15T07:23:32
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion: Applied lowercase schema objects; added CAST for integer division in ROUND
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
