@@ -1,0 +1,53 @@
+============================================================
+DMS Conversion Failure Summary
+============================================================
+All 7 SQL statements were passed through the DMS MCP tool (dms-mcp___statement_conversion_tool)
+and all failed with the same error.
+
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+DMS Parameters Used:
+  - database_name: ProductManagement
+  - schema_name: dbo
+  - region: us-east-1 (default)
+  - migration_project_identifier: auto-detected from qtransform-generated-input.json
+
+============================================================
+Statement 1 (GetAllProductsAsync):
+  DMS Status: error
+  DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+  Manual Conversion: Applied lowercase schema object names, standard SQL syntax preserved
+
+Statement 2 (GetProductByIdAsync):
+  DMS Status: error
+  DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+  Manual Conversion: Applied lowercase schema object names, standard SQL syntax preserved
+
+Statement 3 (InsertProductAsync):
+  DMS Status: error
+  DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+  Manual Conversion: SCOPE_IDENTITY() -> RETURNING + currval(), GETDATE() -> NOW(), 
+                     DECLARE/SET restructured for PostgreSQL DO block, lowercase schema objects
+
+Statement 4 (UpdateProductAsync):
+  DMS Status: error
+  DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+  Manual Conversion: DECLARE restructured for PostgreSQL DO block, GETDATE() -> NOW(), 
+                     SELECT INTO variable syntax adapted, lowercase schema objects
+
+Statement 5 (DeleteProductAsync):
+  DMS Status: error
+  DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+  Manual Conversion: DECLARE restructured for PostgreSQL DO block, GETDATE() -> NOW(), 
+                     SELECT INTO variable syntax adapted, lowercase schema objects
+
+Statement 6 (GetProductsByPriceRangeAsync):
+  DMS Status: error
+  DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+  Manual Conversion: Applied lowercase schema object names, standard SQL syntax preserved
+
+Statement 7 (GetLowStockProductsAsync):
+  DMS Status: error
+  DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+  Manual Conversion: Applied lowercase schema object names, added ::numeric cast for integer division in ROUND,
+                     standard SQL syntax preserved
+============================================================
