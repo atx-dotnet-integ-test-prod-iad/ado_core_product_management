@@ -1,0 +1,161 @@
+============================================================
+FINAL MIGRATION REPORT
+SQL Server to PostgreSQL Migration for .NET ADO Application
+============================================================
+Date: 2026-04-16
+Project: AdoCore (ProductManagement Application)
+Source: Microsoft SQL Server 2019 / Microsoft.Data.SqlClient 5.1.4
+Target: PostgreSQL 13 / Npgsql 8.0.0
+
+============================================================
+1. SQL STATEMENT MIGRATION SUMMARY
+============================================================
+Total SQL Statements Processed: 7
+Statements Successfully Converted by DMS Tool: 0
+Statements Requiring Manual Conversion (DMS Failed): 7
+DMS Failure Reason: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+SQL Equivalency Validation Results:
+  - Statements Validated as EQUIVALENT: 0
+  - Statements Validated as NOT_EQUIVALENT: 0
+  - Statements with Equivalency ERROR: 7
+  - Equivalency Tool Error: {'equivalence_status': 'ERROR', 'error': "'uniqueID'"}
+
+Note: All equivalency statuses come exclusively from the SQL Equivalency tool output.
+No agent judgment was used to determine equivalency.
+
+============================================================
+2. SQL STATEMENT CONVERSION DETAILS
+============================================================
+Statement 1 (GetAllProductsAsync):
+  - Type: CTE with window functions (AVG OVER, COUNT OVER), CASE, ROUND, INNER JOIN
+  - Key Changes: Schema objects lowercased
+  - PostgreSQL Compatibility: High (CTEs, window functions, CASE, ROUND all compatible)
+
+Statement 2 (GetProductByIdAsync):
+  - Type: CTE with LAG window function, LEFT JOIN, CASE with NULL handling
+  - Key Changes: Schema objects lowercased, CTE renamed from ProductHistory to producthistory_cte
+  - PostgreSQL Compatibility: High (LAG, LEFT JOIN, CASE all compatible)
+
+Statement 3 (InsertProductAsync):
+  - Type: Transaction block with DECLARE, INSERT, SCOPE_IDENTITY(), GETDATE()
+  - Key Changes: 
+    * SCOPE_IDENTITY() -> RETURNING productid
+    * GETDATE() -> NOW()
+    * DECLARE @variable syntax removed (restructured as separate SQL commands)
+    * BEGIN TRANSACTION/COMMIT -> App-level NpgsqlTransaction
+  - PostgreSQL Compatibility: Required significant restructuring
+
+Statement 4 (UpdateProductAsync):
+  - Type: Transaction block with DECLARE variables, SELECT INTO variables, UPDATE, GETDATE()
+  - Key Changes:
+    * DECLARE @variable/SELECT INTO @variable -> Separate SELECT query
+    * GETDATE() -> NOW()
+    * Transaction moved to app-level
+  - PostgreSQL Compatibility: Required significant restructuring
+
+Statement 5 (DeleteProductAsync):
+  - Type: Transaction block with DECLARE, DELETE, CASE in UPDATE, GETDATE()
+  - Key Changes:
+    * Same as Statement 4 for variable handling
+    * GETDATE() -> NOW()
+    * CASE in UPDATE preserved (compatible)
+  - PostgreSQL Compatibility: Required significant restructuring
+
+Statement 6 (GetProductsByPriceRangeAsync):
+  - Type: CTE with RANK, PERCENT_RANK window functions, BETWEEN, CASE
+  - Key Changes: Schema objects lowercased
+  - PostgreSQL Compatibility: High (RANK, PERCENT_RANK, BETWEEN all compatible)
+
+Statement 7 (GetLowStockProductsAsync):
+  - Type: CTE with AVG/MIN/MAX OVER window functions, CASE, ROUND
+  - Key Changes: Schema objects lowercased, added CAST(stockquantity AS DECIMAL) for integer division
+  - PostgreSQL Compatibility: High (window functions, CASE compatible; integer division fix required)
+
+============================================================
+3. PACKAGE DEPENDENCY CHANGES
+============================================================
+Removed: Microsoft.Data.SqlClient 5.1.4
+Added:   Npgsql 8.0.0
+
+============================================================
+4. ADO.NET CLASS REPLACEMENTS
+============================================================
+SqlConnection     -> NpgsqlConnection    (3 occurrences)
+SqlCommand        -> NpgsqlCommand       (15 occurrences)
+SqlDataReader     -> NpgsqlDataReader    (1 occurrence)
+SqlTransaction    -> NpgsqlTransaction   (11 occurrences, via cast)
+using Microsoft.Data.SqlClient -> using Npgsql (1 occurrence)
+
+============================================================
+5. CONNECTION STRING CHANGES
+============================================================
+Before (SQL Server):
+  Server=localhost;Database=ProductManagement;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True
+
+After (PostgreSQL):
+  Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=postgres;
+
+Parameters Mapped:
+  Server= -> Host=
+  Database=ProductManagement -> Database=postgres
+  Port=5432 (added)
+  Username=postgres (added, placeholder)
+  Password=postgres (added, placeholder)
+  
+Parameters Removed (SQL Server specific):
+  Trusted_Connection=True
+  MultipleActiveResultSets=true
+  TrustServerCertificate=True
+
+============================================================
+6. FILES MODIFIED
+============================================================
+1. sourceCode/AdoCore.csproj - Package reference update
+2. sourceCode/DataAccess/ProductRepository.cs - SQL statements, ADO.NET classes, using directive
+3. sourceCode/appsettings.json - Connection strings
+
+============================================================
+7. FILES UNCHANGED
+============================================================
+1. sourceCode/Program.cs - No SQL Server imports (uses DI only)
+2. sourceCode/Business/ProductService.cs - Business logic layer, no database references
+3. sourceCode/CLI/CommandLineInterface.cs - UI layer, no database references
+4. sourceCode/CLI/InteractiveMenu.cs - UI layer, no database references
+5. sourceCode/Models/Product.cs - Model class, no database references
+
+============================================================
+8. MIGRATION ARTIFACTS
+============================================================
+1. extracted_statements.sql - All 7 original MS SQL statements
+2. converted_statements.sql - All 7 converted PostgreSQL statements
+3. sql_equivalency_validation_report.json - Complete equivalency validation report
+4. dms_failure_summary.txt - DMS conversion failure documentation
+5. migration_report.txt - This report
+
+============================================================
+9. BUILD VERIFICATION
+============================================================
+Final Build: SUCCEEDED
+Errors: 0
+Warnings: 12 (pre-existing nullable reference type warnings, not related to migration)
+Target Framework: .NET 9.0
+
+============================================================
+10. KNOWN ISSUES / MANUAL REVIEW NEEDED
+============================================================
+1. DMS Tool Unavailable: All 7 SQL statements failed DMS conversion due to 
+   "Metadata model creation failed" error. Manual conversion was applied.
+   
+2. SQL Equivalency Tool Unavailable: All 7 statement pairs returned ERROR from 
+   the equivalency tool due to 'uniqueID' service error. Manual review of 
+   statement equivalency is recommended.
+   
+3. Connection String Credentials: Placeholder credentials (postgres/postgres) 
+   are used. Production credentials should be configured via environment variables
+   or secure configuration.
+
+4. Integer Division: Statement 7 (GetLowStockProductsAsync) required explicit 
+   CAST(stockquantity AS DECIMAL) to prevent PostgreSQL integer division 
+   truncation, which differs from SQL Server behavior.

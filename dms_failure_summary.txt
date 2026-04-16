@@ -1,0 +1,96 @@
+============================================================
+DMS Conversion Failure Summary
+============================================================
+Date: 2026-04-16
+DMS Migration Project ARN: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Schema: dbo
+Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+
+All 7 SQL statements failed DMS conversion with the same error.
+Manual conversion was applied using DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA methodology.
+
+============================================================
+Statement 1: GetAllProductsAsync
+============================================================
+DMS Attempt: Failed
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion Applied: Yes
+Conversion Notes: 
+  - Schema objects lowercased (Products->products, ProductStats CTE alias->productstats)
+  - Column names lowercased (ProductId->productid, etc.)
+  - ROUND, AVG OVER, COUNT OVER, CASE, INNER JOIN are PostgreSQL compatible - no syntax changes needed
+
+============================================================
+Statement 2: GetProductByIdAsync
+============================================================
+DMS Attempt: Failed
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion Applied: Yes
+Conversion Notes:
+  - Schema objects lowercased
+  - CTE name changed from ProductHistory to producthistory_cte (to avoid conflict with table name producthistory)
+  - LAG window function is PostgreSQL compatible
+  - ROUND, CASE with NULL handling are compatible
+
+============================================================
+Statement 3: InsertProductAsync
+============================================================
+DMS Attempt: Failed
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion Applied: Yes
+Conversion Notes:
+  - SCOPE_IDENTITY() replaced with RETURNING productid clause on INSERT
+  - GETDATE() replaced with NOW()
+  - DECLARE @variable syntax not supported in PostgreSQL - restructured as separate statements
+  - Transaction management moved to application layer (NpgsqlTransaction)
+  - Schema objects lowercased
+
+============================================================
+Statement 4: UpdateProductAsync
+============================================================
+DMS Attempt: Failed
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion Applied: Yes
+Conversion Notes:
+  - DECLARE @variable/SELECT INTO @variable syntax not supported - restructured as separate SELECT query
+  - GETDATE() replaced with NOW()
+  - Transaction management moved to application layer
+  - Schema objects lowercased
+
+============================================================
+Statement 5: DeleteProductAsync
+============================================================
+DMS Attempt: Failed
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion Applied: Yes
+Conversion Notes:
+  - Same as Statement 4 for DECLARE/variable handling
+  - GETDATE() replaced with NOW()
+  - CASE in UPDATE is PostgreSQL compatible
+  - Transaction management moved to application layer
+  - Schema objects lowercased
+
+============================================================
+Statement 6: GetProductsByPriceRangeAsync
+============================================================
+DMS Attempt: Failed
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion Applied: Yes
+Conversion Notes:
+  - Schema objects lowercased
+  - RANK(), PERCENT_RANK() window functions are PostgreSQL compatible
+  - BETWEEN operator is compatible
+  - CASE expression is compatible
+
+============================================================
+Statement 7: GetLowStockProductsAsync
+============================================================
+DMS Attempt: Failed
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion Applied: Yes
+Conversion Notes:
+  - Schema objects lowercased
+  - AVG/MIN/MAX OVER() window functions are PostgreSQL compatible
+  - Added CAST(stockquantity AS DECIMAL) for integer division fix in PostgreSQL
+  - ROUND function is compatible
+  - CASE expression is compatible
