@@ -1,0 +1,60 @@
+== DMS Conversion Failure Summary ==
+Date: 2026-04-18
+Migration Project ARN: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+
+== DMS Error ==
+All 7 SQL statements failed DMS conversion with the same error:
+Error: "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+The error occurred at the metadata model creation step, before any SQL conversion could take place.
+Multiple retry attempts were made with different poll intervals (10s, 15s, 20s) and max poll attempts (15, 30, 45).
+
+== Conversion Approach ==
+Per transformation definition rules, manual conversion was applied with:
+- Reason: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+- All schema object names (tables, columns, views) converted to lowercase
+- SCOPE_IDENTITY() replaced with currval(pg_get_serial_sequence(...))
+- GETDATE() replaced with NOW()
+- BEGIN TRANSACTION replaced with BEGIN
+- DECLARE @var / SET @var patterns replaced with subquery approaches
+- INT division handled with CAST(... AS DECIMAL) where needed
+
+== Statement-by-Statement DMS Attempts ==
+
+Statement 1 (GetAllProductsAsync):
+  DMS Input: CTE with AVG/COUNT OVER(), CASE, ROUND, INNER JOIN, ORDER BY
+  DMS Output: Error - Metadata model creation failed
+  Manual Conversion: Lowercase schema names, CTE renamed to productstats_cte
+
+Statement 2 (GetProductByIdAsync):
+  DMS Input: CTE with LAG OVER(), CASE, ROUND, LEFT JOIN, parameterized WHERE
+  DMS Output: Error - Metadata model creation failed
+  Manual Conversion: Lowercase schema names, CTE renamed to producthistory_cte
+
+Statement 3 (InsertProductAsync):
+  DMS Input: DECLARE, BEGIN TRANSACTION, INSERT, SCOPE_IDENTITY(), GETDATE(), UPDATE, SELECT
+  DMS Output: Error - Metadata model creation failed
+  Manual Conversion: Restructured to use currval() for identity, BEGIN instead of BEGIN TRANSACTION, NOW() for GETDATE()
+
+Statement 4 (UpdateProductAsync):
+  DMS Input: BEGIN TRANSACTION, DECLARE, SELECT INTO vars, UPDATE, INSERT, UPDATE stats
+  DMS Output: Error - Metadata model creation failed
+  Manual Conversion: Restructured to use INSERT...SELECT for history capture (eliminating variables), NOW() for GETDATE()
+
+Statement 5 (DeleteProductAsync):
+  DMS Input: BEGIN TRANSACTION, DECLARE, SELECT INTO vars, INSERT history, DELETE, UPDATE with CASE
+  DMS Output: Error - Metadata model creation failed
+  Manual Conversion: Restructured to use INSERT...SELECT for history capture, subquery for stats update
+
+Statement 6 (GetProductsByPriceRangeAsync):
+  DMS Input: CTE with RANK(), PERCENT_RANK(), BETWEEN, CASE
+  DMS Output: Error - Metadata model creation failed
+  Manual Conversion: Lowercase schema names, compatible syntax (window functions supported in PostgreSQL)
+
+Statement 7 (GetLowStockProductsAsync):
+  DMS Input: CTE with AVG/MIN/MAX OVER(), CASE, ROUND
+  DMS Output: Error - Metadata model creation failed
+  Manual Conversion: Lowercase schema names, added CAST for integer division fix
+
+== SQL Equivalency Validation ==
+All 7 statement pairs were submitted to the SQL Equivalency tool.
+All 7 returned ERROR with: "'uniqueID'" - infrastructure issue in the equivalency tool.
