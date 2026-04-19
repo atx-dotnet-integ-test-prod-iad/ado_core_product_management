@@ -1,0 +1,110 @@
+==============================================================================
+MIGRATION LOG - SQL Server to PostgreSQL
+Date: 2026-04-19
+Source: DataAccess/ProductRepository.cs
+Total SQL Statements: 7
+==============================================================================
+
+DMS TOOL STATUS: ALL CALLS FAILED
+DMS Error (consistent across all 7 statements):
+  "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+  Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+  Region: us-east-1
+  Schema: dbo
+
+All statements were manually converted with lowercase schema object names per
+the DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA protocol.
+
+SQL EQUIVALENCY TOOL STATUS: ALL CALLS RETURNED ERROR
+Equivalency Error (consistent across all 7 statements):
+  {"equivalence_status": "ERROR", "error": "'uniqueID'"}
+Note: Per transformation rules, all are marked as ERROR. No agent judgment used.
+
+==============================================================================
+STATEMENT-BY-STATEMENT LOG
+==============================================================================
+
+--- Statement 1: GetAllProductsAsync ---
+Source Location: ProductRepository.cs, GetAllProductsAsync method (~lines 44-66)
+DMS Attempt: FAILED - Metadata model creation failed
+DMS Timestamp: 2026-04-19T14:56:32
+Manual Conversion: Applied lowercase schema names
+Key Changes: Table/column names lowercased (Products->products, ProductId->productid, etc.)
+SQL Syntax: CTE with window functions - compatible between MSSQL and PostgreSQL
+Equivalency Check: ERROR (tool returned error "'uniqueID'")
+
+--- Statement 2: GetProductByIdAsync ---
+Source Location: ProductRepository.cs, GetProductByIdAsync method (~lines 76-100)
+DMS Attempt: FAILED - Metadata model creation failed
+DMS Timestamp: 2026-04-19T14:57:16
+Manual Conversion: Applied lowercase schema names
+Key Changes: Table/column names lowercased, LAG window function compatible
+Equivalency Check: ERROR (tool returned error "'uniqueID'")
+
+--- Statement 3: InsertProductAsync ---
+Source Location: ProductRepository.cs, InsertProductAsync method (~lines 110-130)
+DMS Attempt: FAILED - Metadata model creation failed
+DMS Timestamp: 2026-04-19T14:57:31
+Manual Conversion: Applied lowercase schema names + structural changes
+Key Changes:
+  - SCOPE_IDENTITY() -> RETURNING clause in CTE
+  - GETDATE() -> NOW()
+  - BEGIN TRANSACTION/COMMIT -> Writable CTE pattern
+  - DECLARE @var / SET @var -> Eliminated via CTE structure
+  - Table/column names lowercased
+Equivalency Check: ERROR (tool returned error "'uniqueID'")
+
+--- Statement 4: UpdateProductAsync ---
+Source Location: ProductRepository.cs, UpdateProductAsync method (~lines 145-175)
+DMS Attempt: FAILED - Metadata model creation failed
+DMS Timestamp: 2026-04-19T14:57:45
+Manual Conversion: Applied lowercase schema names + structural changes
+Key Changes:
+  - DECLARE @OldPrice/@OldStock -> CTE old_values subquery
+  - GETDATE() -> NOW()
+  - BEGIN TRANSACTION/COMMIT -> Writable CTE pattern
+  - Table/column names lowercased
+Equivalency Check: ERROR (tool returned error "'uniqueID'")
+
+--- Statement 5: DeleteProductAsync ---
+Source Location: ProductRepository.cs, DeleteProductAsync method (~lines 185-220)
+DMS Attempt: FAILED - Metadata model creation failed
+DMS Timestamp: 2026-04-19T14:57:58
+Manual Conversion: Applied lowercase schema names + structural changes
+Key Changes:
+  - DECLARE @OldPrice/@OldStock -> CTE old_values subquery
+  - GETDATE() -> NOW()
+  - BEGIN TRANSACTION/COMMIT -> Writable CTE pattern
+  - CASE expression preserved (PostgreSQL compatible)
+  - Table/column names lowercased
+Equivalency Check: ERROR (tool returned error "'uniqueID'")
+
+--- Statement 6: GetProductsByPriceRangeAsync ---
+Source Location: ProductRepository.cs, GetProductsByPriceRangeAsync method (~lines 230-250)
+DMS Attempt: FAILED - Metadata model creation failed
+DMS Timestamp: 2026-04-19T14:58:12
+Manual Conversion: Applied lowercase schema names
+Key Changes: Table/column names lowercased, RANK/PERCENT_RANK compatible
+Equivalency Check: ERROR (tool returned error "'uniqueID'")
+
+--- Statement 7: GetLowStockProductsAsync ---
+Source Location: ProductRepository.cs, GetLowStockProductsAsync method (~lines 260-285)
+DMS Attempt: FAILED - Metadata model creation failed
+DMS Timestamp: 2026-04-19T14:58:27
+Manual Conversion: Applied lowercase schema names + CAST for integer division
+Key Changes:
+  - Table/column names lowercased
+  - Added CAST(stockquantity AS NUMERIC) for proper division
+  - AVG/MIN/MAX window functions compatible
+Equivalency Check: ERROR (tool returned error "'uniqueID'")
+
+==============================================================================
+SUMMARY
+==============================================================================
+Total Statements Processed: 7
+DMS Conversion Successes: 0
+DMS Conversion Failures: 7
+Manual Conversions Required: 7
+Equivalency Validations - EQUIVALENT: 0
+Equivalency Validations - NOT_EQUIVALENT: 0
+Equivalency Validations - ERROR: 7
