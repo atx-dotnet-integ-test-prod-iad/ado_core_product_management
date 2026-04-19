@@ -1,0 +1,170 @@
+{
+  "migration_report": {
+    "title": "MS SQL Server to PostgreSQL Migration Report",
+    "date": "2026-04-19",
+    "source_database": "Microsoft SQL Server (ProductManagement, dbo schema)",
+    "target_database": "PostgreSQL (ProductManagement, productmanagement_dbo schema)",
+    "application": "AdoCore (.NET 9.0 ADO.NET application)",
+    "migration_project_arn": "arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU"
+  },
+  "sql_statement_summary": {
+    "total_statements_processed": 7,
+    "dms_conversion_successful": 0,
+    "dms_conversion_failed": 7,
+    "manual_conversion_required": 7,
+    "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}",
+    "dms_schema_mapping_successful": true,
+    "dms_schema_mapping_tables": ["Products -> products", "ProductHistory -> producthistory", "ProductStats -> productstats"]
+  },
+  "equivalency_validation_summary": {
+    "total_pairs_validated": 7,
+    "equivalent": 0,
+    "not_equivalent": 0,
+    "error": 7,
+    "tool_error_reason": "'uniqueID' - internal tool error on all validation attempts"
+  },
+  "statement_details": [
+    {
+      "id": 1,
+      "name": "GetAllProductsAsync",
+      "type": "SELECT with CTE",
+      "dms_conversion": "FAILED",
+      "manual_conversion": "Applied lowercase schema mapping",
+      "key_changes": "CTE renamed productstats_cte, schema prefix productmanagement_dbo, all identifiers lowercase",
+      "equivalency_status": "ERROR"
+    },
+    {
+      "id": 2,
+      "name": "GetProductByIdAsync",
+      "type": "SELECT with CTE and LAG window function",
+      "dms_conversion": "FAILED",
+      "manual_conversion": "Applied lowercase schema mapping",
+      "key_changes": "CTE renamed producthistory_cte, schema prefix, all identifiers lowercase",
+      "equivalency_status": "ERROR"
+    },
+    {
+      "id": 3,
+      "name": "InsertProductAsync",
+      "type": "Transaction block (INSERT, SCOPE_IDENTITY, INSERT history, UPDATE stats)",
+      "dms_conversion": "FAILED",
+      "manual_conversion": "Restructured for Npgsql compatibility",
+      "key_changes": "SCOPE_IDENTITY() -> RETURNING productid, GETDATE() -> NOW(), split into 3 separate commands with C# transaction management",
+      "equivalency_status": "ERROR"
+    },
+    {
+      "id": 4,
+      "name": "UpdateProductAsync",
+      "type": "Transaction block (DECLARE vars, SELECT into vars, UPDATE, INSERT history, UPDATE stats)",
+      "dms_conversion": "FAILED",
+      "manual_conversion": "Restructured for Npgsql compatibility",
+      "key_changes": "DECLARE/SET vars -> C# variables from SELECT, GETDATE() -> NOW(), split into 4 separate commands with C# transaction",
+      "equivalency_status": "ERROR"
+    },
+    {
+      "id": 5,
+      "name": "DeleteProductAsync",
+      "type": "Transaction block (DECLARE vars, SELECT into vars, INSERT history, DELETE, UPDATE stats)",
+      "dms_conversion": "FAILED",
+      "manual_conversion": "Restructured for Npgsql compatibility",
+      "key_changes": "DECLARE/SET vars -> C# variables from SELECT, GETDATE() -> NOW(), split into 4 separate commands with C# transaction",
+      "equivalency_status": "ERROR"
+    },
+    {
+      "id": 6,
+      "name": "GetProductsByPriceRangeAsync",
+      "type": "SELECT with CTE, RANK, PERCENT_RANK",
+      "dms_conversion": "FAILED",
+      "manual_conversion": "Applied lowercase schema mapping",
+      "key_changes": "Schema prefix, all identifiers lowercase",
+      "equivalency_status": "ERROR"
+    },
+    {
+      "id": 7,
+      "name": "GetLowStockProductsAsync",
+      "type": "SELECT with CTE, AVG/MIN/MAX window functions",
+      "dms_conversion": "FAILED",
+      "manual_conversion": "Applied lowercase schema mapping",
+      "key_changes": "Schema prefix, all identifiers lowercase, CAST(stockquantity AS NUMERIC) for integer division",
+      "equivalency_status": "ERROR"
+    }
+  ],
+  "file_changes": [
+    {
+      "file": "sourceCode/DataAccess/ProductRepository.cs",
+      "changes": [
+        "using Microsoft.Data.SqlClient -> using Npgsql",
+        "SqlConnection -> NpgsqlConnection (field, methods, constructor)",
+        "SqlCommand -> NpgsqlCommand (all command instances)",
+        "SqlDataReader -> NpgsqlDataReader (MapProductFromReader parameter)",
+        "All 7 SQL statement strings replaced with PostgreSQL equivalents",
+        "InsertProductAsync: restructured to C# managed transaction with 3 commands",
+        "UpdateProductAsync: restructured to C# managed transaction with 4 commands",
+        "DeleteProductAsync: restructured to C# managed transaction with 4 commands",
+        "MapProductFromReader: column names updated to lowercase (productid, name, description, price, stockquantity, createddate, modifieddate)"
+      ]
+    },
+    {
+      "file": "sourceCode/AdoCore.csproj",
+      "changes": [
+        "Microsoft.Data.SqlClient 5.1.4 -> Npgsql 9.0.3"
+      ]
+    },
+    {
+      "file": "sourceCode/appsettings.json",
+      "changes": [
+        "DevConnection: Server=localhost -> Host=localhost, removed Trusted_Connection/MultipleActiveResultSets/TrustServerCertificate, added Username/Password",
+        "ProdConnection: Same pattern conversion"
+      ]
+    }
+  ],
+  "artifacts_generated": [
+    "sourceCode/extracted_statements.sql - Catalog of all 7 original MS SQL statements",
+    "sourceCode/converted_statements.sql - Catalog of all 7 converted PostgreSQL statements",
+    "sourceCode/dms_conversion_summary.txt - DMS failure documentation with schema mappings",
+    "sourceCode/sql_equivalency_validation_report.json - Comprehensive equivalency validation report",
+    "sourceCode/migration_report.json - This final migration report"
+  ],
+  "schema_mapping": {
+    "source_schema": "dbo",
+    "target_schema": "productmanagement_dbo",
+    "tables": {
+      "Products": {
+        "target": "productmanagement_dbo.products",
+        "columns_mapping": "ProductId->productid, Name->name, Description->description, Price->price, StockQuantity->stockquantity, CategoryId->categoryid, SupplierId->supplierid, SKU->sku, Weight->weight, Dimensions->dimensions, IsDiscontinued->isdiscontinued, ReorderLevel->reorderlevel, CreatedDate->createddate, ModifiedDate->modifieddate"
+      },
+      "ProductHistory": {
+        "target": "productmanagement_dbo.producthistory",
+        "columns_mapping": "HistoryId->historyid, ProductId->productid, Action->action, OldPrice->oldprice, NewPrice->newprice, OldStock->oldstock, NewStock->newstock, ActionDate->actiondate, ModifiedBy->modifiedby"
+      },
+      "ProductStats": {
+        "target": "productmanagement_dbo.productstats",
+        "columns_mapping": "StatId->statid, TotalProducts->totalproducts, AveragePrice->averageprice, TotalStockValue->totalstockvalue, LowStockCount->lowstockcount, DiscontinuedCount->discontinuedcount, LastUpdated->lastupdated"
+      }
+    }
+  },
+  "build_status": {
+    "final_build": "SUCCESS",
+    "errors": 0,
+    "warnings": 10,
+    "warning_details": "Pre-existing CS8618/CS8601/CS8600/CS8603/CS8625 nullable reference warnings (not introduced by migration)",
+    "vulnerable_packages": "None"
+  },
+  "manual_interventions": [
+    {
+      "description": "All 7 SQL statements required manual conversion due to DMS statement_conversion_tool failure",
+      "reason": "DMS metadata model creation failed with 'Unknown metadata model creation status: RECEIVED'",
+      "approach": "Used DMS schema_mapping_tool (which worked) to get correct target schema/table/column names, then manually converted SQL syntax",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA"
+    },
+    {
+      "description": "Statements 3, 4, 5 required C# code restructuring beyond SQL conversion",
+      "reason": "Original code used embedded T-SQL transactions with DECLARE/SET variables which don't translate directly to PostgreSQL parameterized queries via Npgsql",
+      "approach": "Split single multi-statement SQL into separate NpgsqlCommand instances within C# managed transactions (BeginTransactionAsync/CommitAsync/RollbackAsync)"
+    },
+    {
+      "description": "Package version changed from plan specification (8.0.1) to 9.0.3",
+      "reason": "Npgsql 8.0.1 has known high severity vulnerability GHSA-x9vc-6hfv-hg8c. Per guardrail rules, insecure dependencies are not allowed.",
+      "approach": "Used Npgsql 9.0.3 which is the latest stable version compatible with .NET 9.0 without known vulnerabilities"
+    }
+  ]
+}

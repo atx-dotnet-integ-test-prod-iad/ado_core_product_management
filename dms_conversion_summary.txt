@@ -1,0 +1,88 @@
+=====================================================
+DMS Conversion Failure Summary
+=====================================================
+Date: 2026-04-19
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Database: ProductManagement
+Schema: dbo
+Server: 172.31.94.132
+
+=====================================================
+DMS Tool Status
+=====================================================
+- Statement Conversion Tool (dms-mcp___statement_conversion_tool): FAILED
+  Error: "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+  Attempts: 5 (with varying poll_interval_seconds: 10, 15, 20, 30 and max_poll_attempts: 15, 30, 40, 45, 60)
+  
+- Schema Mapping Tool (dms-mcp___schema_mapping_tool): SUCCESS
+  Successfully retrieved schema mappings for Products, ProductHistory, ProductStats tables
+
+=====================================================
+Schema Mappings Retrieved from DMS
+=====================================================
+Source: dbo.Products -> Target: productmanagement_dbo.products
+  Columns: productid, name, description, price, stockquantity, categoryid, supplierid, sku, weight, dimensions, isdiscontinued, reorderlevel, createddate, modifieddate
+
+Source: dbo.ProductHistory -> Target: productmanagement_dbo.producthistory
+  Columns: historyid, productid, action, oldprice, newprice, oldstock, newstock, actiondate, modifiedby
+
+Source: dbo.ProductStats -> Target: productmanagement_dbo.productstats
+  Columns: statid, totalproducts, averageprice, totalstockvalue, lowstockcount, discontinuedcount, lastupdated
+
+=====================================================
+Manual Conversion Details (All 7 Statements)
+=====================================================
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Schema Mapping Source: DMS schema_mapping_tool (successful)
+
+Key Conversion Rules Applied:
+1. All schema object names converted to lowercase per DMS schema mapping
+2. Schema prefix changed from 'dbo' to 'productmanagement_dbo'
+3. GETDATE() -> NOW()
+4. SCOPE_IDENTITY() -> RETURNING clause
+5. DECLARE @var / SET @var -> PostgreSQL variable handling
+6. CTE names changed to avoid conflicts with table names (e.g., ProductStats CTE -> productstats_cte)
+7. Integer division cast to NUMERIC for ROUND function compatibility
+8. BEGIN TRANSACTION/COMMIT blocks restructured for Npgsql ADO.NET compatibility
+
+=====================================================
+Statement-by-Statement Details
+=====================================================
+
+Statement 1: GetAllProductsAsync
+  DMS Output: Error - Metadata model creation failed
+  Manual Conversion: Applied lowercase schema mapping
+  Key Changes: CTE renamed to productstats_cte to avoid conflict with productstats table
+
+Statement 2: GetProductByIdAsync
+  DMS Output: Error - Metadata model creation failed
+  Manual Conversion: Applied lowercase schema mapping
+  Key Changes: CTE renamed to producthistory_cte to avoid conflict with producthistory table
+
+Statement 3: InsertProductAsync
+  DMS Output: Error - Metadata model creation failed
+  Manual Conversion: Restructured for PostgreSQL + Npgsql compatibility
+  Key Changes: SCOPE_IDENTITY() -> RETURNING; GETDATE() -> NOW(); 
+               Transaction block split into individual statements for C# transaction management
+
+Statement 4: UpdateProductAsync
+  DMS Output: Error - Metadata model creation failed
+  Manual Conversion: Restructured for PostgreSQL + Npgsql compatibility
+  Key Changes: DECLARE/SET variables -> separate SELECT + C# variable read;
+               GETDATE() -> NOW(); Transaction managed in C#
+
+Statement 5: DeleteProductAsync
+  DMS Output: Error - Metadata model creation failed
+  Manual Conversion: Restructured for PostgreSQL + Npgsql compatibility
+  Key Changes: DECLARE/SET variables -> separate SELECT + C# variable read;
+               GETDATE() -> NOW(); Transaction managed in C#
+
+Statement 6: GetProductsByPriceRangeAsync
+  DMS Output: Error - Metadata model creation failed
+  Manual Conversion: Applied lowercase schema mapping
+  Key Changes: Straightforward name lowering, SQL syntax compatible as-is
+
+Statement 7: GetLowStockProductsAsync
+  DMS Output: Error - Metadata model creation failed
+  Manual Conversion: Applied lowercase schema mapping
+  Key Changes: Added CAST(stockquantity AS NUMERIC) for integer division in ROUND
