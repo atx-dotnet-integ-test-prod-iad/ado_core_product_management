@@ -1,0 +1,115 @@
+============================================================
+DMS Conversion Log
+Project: ADO.NET SQL Server to PostgreSQL Migration
+============================================================
+
+DMS Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Region: us-east-1
+Database: ProductManagement
+Schema: dbo
+
+============================================================
+DMS Statement Conversion Tool Status: FAILED (all 7 statements)
+Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Multiple retry attempts were made with different polling parameters (poll_interval: 10s, 15s, 20s; max_attempts: 15, 30, 45)
+All attempts resulted in the same error.
+============================================================
+
+DMS Schema Mapping Tool Status: SUCCESS
+Schema mappings successfully retrieved for all 3 tables:
+  - dbo.Products -> productmanagement_dbo.products
+  - dbo.ProductHistory -> productmanagement_dbo.producthistory
+  - dbo.ProductStats -> productmanagement_dbo.productstats
+
+============================================================
+Statement 1: GetAllProductsAsync
+============================================================
+DMS Status: FAILED
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Manual Conversion Notes:
+  - CTE alias renamed from ProductStats to productstats_cte (to avoid conflict with table name)
+  - All column references converted to lowercase per DMS schema mapping
+  - Table references updated to productmanagement_dbo.products
+  - Window functions (AVG OVER, COUNT OVER) are compatible with PostgreSQL
+
+============================================================
+Statement 2: GetProductByIdAsync
+============================================================
+DMS Status: FAILED
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Manual Conversion Notes:
+  - CTE alias renamed from ProductHistory to producthistory_cte (to avoid conflict with table name)
+  - All column references converted to lowercase per DMS schema mapping
+  - Table references updated to productmanagement_dbo.products
+  - LAG() window function is compatible with PostgreSQL
+  - @ProductId parameter preserved (Npgsql supports @Parameter syntax)
+
+============================================================
+Statement 3: InsertProductAsync
+============================================================
+DMS Status: FAILED
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Manual Conversion Notes:
+  - SCOPE_IDENTITY() replaced with RETURNING clause
+  - BEGIN TRANSACTION/COMMIT removed (restructured as DO block - inherently transactional)
+  - DECLARE @var TYPE converted to PostgreSQL DECLARE v_var TYPE syntax
+  - GETDATE() replaced with clock_timestamp() per DMS schema mapping (default values use clock_timestamp)
+  - Table references updated to productmanagement_dbo schema
+  - All column names converted to lowercase
+
+============================================================
+Statement 4: UpdateProductAsync
+============================================================
+DMS Status: FAILED
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Manual Conversion Notes:
+  - BEGIN TRANSACTION/COMMIT removed (restructured as DO block)
+  - DECLARE @var TYPE converted to PostgreSQL DECLARE v_var TYPE syntax
+  - SELECT @var = col converted to SELECT col INTO v_var
+  - DECIMAL(18,2) converted to NUMERIC(18,2) per DMS schema mapping
+  - GETDATE() replaced with clock_timestamp()
+  - Table references updated to productmanagement_dbo schema
+
+============================================================
+Statement 5: DeleteProductAsync
+============================================================
+DMS Status: FAILED
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Manual Conversion Notes:
+  - BEGIN TRANSACTION/COMMIT removed (restructured as DO block)
+  - DECLARE @var TYPE converted to PostgreSQL DECLARE v_var TYPE syntax
+  - SELECT @var = col converted to SELECT col INTO v_var
+  - GETDATE() replaced with clock_timestamp()
+  - CASE expression for AveragePrice calculation preserved (compatible syntax)
+  - Table references updated to productmanagement_dbo schema
+
+============================================================
+Statement 6: GetProductsByPriceRangeAsync
+============================================================
+DMS Status: FAILED
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Manual Conversion Notes:
+  - CTE alias converted to lowercase: rankedproducts
+  - RANK() and PERCENT_RANK() window functions are compatible with PostgreSQL
+  - BETWEEN clause is compatible with PostgreSQL
+  - All column references converted to lowercase
+  - Table references updated to productmanagement_dbo.products
+
+============================================================
+Statement 7: GetLowStockProductsAsync
+============================================================
+DMS Status: FAILED
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Manual Conversion Notes:
+  - CTE alias converted to lowercase: stockanalysis
+  - AVG, MIN, MAX OVER() window functions are compatible with PostgreSQL
+  - Added CAST(stockquantity AS NUMERIC) for division to ensure decimal result
+  - All column references converted to lowercase
+  - Table references updated to productmanagement_dbo.products
