@@ -1,0 +1,60 @@
+DMS Conversion Failure Log
+==========================
+Date: 2026-04-21
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Database: ProductManagement
+Schema: dbo
+Region: us-east-1
+
+ALL 7 statements failed with the same error:
+Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+
+Each statement was attempted at least once (Statement 1 was attempted twice).
+All statements were manually converted using DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA approach.
+
+Manual Conversion Rules Applied:
+1. All schema object names (tables, columns, aliases) converted to lowercase
+2. SCOPE_IDENTITY() replaced with lastval()
+3. GETDATE() replaced with NOW()
+4. BEGIN TRANSACTION replaced with BEGIN
+5. DECLARE @var patterns removed and replaced with subquery approaches where needed
+6. Integer division cast to NUMERIC for correct ROUND behavior
+7. Transaction block ordering adjusted for PostgreSQL compatibility (e.g., log before delete)
+
+Statement Details:
+------------------
+
+Statement 1 (GetAllProductsAsync):
+  DMS Attempts: 2
+  DMS Output: error - Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+  Manual Conversion: Applied lowercase schema, CTE/window functions compatible as-is
+
+Statement 2 (GetProductByIdAsync):
+  DMS Attempts: 1
+  DMS Output: error - Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+  Manual Conversion: Applied lowercase schema, LAG window function compatible as-is
+
+Statement 3 (InsertProductAsync):
+  DMS Attempts: 1
+  DMS Output: error - Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+  Manual Conversion: SCOPE_IDENTITY() -> lastval(), GETDATE() -> NOW(), removed DECLARE, BEGIN TRANSACTION -> BEGIN
+
+Statement 4 (UpdateProductAsync):
+  DMS Attempts: 1
+  DMS Output: error - Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+  Manual Conversion: Removed DECLARE/@var, GETDATE() -> NOW(), used subquery for old values, BEGIN TRANSACTION -> BEGIN
+
+Statement 5 (DeleteProductAsync):
+  DMS Attempts: 1
+  DMS Output: error - Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+  Manual Conversion: Removed DECLARE/@var, GETDATE() -> NOW(), reordered operations (log before delete), BEGIN TRANSACTION -> BEGIN
+
+Statement 6 (GetProductsByPriceRangeAsync):
+  DMS Attempts: 1
+  DMS Output: error - Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+  Manual Conversion: Applied lowercase schema, RANK/PERCENT_RANK compatible as-is
+
+Statement 7 (GetLowStockProductsAsync):
+  DMS Attempts: 1
+  DMS Output: error - Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+  Manual Conversion: Applied lowercase schema, added CAST for integer division in ROUND, AVG/MIN/MAX compatible as-is
