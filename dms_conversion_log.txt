@@ -1,0 +1,89 @@
+============================================================
+DMS Conversion Failure Log
+============================================================
+Date: 2026-04-22
+DMS Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Database: ProductManagement
+Schema: dbo
+Server: 172.31.94.132
+
+All 7 SQL statements failed with the same error:
+  Error: "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+
+Multiple retry attempts were made with varied parameters (max_poll_attempts: 15-30, poll_interval_seconds: 10-20).
+All attempts resulted in the same error.
+
+Schema mapping was successfully retrieved via DMS schema_mapping_tool:
+  - dbo.Products -> productmanagement_dbo.products
+  - dbo.ProductHistory -> productmanagement_dbo.producthistory
+  - dbo.ProductStats -> productmanagement_dbo.productstats
+
+Manual conversion applied using DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA rules:
+  - All schema object names (tables, columns) converted to lowercase
+  - Schema prefix productmanagement_dbo applied per DMS schema mapping
+  - SCOPE_IDENTITY() -> INSERT ... RETURNING + CTE pattern
+  - GETDATE() -> NOW()
+  - DECLARE @variable -> CTE subquery pattern
+  - BEGIN TRANSACTION/COMMIT -> Writable CTEs (PostgreSQL 9.1+)
+
+============================================================
+Statement 1: GetAllProductsAsync
+============================================================
+DMS Input: CTE with AVG/COUNT window functions, CASE, ROUND, ORDER BY
+DMS Output: Error - Metadata model creation failed
+Manual Conversion: Lowercased all identifiers, changed Products -> productmanagement_dbo.products
+  Renamed CTE from ProductStats to productstats_cte to avoid collision with table name
+
+============================================================
+Statement 2: GetProductByIdAsync
+============================================================
+DMS Input: CTE with LAG window function, CASE, ROUND
+DMS Output: Error - Metadata model creation failed
+Manual Conversion: Lowercased all identifiers, changed Products -> productmanagement_dbo.products
+  Renamed CTE from ProductHistory to producthistory_cte to avoid collision with table name
+
+============================================================
+Statement 3: InsertProductAsync
+============================================================
+DMS Input: DECLARE, BEGIN TRANSACTION, INSERT, SCOPE_IDENTITY(), GETDATE(), UPDATE, COMMIT, SELECT
+DMS Output: Error - Metadata model creation failed
+Manual Conversion: 
+  - Replaced SCOPE_IDENTITY() with INSERT...RETURNING in writable CTE
+  - Replaced GETDATE() with NOW()
+  - Removed DECLARE @variable, used CTE chain instead
+  - Restructured to use writable CTEs for multi-statement transaction
+
+============================================================
+Statement 4: UpdateProductAsync
+============================================================
+DMS Input: BEGIN TRANSACTION, DECLARE, SELECT INTO variable, UPDATE, INSERT, UPDATE, COMMIT
+DMS Output: Error - Metadata model creation failed
+Manual Conversion:
+  - Replaced DECLARE @OldPrice/@OldStock with CTE subquery (old_values)
+  - Replaced GETDATE() with NOW()
+  - Restructured to use writable CTEs for multi-statement transaction
+
+============================================================
+Statement 5: DeleteProductAsync
+============================================================
+DMS Input: BEGIN TRANSACTION, DECLARE, SELECT INTO variable, INSERT, DELETE, UPDATE, COMMIT
+DMS Output: Error - Metadata model creation failed
+Manual Conversion:
+  - Replaced DECLARE @OldPrice/@OldStock with CTE subquery (old_values)
+  - Replaced GETDATE() with NOW()
+  - Restructured to use writable CTEs for multi-statement transaction
+
+============================================================
+Statement 6: GetProductsByPriceRangeAsync
+============================================================
+DMS Input: CTE with RANK(), PERCENT_RANK(), BETWEEN, CASE, ORDER BY
+DMS Output: Error - Metadata model creation failed
+Manual Conversion: Lowercased all identifiers, changed Products -> productmanagement_dbo.products
+
+============================================================
+Statement 7: GetLowStockProductsAsync
+============================================================
+DMS Input: CTE with AVG/MIN/MAX window functions, CASE, ROUND, ORDER BY
+DMS Output: Error - Metadata model creation failed
+Manual Conversion: Lowercased all identifiers, changed Products -> productmanagement_dbo.products
+  Added CAST(stockquantity AS NUMERIC) for integer division fix in PostgreSQL
