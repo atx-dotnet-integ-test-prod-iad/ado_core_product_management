@@ -1,0 +1,81 @@
+============================================================
+DMS Conversion Failure Summary
+============================================================
+Date: 2026-04-23
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Total Statements Attempted: 7
+Total DMS Failures: 7
+Conversion Method Used: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+============================================================
+Statement 1: GetAllProductsAsync
+============================================================
+DMS Output: {"status": "error", "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"}
+Manual Conversion Applied:
+- All schema object names converted to lowercase (Products -> products, ProductId -> productid, etc.)
+- ROUND() wrapped with CAST(... AS numeric) for PostgreSQL compatibility
+- Window functions (AVG OVER, COUNT OVER) compatible as-is
+- CTE syntax compatible as-is
+
+============================================================
+Statement 2: GetProductByIdAsync
+============================================================
+DMS Output: {"status": "error", "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"}
+Manual Conversion Applied:
+- All schema object names converted to lowercase
+- ROUND() wrapped with CAST(... AS numeric) for PostgreSQL compatibility
+- LAG window function compatible as-is
+- Parameter @ProductId preserved (Npgsql supports @ prefix)
+
+============================================================
+Statement 3: InsertProductAsync
+============================================================
+DMS Output: {"status": "error", "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"}
+Manual Conversion Applied:
+- All schema object names converted to lowercase
+- SCOPE_IDENTITY() replaced with RETURNING clause
+- GETDATE() replaced with NOW()
+- DECLARE @NewProductId / SET removed - restructured to use RETURNING
+- BEGIN TRANSACTION -> BEGIN (PostgreSQL syntax)
+- Transaction block restructured: INSERT with RETURNING captures new ID,
+  then subsequent statements use the captured ID
+
+============================================================
+Statement 4: UpdateProductAsync
+============================================================
+DMS Output: {"status": "error", "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"}
+Manual Conversion Applied:
+- All schema object names converted to lowercase
+- GETDATE() replaced with NOW()
+- DECLARE @OldPrice/@OldStock removed - handled at application layer
+- BEGIN TRANSACTION -> BEGIN (PostgreSQL syntax)
+- SELECT INTO variables restructured for application-layer handling
+
+============================================================
+Statement 5: DeleteProductAsync
+============================================================
+DMS Output: {"status": "error", "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"}
+Manual Conversion Applied:
+- All schema object names converted to lowercase
+- GETDATE() replaced with NOW()
+- DECLARE @OldPrice/@OldStock removed - handled at application layer
+- BEGIN TRANSACTION -> BEGIN (PostgreSQL syntax)
+- CASE expression in UPDATE compatible as-is
+
+============================================================
+Statement 6: GetProductsByPriceRangeAsync
+============================================================
+DMS Output: {"status": "error", "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"}
+Manual Conversion Applied:
+- All schema object names converted to lowercase
+- RANK() and PERCENT_RANK() window functions compatible as-is
+- BETWEEN clause compatible as-is
+
+============================================================
+Statement 7: GetLowStockProductsAsync
+============================================================
+DMS Output: {"status": "error", "error": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"}
+Manual Conversion Applied:
+- All schema object names converted to lowercase
+- ROUND() wrapped with CAST(... AS numeric) for PostgreSQL compatibility
+- AVG/MIN/MAX OVER window functions compatible as-is
