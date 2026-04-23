@@ -1,0 +1,116 @@
+============================================
+DMS Conversion Log
+============================================
+Migration Project ARN: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Database: ProductManagement
+Schema: dbo
+Server: 172.31.94.132
+Region: us-east-1
+============================================
+
+============================================
+Schema Mapping Results (from DMS schema_mapping_tool - SUCCESSFUL)
+============================================
+- Products (dbo) -> products (productmanagement_dbo) - SUCCESS
+- ProductHistory (dbo) -> producthistory (productmanagement_dbo) - SUCCESS
+- ProductStats (dbo) -> productstats (productmanagement_dbo) - SUCCESS
+
+Target DDL retrieved:
+- productmanagement_dbo.products: All columns lowercase (productid, name, description, price, stockquantity, createddate, modifieddate, etc.)
+- productmanagement_dbo.producthistory: All columns lowercase (historyid, productid, action, oldprice, newprice, oldstock, newstock, actiondate, modifiedby)
+- productmanagement_dbo.productstats: All columns lowercase (statid, totalproducts, averageprice, totalstockvalue, lowstockcount, discontinuedcount, lastupdated)
+
+============================================
+Statement 1: GetAllProductsAsync
+============================================
+DMS Tool Status: ERROR
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+DMS Timestamp: 2026-04-23T19:43:22.698239
+DMS Attempts: 2 (initial + retry with increased poll settings)
+Manual Conversion: YES - Applied lowercase schema mapping per DMS schema_mapping_tool output
+Conversion Reason: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+============================================
+Statement 2: GetProductByIdAsync
+============================================
+DMS Tool Status: ERROR
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+DMS Timestamp: 2026-04-23T19:44:26.784610
+DMS Attempts: 1
+Manual Conversion: YES - Applied lowercase schema mapping per DMS schema_mapping_tool output
+Conversion Reason: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+============================================
+Statement 3: InsertProductAsync
+============================================
+DMS Tool Status: ERROR
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+DMS Timestamp: 2026-04-23T19:44:31.724881
+DMS Attempts: 1
+Manual Conversion: YES - Applied lowercase schema mapping per DMS schema_mapping_tool output
+Conversion Reason: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Key Changes:
+  - SCOPE_IDENTITY() -> RETURNING clause in CTE
+  - GETDATE() -> clock_timestamp()
+  - DECLARE @var / BEGIN TRANSACTION/COMMIT -> Writable CTE pattern
+  - Multi-statement transaction restructured as single CTE chain
+
+============================================
+Statement 4: UpdateProductAsync
+============================================
+DMS Tool Status: ERROR
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+DMS Timestamp: 2026-04-23T19:44:36.686582
+DMS Attempts: 1
+Manual Conversion: YES - Applied lowercase schema mapping per DMS schema_mapping_tool output
+Conversion Reason: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Key Changes:
+  - DECLARE @var / SELECT INTO vars -> CTE with old_values
+  - GETDATE() -> clock_timestamp()
+  - BEGIN TRANSACTION/COMMIT -> Writable CTE pattern
+
+============================================
+Statement 5: DeleteProductAsync
+============================================
+DMS Tool Status: ERROR
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+DMS Timestamp: 2026-04-23T19:44:41.533812
+DMS Attempts: 1
+Manual Conversion: YES - Applied lowercase schema mapping per DMS schema_mapping_tool output
+Conversion Reason: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Key Changes:
+  - DECLARE @var / SELECT INTO vars -> CTE with old_values
+  - GETDATE() -> clock_timestamp()
+  - BEGIN TRANSACTION/COMMIT -> Writable CTE pattern
+
+============================================
+Statement 6: GetProductsByPriceRangeAsync
+============================================
+DMS Tool Status: ERROR
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+DMS Timestamp: 2026-04-23T19:44:46.354009
+DMS Attempts: 1
+Manual Conversion: YES - Applied lowercase schema mapping per DMS schema_mapping_tool output
+Conversion Reason: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+============================================
+Statement 7: GetLowStockProductsAsync
+============================================
+DMS Tool Status: ERROR
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+DMS Timestamp: 2026-04-23T19:44:51.166681
+DMS Attempts: 1
+Manual Conversion: YES - Applied lowercase schema mapping per DMS schema_mapping_tool output
+Conversion Reason: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Key Changes:
+  - Added CAST(stockquantity AS NUMERIC) to prevent integer division in ROUND function
+
+============================================
+Summary
+============================================
+Total Statements: 7
+DMS Successful Conversions: 0
+DMS Failed Conversions: 7
+Manual Conversions Required: 7
+DMS Failure Reason (all): Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Schema Mapping Tool: Successfully retrieved mappings for all 3 tables (Products, ProductHistory, ProductStats)
