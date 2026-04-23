@@ -1,0 +1,89 @@
+===============================================================================
+DMS CONVERSION SUMMARY REPORT
+===============================================================================
+Date: 2026-04-23
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Database: ProductManagement
+Schema: dbo
+Region: us-east-1
+Server: 172.31.94.132
+
+===============================================================================
+DMS TOOL STATUS: FAILED FOR ALL 7 STATEMENTS
+===============================================================================
+Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+
+All 7 SQL statements were submitted to the DMS MCP tool (dms-mcp___statement_conversion_tool).
+All 7 returned the same error at the "create_metadata_model" workflow step.
+
+The DMS tool appears to have an infrastructure issue with the metadata model creation
+process - the status returned was "RECEIVED" which the tool did not recognize.
+
+===============================================================================
+MANUAL CONVERSION APPLIED
+===============================================================================
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Reason: DMS tool unavailable due to metadata model creation failure
+
+Manual conversion rules applied:
+1. All schema object names (tables, columns, aliases) converted to lowercase
+2. SCOPE_IDENTITY() -> lastval() (PostgreSQL sequence function)
+3. GETDATE() -> CURRENT_TIMESTAMP
+4. BEGIN TRANSACTION -> BEGIN
+5. DECLARE @variable pattern -> Restructured to use subqueries (PostgreSQL doesn't
+   support DECLARE outside PL/pgSQL blocks for plain SQL execution)
+6. Window functions (AVG OVER, COUNT OVER, LAG, RANK, PERCENT_RANK) - compatible as-is
+7. CTE syntax (WITH...AS) - compatible as-is
+8. CASE expressions - compatible as-is
+9. ROUND() - compatible, added CAST for integer division cases
+10. BETWEEN - compatible as-is
+11. Parameter syntax @ParamName preserved (Npgsql supports this)
+
+===============================================================================
+STATEMENT-BY-STATEMENT DMS RESULTS
+===============================================================================
+
+Statement 1: GetAllProductsAsync
+  DMS Status: error
+  DMS Error: Metadata model creation failed
+  Manual Conversion: Applied lowercase schema mapping
+  Key Changes: Table/column names lowercased
+
+Statement 2: GetProductByIdAsync
+  DMS Status: error
+  DMS Error: Metadata model creation failed
+  Manual Conversion: Applied lowercase schema mapping
+  Key Changes: Table/column names lowercased
+
+Statement 3: InsertProductAsync
+  DMS Status: error
+  DMS Error: Metadata model creation failed
+  Manual Conversion: Applied lowercase schema mapping
+  Key Changes: SCOPE_IDENTITY()->lastval(), GETDATE()->CURRENT_TIMESTAMP,
+               BEGIN TRANSACTION->BEGIN, DECLARE removed, restructured for PostgreSQL
+
+Statement 4: UpdateProductAsync
+  DMS Status: error
+  DMS Error: Metadata model creation failed
+  Manual Conversion: Applied lowercase schema mapping
+  Key Changes: GETDATE()->CURRENT_TIMESTAMP, BEGIN TRANSACTION->BEGIN,
+               DECLARE/SET pattern removed, restructured with subqueries
+
+Statement 5: DeleteProductAsync
+  DMS Status: error
+  DMS Error: Metadata model creation failed
+  Manual Conversion: Applied lowercase schema mapping
+  Key Changes: GETDATE()->CURRENT_TIMESTAMP, BEGIN TRANSACTION->BEGIN,
+               DECLARE/SET pattern removed, restructured with subqueries
+
+Statement 6: GetProductsByPriceRangeAsync
+  DMS Status: error
+  DMS Error: Metadata model creation failed
+  Manual Conversion: Applied lowercase schema mapping
+  Key Changes: Table/column names lowercased
+
+Statement 7: GetLowStockProductsAsync
+  DMS Status: error
+  DMS Error: Metadata model creation failed
+  Manual Conversion: Applied lowercase schema mapping
+  Key Changes: Table/column names lowercased, added CAST for integer division

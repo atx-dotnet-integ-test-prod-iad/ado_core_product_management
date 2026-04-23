@@ -1,0 +1,129 @@
+===============================================================================
+FINAL MIGRATION REPORT
+Microsoft SQL Server to PostgreSQL Migration for .NET ADO Application
+===============================================================================
+Date: 2026-04-23
+Project: AdoCore - Product Management Application
+Source Database: Microsoft SQL Server (ProductManagement)
+Target Database: PostgreSQL (ProductManagement)
+
+===============================================================================
+1. SQL STATEMENT PROCESSING SUMMARY
+===============================================================================
+Total SQL statements processed: 7 (from ProductRepository.cs)
+Successfully converted by DMS MCP tool: 0
+Failed DMS conversion (manual fallback): 7
+Manual conversion method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+DMS Error (all 7 statements): 
+  "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+
+SQL Statements Converted:
+  1. GetAllProductsAsync - CTE with AVG/COUNT OVER, CASE, ROUND, INNER JOIN
+  2. GetProductByIdAsync - CTE with LAG, ROUND, LEFT JOIN, CASE
+  3. InsertProductAsync - Transaction (SCOPE_IDENTITY->lastval, GETDATE->CURRENT_TIMESTAMP)
+  4. UpdateProductAsync - Transaction (DECLARE removed, subqueries, GETDATE->CURRENT_TIMESTAMP)
+  5. DeleteProductAsync - Transaction (DECLARE removed, subqueries, GETDATE->CURRENT_TIMESTAMP)
+  6. GetProductsByPriceRangeAsync - CTE with RANK/PERCENT_RANK, BETWEEN, CASE
+  7. GetLowStockProductsAsync - CTE with AVG/MIN/MAX OVER, CASE, ROUND
+
+===============================================================================
+2. SQL EQUIVALENCY VALIDATION SUMMARY
+===============================================================================
+Total statement pairs validated: 7
+Equivalent: 0
+Non-Equivalent: 0
+Equivalency Errors: 7
+
+SQL Equivalency Tool Error (all 7 pairs):
+  {"equivalence_status": "ERROR", "error": "'uniqueID'"}
+
+Note: The SQL Equivalency tool returned a consistent infrastructure error for all 
+statement pairs, including trivial test queries. Equivalency could not be determined
+by the tool for any statement pair.
+
+===============================================================================
+3. FILES MODIFIED
+===============================================================================
+Source Code Files:
+  - sourceCode/DataAccess/ProductRepository.cs
+    * All 7 SQL statements converted to PostgreSQL
+    * using Microsoft.Data.SqlClient -> using Npgsql
+    * SqlConnection -> NpgsqlConnection
+    * SqlCommand -> NpgsqlCommand
+    * SqlDataReader -> NpgsqlDataReader
+
+  - sourceCode/AdoCore.csproj
+    * Microsoft.Data.SqlClient 5.1.4 -> Npgsql 8.0.6
+
+  - sourceCode/appsettings.json
+    * Connection strings converted from SQL Server to PostgreSQL format
+    * Server=localhost -> Host=localhost
+    * Trusted_Connection=True removed
+    * MultipleActiveResultSets=true removed
+    * TrustServerCertificate=True removed
+    * Username=postgres;Password=postgres added
+
+SQL Setup Scripts:
+  - sourceCode/Scripts/01_InitialSetup.sql
+    * Converted to PostgreSQL syntax
+    * IDENTITY -> SERIAL
+    * NVARCHAR -> VARCHAR
+    * DATETIME -> TIMESTAMP
+    * GETDATE() -> CURRENT_TIMESTAMP
+    * Stored procedures -> PostgreSQL functions
+    * IF NOT EXISTS patterns -> PostgreSQL equivalents
+    * GO statements removed
+
+  - sourceCode/Database/Scripts/01_InitialSetup.sql
+    * Full conversion including tables, indexes, triggers, stored functions
+    * BIT -> BOOLEAN
+    * SYSTEM_USER -> current_user
+    * CREATE OR ALTER PROCEDURE -> CREATE OR REPLACE FUNCTION
+    * SQL Server trigger syntax -> PostgreSQL trigger + function
+    * All schema object names lowercased
+
+Generated Artifacts:
+  - sourceCode/extracted_statements.sql (original 7 MS SQL statements)
+  - sourceCode/converted_statements.sql (converted 7 PostgreSQL statements)
+  - sourceCode/dms_conversion_summary.txt (DMS failure documentation)
+  - sourceCode/sql_equivalency_validation_report.json (equivalency results)
+
+===============================================================================
+4. MANUAL INTERVENTIONS REQUIRED
+===============================================================================
+All 7 SQL statements required manual conversion due to DMS tool failure.
+
+Key manual conversion patterns applied:
+  - SCOPE_IDENTITY() -> lastval()
+  - GETDATE() -> CURRENT_TIMESTAMP
+  - BEGIN TRANSACTION -> BEGIN
+  - DECLARE @variable / SET patterns -> Restructured with subqueries
+  - All schema object names converted to lowercase
+  - Integer division in ROUND() -> Added CAST for proper decimal behavior
+  - Transaction blocks restructured to capture old values via subqueries before mutations
+
+===============================================================================
+5. BUILD STATUS
+===============================================================================
+Final build: SUCCESS (0 errors, 10 warnings - all pre-existing nullable warnings)
+Framework: .NET 9.0
+Output: AdoCore.dll
+
+===============================================================================
+6. REMAINING ITEMS FOR MANUAL REVIEW
+===============================================================================
+- All 7 SQL equivalency validations returned ERROR due to tool infrastructure issue
+  These statements should be manually reviewed for functional equivalency:
+  1. GetAllProductsAsync - Window functions, CTE, CASE (straightforward conversion)
+  2. GetProductByIdAsync - LAG window function, CTE (straightforward conversion)
+  3. InsertProductAsync - Transaction restructured (SCOPE_IDENTITY->lastval)
+  4. UpdateProductAsync - Transaction restructured (DECLARE removed, operation order changed)
+  5. DeleteProductAsync - Transaction restructured (DECLARE removed, operation order changed)
+  6. GetProductsByPriceRangeAsync - RANK/PERCENT_RANK (straightforward conversion)
+  7. GetLowStockProductsAsync - Aggregate window functions (added CAST for int division)
+
+- Connection strings use placeholder credentials (postgres/postgres)
+  Production deployment should use proper secure credential management
+
+- Integration testing against actual PostgreSQL database recommended
