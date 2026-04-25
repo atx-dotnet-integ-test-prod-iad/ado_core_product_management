@@ -1,0 +1,66 @@
+============================================
+DMS CONVERSION FAILURE SUMMARY
+============================================
+Date: 2026-04-25
+DMS Tool: dms-mcp___statement_conversion_tool
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Schema: dbo
+Region: us-east-1
+
+STATUS: ALL 7 statements failed DMS conversion
+ERROR: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+
+All statements were attempted multiple times with various configurations:
+- Default poll settings (15 attempts, 10s interval)
+- Extended poll settings (30 attempts, 15s interval)
+- Extended poll settings (40 attempts, 20s interval)
+- Extended poll settings (50 attempts, 30s interval)
+- Simple test queries also failed with the same error
+
+RESOLUTION: Manual conversion applied using DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+Schema mapping was obtained successfully from dms-mcp___schema_mapping_tool:
+  - Products -> products (schema: productmanagement_dbo)
+  - ProductHistory -> producthistory (schema: productmanagement_dbo)
+  - ProductStats -> productstats (schema: productmanagement_dbo)
+
+CONVERSION RULES APPLIED:
+1. All table names converted to lowercase per DMS schema mapping
+2. All column names converted to lowercase per DMS schema mapping
+3. GETDATE() -> NOW()
+4. SCOPE_IDENTITY() -> RETURNING clause with CTE pattern
+5. DECLARE/SET variable patterns -> subquery approaches for ADO.NET compatibility
+6. BEGIN TRANSACTION/COMMIT -> BEGIN/COMMIT
+7. Window functions preserved (compatible between SQL Server and PostgreSQL)
+8. CTE syntax preserved (compatible between SQL Server and PostgreSQL)
+9. Integer division in ROUND() -> explicit NUMERIC cast for PostgreSQL
+10. Parameter syntax (@ParamName) preserved for Npgsql compatibility
+
+STATEMENT DETAILS:
+---
+Statement 1 (GetAllProductsAsync): DMS FAILED -> Manual conversion
+  DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+  Changes: Lowercase schema objects, CTE name changed to avoid conflict with table name productstats
+  
+Statement 2 (GetProductByIdAsync): DMS FAILED -> Manual conversion
+  DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+  Changes: Lowercase schema objects, CTE name changed to avoid conflict with table name producthistory
+
+Statement 3 (InsertProductAsync): DMS FAILED -> Manual conversion
+  DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+  Changes: Lowercase schema, SCOPE_IDENTITY() -> CTE with RETURNING + currval(), GETDATE() -> NOW(), BEGIN TRANSACTION -> BEGIN
+
+Statement 4 (UpdateProductAsync): DMS FAILED -> Manual conversion
+  DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+  Changes: Lowercase schema, DECLARE/SET -> subquery approach, GETDATE() -> NOW(), BEGIN TRANSACTION -> BEGIN
+
+Statement 5 (DeleteProductAsync): DMS FAILED -> Manual conversion
+  DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+  Changes: Lowercase schema, DECLARE/SET -> subquery approach, GETDATE() -> NOW(), BEGIN TRANSACTION -> BEGIN
+
+Statement 6 (GetProductsByPriceRangeAsync): DMS FAILED -> Manual conversion
+  DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+  Changes: Lowercase schema objects
+
+Statement 7 (GetLowStockProductsAsync): DMS FAILED -> Manual conversion
+  DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+  Changes: Lowercase schema objects, integer division cast to NUMERIC
