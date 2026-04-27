@@ -1,0 +1,29 @@
+-- =====================================================
+-- DMS Conversion Failure Summary
+-- =====================================================
+-- DMS Tool: dms-mcp___statement_conversion_tool
+-- Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+-- Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+-- DMS Schema Mapping Tool: Successfully returned schema mappings for Products, ProductHistory, ProductStats
+-- 
+-- All 7 SQL statements were passed to the DMS statement_conversion_tool.
+-- All 7 statements failed with the same error.
+-- Manual conversion was applied using lowercase schema object names as per DMS schema mapping results.
+-- Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+--
+-- Statement 1: GetAllProductsAsync - DMS FAILED - Manually converted
+-- Statement 2: GetProductByIdAsync - DMS FAILED - Manually converted
+-- Statement 3: InsertProductAsync - DMS FAILED - Manually converted  
+-- Statement 4: UpdateProductAsync - DMS FAILED - Manually converted
+-- Statement 5: DeleteProductAsync - DMS FAILED - Manually converted
+-- Statement 6: GetProductsByPriceRangeAsync - DMS FAILED - Manually converted
+-- Statement 7: GetLowStockProductsAsync - DMS FAILED - Manually converted
+--
+-- Key conversions applied:
+-- 1. Table names: Products->products, ProductHistory->producthistory, ProductStats->productstats
+-- 2. Column names: All converted to lowercase (productid, name, price, etc.)
+-- 3. SCOPE_IDENTITY() -> Writeable CTE with RETURNING clause
+-- 4. GETDATE() -> NOW()
+-- 5. DECLARE @var / BEGIN TRANSACTION / COMMIT -> Writeable CTEs for atomic operations
+-- 6. Integer division fix: CAST(stockquantity AS NUMERIC) for proper decimal division
+-- =====================================================
