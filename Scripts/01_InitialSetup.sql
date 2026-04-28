@@ -1,103 +1,113 @@
 -- Create ProductManagement Database
-IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'ProductManagement')
-BEGIN
-    CREATE DATABASE ProductManagement;
-END
-GO
+-- Note: In PostgreSQL, CREATE DATABASE cannot be inside a transaction block.
+-- Run this separately if needed: CREATE DATABASE productmanagement;
 
-USE ProductManagement;
-GO
+-- Connect to the database
+-- \c productmanagement
 
--- Create Products Table
-IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Products]') AND type in (N'U'))
-BEGIN
-    CREATE TABLE [dbo].[Products](
-        [ProductId] [int] IDENTITY(1,1) PRIMARY KEY,
-        [Name] [nvarchar](100) NOT NULL,
-        [Description] [nvarchar](500) NULL,
-        [Price] [decimal](18, 2) NOT NULL,
-        [StockQuantity] [int] NOT NULL,
-        [CreatedDate] [datetime] NOT NULL DEFAULT GETDATE(),
-        [ModifiedDate] [datetime] NULL
-    )
-END
-GO
+-- Create products table
+CREATE TABLE IF NOT EXISTS products (
+    productid INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(500) NULL,
+    price DECIMAL(18, 2) NOT NULL,
+    stockquantity INT NOT NULL,
+    createddate TIMESTAMP NOT NULL DEFAULT NOW(),
+    modifieddate TIMESTAMP NULL
+);
 
--- Create Stored Procedure for Getting All Products
-CREATE OR ALTER PROCEDURE [dbo].[sp_GetAllProducts]
-AS
+-- Create function for Getting All Products
+CREATE OR REPLACE FUNCTION sp_getallproducts()
+RETURNS TABLE (
+    productid INT,
+    name VARCHAR(100),
+    description VARCHAR(500),
+    price DECIMAL(18, 2),
+    stockquantity INT,
+    createddate TIMESTAMP,
+    modifieddate TIMESTAMP
+) AS $$
 BEGIN
-    SET NOCOUNT ON;
-    SELECT ProductId, Name, Description, Price, StockQuantity, CreatedDate, ModifiedDate
-    FROM Products
-    ORDER BY Name;
-END
-GO
+    RETURN QUERY
+    SELECT p.productid, p.name, p.description, p.price, p.stockquantity, p.createddate, p.modifieddate
+    FROM products p
+    ORDER BY p.name;
+END;
+$$ LANGUAGE plpgsql;
 
--- Create Stored Procedure for Getting Product by ID
-CREATE OR ALTER PROCEDURE [dbo].[sp_GetProductById]
-    @ProductId INT
-AS
+-- Create function for Getting Product by ID
+CREATE OR REPLACE FUNCTION sp_getproductbyid(p_productid INT)
+RETURNS TABLE (
+    productid INT,
+    name VARCHAR(100),
+    description VARCHAR(500),
+    price DECIMAL(18, 2),
+    stockquantity INT,
+    createddate TIMESTAMP,
+    modifieddate TIMESTAMP
+) AS $$
 BEGIN
-    SET NOCOUNT ON;
-    SELECT ProductId, Name, Description, Price, StockQuantity, CreatedDate, ModifiedDate
-    FROM Products
-    WHERE ProductId = @ProductId;
-END
-GO
+    RETURN QUERY
+    SELECT p.productid, p.name, p.description, p.price, p.stockquantity, p.createddate, p.modifieddate
+    FROM products p
+    WHERE p.productid = p_productid;
+END;
+$$ LANGUAGE plpgsql;
 
--- Create Stored Procedure for Inserting Product
-CREATE OR ALTER PROCEDURE [dbo].[sp_InsertProduct]
-    @Name NVARCHAR(100),
-    @Description NVARCHAR(500),
-    @Price DECIMAL(18,2),
-    @StockQuantity INT
-AS
+-- Create function for Inserting Product
+CREATE OR REPLACE FUNCTION sp_insertproduct(
+    p_name VARCHAR(100),
+    p_description VARCHAR(500),
+    p_price DECIMAL(18,2),
+    p_stockquantity INT
+)
+RETURNS INT AS $$
+DECLARE
+    v_productid INT;
 BEGIN
-    SET NOCOUNT ON;
-    INSERT INTO Products (Name, Description, Price, StockQuantity)
-    VALUES (@Name, @Description, @Price, @StockQuantity);
-    
-    SELECT SCOPE_IDENTITY() AS ProductId;
-END
-GO
+    INSERT INTO products (name, description, price, stockquantity)
+    VALUES (p_name, p_description, p_price, p_stockquantity)
+    RETURNING products.productid INTO v_productid;
 
--- Create Stored Procedure for Updating Product
-CREATE OR ALTER PROCEDURE [dbo].[sp_UpdateProduct]
-    @ProductId INT,
-    @Name NVARCHAR(100),
-    @Description NVARCHAR(500),
-    @Price DECIMAL(18,2),
-    @StockQuantity INT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    UPDATE Products
-    SET Name = @Name,
-        Description = @Description,
-        Price = @Price,
-        StockQuantity = @StockQuantity,
-        ModifiedDate = GETDATE()
-    WHERE ProductId = @ProductId;
-END
-GO
+    RETURN v_productid;
+END;
+$$ LANGUAGE plpgsql;
 
--- Create Stored Procedure for Deleting Product
-CREATE OR ALTER PROCEDURE [dbo].[sp_DeleteProduct]
-    @ProductId INT
-AS
+-- Create function for Updating Product
+CREATE OR REPLACE FUNCTION sp_updateproduct(
+    p_productid INT,
+    p_name VARCHAR(100),
+    p_description VARCHAR(500),
+    p_price DECIMAL(18,2),
+    p_stockquantity INT
+)
+RETURNS VOID AS $$
 BEGIN
-    SET NOCOUNT ON;
-    DELETE FROM Products
-    WHERE ProductId = @ProductId;
-END
-GO
+    UPDATE products
+    SET name = p_name,
+        description = p_description,
+        price = p_price,
+        stockquantity = p_stockquantity,
+        modifieddate = NOW()
+    WHERE productid = p_productid;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create function for Deleting Product
+CREATE OR REPLACE FUNCTION sp_deleteproduct(p_productid INT)
+RETURNS VOID AS $$
+BEGIN
+    DELETE FROM products
+    WHERE productid = p_productid;
+END;
+$$ LANGUAGE plpgsql;
 
 -- Insert Sample Data
-IF NOT EXISTS (SELECT TOP 1 1 FROM Products)
+DO $$
 BEGIN
-    EXEC sp_InsertProduct 'Laptop', 'High-performance laptop', 999.99, 10;
-    EXEC sp_InsertProduct 'Mouse', 'Wireless gaming mouse', 49.99, 20;
-    EXEC sp_InsertProduct 'Keyboard', 'Mechanical keyboard', 129.99, 15;
-END
-GO 
+    IF NOT EXISTS (SELECT 1 FROM products LIMIT 1) THEN
+        PERFORM sp_insertproduct('Laptop', 'High-performance laptop', 999.99, 10);
+        PERFORM sp_insertproduct('Mouse', 'Wireless gaming mouse', 49.99, 20);
+        PERFORM sp_insertproduct('Keyboard', 'Mechanical keyboard', 129.99, 15);
+    END IF;
+END $$;
