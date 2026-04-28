@@ -1,0 +1,38 @@
+DMS Conversion Failure Log
+==========================
+Date: 2026-04-28
+Migration Project ARN: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+
+All 7 SQL statements were submitted to the DMS MCP tool (dms-mcp___statement_conversion_tool) 
+for conversion. The tool consistently returned the same error for all attempts:
+
+Error: "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+
+The DMS tool was called 4 times with various parameters:
+  1. Attempt 1: Statement 1 with default poll settings → ERROR
+  2. Attempt 2: Statement 1 with max_poll_attempts=20, poll_interval_seconds=15 → ERROR
+  3. Attempt 3: Simple SELECT statement to test connectivity → ERROR
+  4. Attempt 4: Simple SELECT with explicit server_name → ERROR
+
+Since the DMS tool was consistently unavailable due to metadata model creation issues,
+all 7 statements were manually converted applying lowercase schema object names per the
+transformation definition guidelines.
+
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+Manual Conversion Rules Applied:
+1. All schema object names (tables, columns, aliases) converted to lowercase
+2. SCOPE_IDENTITY() → RETURNING clause
+3. GETDATE() → NOW()
+4. BEGIN TRANSACTION/COMMIT → Managed by ADO.NET transaction
+5. DECLARE @variable → Restructured to use multiple ADO.NET commands
+6. ROUND with integer division → Added explicit CAST to NUMERIC
+
+Statements Processed:
+  Statement 1 (GetAllProductsAsync): CTE with window functions - lowercased objects
+  Statement 2 (GetProductByIdAsync): CTE with LAG - lowercased objects
+  Statement 3 (InsertProductAsync): Transaction block - restructured for PostgreSQL
+  Statement 4 (UpdateProductAsync): Transaction block - restructured for PostgreSQL
+  Statement 5 (DeleteProductAsync): Transaction block - restructured for PostgreSQL
+  Statement 6 (GetProductsByPriceRangeAsync): CTE with RANK/PERCENT_RANK - lowercased objects
+  Statement 7 (GetLowStockProductsAsync): CTE with AVG/MIN/MAX - lowercased objects
