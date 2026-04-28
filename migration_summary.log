@@ -1,0 +1,135 @@
+==============================================================================
+MIGRATION SUMMARY LOG
+Microsoft SQL Server to PostgreSQL Migration for .NET ADO Application
+==============================================================================
+Generated: 2026-04-28
+Application: AdoCore (Product Management)
+Framework: .NET 9.0
+Source Database: Microsoft SQL Server 2019
+Target Database: PostgreSQL 13
+
+==============================================================================
+1. SQL STATEMENT CONVERSION SUMMARY
+==============================================================================
+Total SQL statements processed: 7
+DMS conversion successes: 0
+DMS conversion failures: 7
+Manual conversions (DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA): 7
+
+DMS Failure Reason: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+
+Statement Details:
+  1. GetAllProductsAsync - CTE with AVG/COUNT window functions, INNER JOIN, CASE, ROUND
+     Conversion: Lowercased all schema objects
+  2. GetProductByIdAsync - CTE with LAG window function, LEFT JOIN, CASE, ROUND
+     Conversion: Lowercased all schema objects
+  3. InsertProductAsync - Transaction with DECLARE, INSERT, SCOPE_IDENTITY(), GETDATE()
+     Conversion: Restructured to INSERT...RETURNING, NOW(), app-level transaction
+  4. UpdateProductAsync - Transaction with DECLARE, SELECT into vars, UPDATE, INSERT, GETDATE()
+     Conversion: Restructured to separate commands with app-level transaction, NOW()
+  5. DeleteProductAsync - Transaction with DECLARE, SELECT into vars, INSERT, DELETE, CASE, GETDATE()
+     Conversion: Restructured to separate commands with app-level transaction, NOW()
+  6. GetProductsByPriceRangeAsync - CTE with RANK()/PERCENT_RANK(), BETWEEN, CASE
+     Conversion: Lowercased all schema objects
+  7. GetLowStockProductsAsync - CTE with AVG/MIN/MAX window functions, CASE, ROUND
+     Conversion: Lowercased all schema objects, added ::numeric cast for integer division
+
+==============================================================================
+2. SQL EQUIVALENCY VALIDATION SUMMARY
+==============================================================================
+Total statement pairs validated: 7
+Equivalent: 0
+Not Equivalent: 0
+Errors: 7
+
+Equivalency Tool Error: All 7 statement pairs returned {"equivalence_status": "ERROR", "error": "'uniqueID'"}
+Note: Per transformation rules, all equivalency statuses come from the SQL Equivalency tool, not agent judgment.
+
+==============================================================================
+3. PACKAGE DEPENDENCY CHANGES
+==============================================================================
+Removed: Microsoft.Data.SqlClient Version 5.1.4
+Added:   Npgsql Version 8.0.1
+
+==============================================================================
+4. CLASS/TYPE REPLACEMENTS
+==============================================================================
+  using Microsoft.Data.SqlClient → using Npgsql
+  SqlConnection → NpgsqlConnection (3 occurrences: field, method return type, constructor)
+  SqlCommand → NpgsqlCommand (15 occurrences: all command instantiations)
+  SqlDataReader → NpgsqlDataReader (1 occurrence: MapProductFromReader parameter)
+  System.Data.Common.DbTransaction → NpgsqlTransaction (11 occurrences: transaction assignment)
+
+==============================================================================
+5. CONNECTION STRING CHANGES
+==============================================================================
+Before (SQL Server):
+  DevConnection: Server=localhost;Database=ProductManagement;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True
+  ProdConnection: Server=localhost;Database=ProductManagement;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True
+
+After (PostgreSQL):
+  DevConnection: Host=localhost;Database=ProductManagement;Username=postgres;Password=postgres
+  ProdConnection: Host=localhost;Database=ProductManagement;Username=postgres;Password=postgres
+
+Parameter Mapping:
+  Server= → Host=
+  Database= → Database= (unchanged)
+  Trusted_Connection=True → Removed (replaced with Username/Password auth)
+  MultipleActiveResultSets=true → Removed (not applicable to PostgreSQL)
+  TrustServerCertificate=True → Removed (not applicable to PostgreSQL)
+  Added: Username=postgres;Password=postgres
+
+==============================================================================
+6. FILES MODIFIED
+==============================================================================
+  sourceCode/DataAccess/ProductRepository.cs - SQL statements, class types, using directives
+  sourceCode/AdoCore.csproj - Package reference updated
+  sourceCode/appsettings.json - Connection strings updated
+
+==============================================================================
+7. FILES CREATED
+==============================================================================
+  sourceCode/extracted_statements.sql - Catalog of all 7 original MS SQL statements
+  sourceCode/converted_statements.sql - Catalog of all 7 converted PostgreSQL statements
+  sourceCode/sql_equivalency_validation_report.json - Equivalency validation report
+  sourceCode/migration_summary.log - This file
+
+==============================================================================
+8. SQL SYNTAX CONVERSIONS APPLIED
+==============================================================================
+  SCOPE_IDENTITY() → INSERT...RETURNING productid
+  GETDATE() → NOW()
+  DECLARE @var TYPE → Application-level variables (C# code)
+  SET @var = value → Application-level assignment (C# code)
+  BEGIN TRANSACTION/COMMIT → Application-level BeginTransactionAsync/CommitAsync
+  All table names → lowercase (Products → products, ProductHistory → producthistory, ProductStats → productstats)
+  All column names → lowercase (ProductId → productid, StockQuantity → stockquantity, etc.)
+  All CTE names → lowercase (ProductStats → productstats, RankedProducts → rankedproducts, etc.)
+  All column aliases → lowercase (AvgPrice → avgprice, PriceCategory → pricecategory, etc.)
+  Integer division in ROUND → Added ::numeric cast (StockQuantity/AvgStock → stockquantity::numeric/avgstock)
+
+==============================================================================
+9. FINAL CODEBASE SCAN RESULTS
+==============================================================================
+  SQL Server references in .cs files: 0 (CLEAN)
+  SQL Server references in .csproj: 0 (CLEAN)
+  SQL Server parameters in appsettings.json: 0 (CLEAN)
+  Npgsql references in ProductRepository.cs: 31 (VERIFIED)
+  GETDATE() occurrences: 0 (CLEAN)
+  SCOPE_IDENTITY() occurrences: 0 (CLEAN)
+  BEGIN TRANSACTION in SQL strings: 0 (CLEAN)
+
+==============================================================================
+10. STATEMENTS REQUIRING MANUAL REVIEW
+==============================================================================
+All 7 statements required manual conversion due to DMS tool failure.
+All 7 equivalency validations returned ERROR from the equivalency tool.
+Manual review is recommended for all converted statements to verify correctness.
+
+Statements with structural changes (not just case changes):
+  - Statement 3 (InsertProductAsync): Restructured from single batch SQL with DECLARE/SCOPE_IDENTITY to
+    multi-command approach with INSERT...RETURNING and app-level transaction
+  - Statement 4 (UpdateProductAsync): Restructured from single batch SQL with DECLARE/SET to
+    multi-command approach with SELECT INTO C# vars and app-level transaction
+  - Statement 5 (DeleteProductAsync): Restructured from single batch SQL with DECLARE/SET to
+    multi-command approach with SELECT INTO C# vars and app-level transaction
