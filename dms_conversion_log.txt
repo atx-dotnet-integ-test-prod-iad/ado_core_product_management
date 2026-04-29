@@ -1,0 +1,97 @@
+================================================================================
+DMS CONVERSION LOG
+Date: 2026-04-29
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Database: ProductManagement
+Schema: dbo
+================================================================================
+
+All 7 SQL statements from ProductRepository.cs were submitted to the DMS MCP 
+statement_conversion_tool. All 7 failed with the same error.
+
+DMS Error (consistent across all attempts):
+  Status: error
+  Error: "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+  
+Fallback: Manual conversion applied with lowercase schema object names per plan.
+Conversion Method: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+
+================================================================================
+Statement 1: GetAllProductsAsync
+================================================================================
+DMS Submission Timestamp: 2026-04-29T04:16:31.359034
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion Applied: Yes
+Conversions: Lowercase all schema object names (table names, column names, aliases)
+
+================================================================================
+Statement 2: GetProductByIdAsync  
+================================================================================
+DMS Submission Timestamp: 2026-04-29T04:17:27.232729
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion Applied: Yes
+Conversions: Lowercase all schema object names
+
+================================================================================
+Statement 3: InsertProductAsync
+================================================================================
+DMS Submission Timestamp: 2026-04-29T04:17:43.874351
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion Applied: Yes
+Conversions: Lowercase schema objects, SCOPE_IDENTITY() -> RETURNING clause,
+  GETDATE() -> NOW(), DECLARE/@var -> PostgreSQL DO block with DECLARE,
+  BEGIN TRANSACTION/COMMIT -> handled in application code (Npgsql transaction)
+
+================================================================================
+Statement 4: UpdateProductAsync
+================================================================================
+DMS Submission Timestamp: 2026-04-29T04:17:59.763138
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion Applied: Yes
+Conversions: Lowercase schema objects, GETDATE() -> NOW(),
+  DECLARE/@var -> PostgreSQL DO block with DECLARE,
+  SELECT @var = col -> SELECT col INTO var,
+  BEGIN TRANSACTION/COMMIT -> handled in application code (Npgsql transaction)
+
+================================================================================
+Statement 5: DeleteProductAsync
+================================================================================
+DMS Submission Timestamp: 2026-04-29T04:18:14.598084
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion Applied: Yes
+Conversions: Lowercase schema objects, GETDATE() -> NOW(),
+  DECLARE/@var -> PostgreSQL DO block with DECLARE,
+  SELECT @var = col -> SELECT col INTO var,
+  BEGIN TRANSACTION/COMMIT -> handled in application code (Npgsql transaction)
+
+================================================================================
+Statement 6: GetProductsByPriceRangeAsync
+================================================================================
+DMS Submission Timestamp: 2026-04-29T04:18:31.083331
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion Applied: Yes
+Conversions: Lowercase all schema object names
+
+================================================================================
+Statement 7: GetLowStockProductsAsync
+================================================================================
+DMS Submission Timestamp: 2026-04-29T04:18:46.903307
+DMS Status: error
+DMS Error: Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}
+Manual Conversion Applied: Yes
+Conversions: Lowercase all schema object names, CAST for integer division in ROUND
+
+================================================================================
+SUMMARY
+================================================================================
+Total Statements: 7
+DMS Successful Conversions: 0
+DMS Failed Conversions: 7
+Manual Conversions Applied: 7
+DMS Error Type: Metadata model creation failed (consistent across all attempts)
