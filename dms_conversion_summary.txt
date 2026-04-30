@@ -1,0 +1,66 @@
+== DMS CONVERSION FAILURE SUMMARY ==
+Date: 2026-04-30
+Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+Region: us-east-1
+Schema: dbo
+Database: ProductManagement
+Server: 172.31.94.132
+
+== DMS ERROR (Same for all 7 statements) ==
+Error: "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+Attempts: Multiple attempts with different configurations (varied poll_interval_seconds, max_poll_attempts, with/without explicit server_name/database_name)
+Root Cause: DMS service-level issue - metadata model creation stalls in RECEIVED status
+
+== DMS SCHEMA MAPPING (SUCCESSFUL) ==
+The DMS schema_mapping_tool successfully returned schema mappings for all 3 tables:
+- Products -> products (in productmanagement_dbo schema)
+- ProductHistory -> producthistory (in productmanagement_dbo schema)
+- ProductStats -> productstats (in productmanagement_dbo schema)
+All column names mapped to lowercase.
+GETDATE() -> clock_timestamp()
+IDENTITY -> GENERATED ALWAYS AS IDENTITY
+datetime -> TIMESTAMP WITHOUT TIME ZONE
+decimal -> NUMERIC
+
+== CONVERSION APPROACH ==
+All 7 statements were manually converted following the DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA rule:
+- Applied lowercase schema object names based on DMS schema mapping data
+- Converted SQL Server specific syntax (SCOPE_IDENTITY, GETDATE, DECLARE/SET) to PostgreSQL equivalents
+- Preserved SQL logic and structure
+
+== STATEMENT-BY-STATEMENT SUMMARY ==
+
+Statement 1 (GetAllProductsAsync):
+- DMS Input: CTE with AVG/COUNT OVER window functions, ROUND, CASE, INNER JOIN
+- DMS Output: ERROR - Metadata model creation failed
+- Manual Conversion: Lowercase names, ROUND compatible, CTE alias renamed to avoid conflict with table name productstats
+
+Statement 2 (GetProductByIdAsync):
+- DMS Input: CTE with LAG window function, ROUND, CASE, LEFT JOIN, @ProductId param
+- DMS Output: ERROR - Metadata model creation failed
+- Manual Conversion: Lowercase names, LAG window function compatible, CTE alias renamed
+
+Statement 3 (InsertProductAsync):
+- DMS Input: Transaction with DECLARE, SCOPE_IDENTITY(), INSERT, UPDATE, GETDATE()
+- DMS Output: ERROR - Metadata model creation failed
+- Manual Conversion: Restructured to PostgreSQL CTE with RETURNING clause, clock_timestamp() for GETDATE()
+
+Statement 4 (UpdateProductAsync):
+- DMS Input: Transaction with DECLARE, SELECT INTO variables, UPDATE, INSERT, GETDATE()
+- DMS Output: ERROR - Metadata model creation failed
+- Manual Conversion: Restructured to PostgreSQL CTE with old_values subquery, clock_timestamp()
+
+Statement 5 (DeleteProductAsync):
+- DMS Input: Transaction with DECLARE, SELECT INTO variables, INSERT, DELETE, UPDATE with CASE, GETDATE()
+- DMS Output: ERROR - Metadata model creation failed
+- Manual Conversion: Restructured to PostgreSQL CTE with old_values subquery, clock_timestamp()
+
+Statement 6 (GetProductsByPriceRangeAsync):
+- DMS Input: CTE with RANK/PERCENT_RANK window functions, CASE, @MinPrice/@MaxPrice params
+- DMS Output: ERROR - Metadata model creation failed
+- Manual Conversion: Lowercase names, window functions compatible
+
+Statement 7 (GetLowStockProductsAsync):
+- DMS Input: CTE with AVG/MIN/MAX window functions, CASE, ROUND, @Threshold param
+- DMS Output: ERROR - Metadata model creation failed
+- Manual Conversion: Lowercase names, added CAST to NUMERIC for integer division in ROUND
