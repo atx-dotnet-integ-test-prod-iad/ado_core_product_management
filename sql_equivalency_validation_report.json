@@ -1,0 +1,64 @@
+{
+  "number_of_statements_processed": 7,
+  "number_of_statements_equivalent": 0,
+  "number_of_statements_non_equivalent": 0,
+  "number_of_statements_with_equivalency_error": 7,
+  "statement_details": [
+    {
+      "original_statement": "WITH productstats_cte AS (\n    SELECT \n        productid,\n        AVG(price) OVER() as avgprice,\n        COUNT(*) OVER() as totalproducts\n    FROM products\n)\nSELECT \n    p.productid,\n    p.name,\n    p.description,\n    p.price,\n    p.stockquantity,\n    p.createddate,\n    p.modifieddate,\n    CASE \n        WHEN p.price > ps.avgprice THEN 'Above Average'\n        WHEN p.price < ps.avgprice THEN 'Below Average'\n        ELSE 'Average'\n    END as pricecategory,\n    ROUND((p.price / ps.avgprice) * 100, 2) as pricepercentageofaverage\nFROM products p\nINNER JOIN productstats_cte ps ON p.productid = ps.productid\nORDER BY \n    CASE \n        WHEN p.price > ps.avgprice THEN 1\n        ELSE 2\n    END,\n    p.name",
+      "converted_statement": "WITH productstats_cte AS (\n    SELECT \n        productid,\n        AVG(price) OVER() as avgprice,\n        COUNT(*) OVER() as totalproducts\n    FROM products\n)\nSELECT \n    p.productid,\n    p.name,\n    p.description,\n    p.price,\n    p.stockquantity,\n    p.createddate,\n    p.modifieddate,\n    CASE \n        WHEN p.price > ps.avgprice THEN 'Above Average'\n        WHEN p.price < ps.avgprice THEN 'Below Average'\n        ELSE 'Average'\n    END as pricecategory,\n    ROUND((p.price / ps.avgprice) * 100, 2) as pricepercentageofaverage\nFROM products p\nINNER JOIN productstats_cte ps ON p.productid = ps.productid\nORDER BY \n    CASE \n        WHEN p.price > ps.avgprice THEN 1\n        ELSE 2\n    END,\n    p.name",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-02T03:07:38.172670\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "WITH producthistory_cte AS (\n    SELECT \n        productid,\n        LAG(price) OVER (ORDER BY modifieddate) as previousprice,\n        LAG(stockquantity) OVER (ORDER BY modifieddate) as previousstock\n    FROM products\n    WHERE productid = @ProductId\n)\nSELECT \n    p.productid,\n    p.name,\n    p.description,\n    p.price,\n    p.stockquantity,\n    p.createddate,\n    p.modifieddate,\n    ph.previousprice,\n    ph.previousstock,\n    CASE \n        WHEN ph.previousprice IS NOT NULL THEN \n            ROUND(((p.price - ph.previousprice) / ph.previousprice) * 100, 2)\n        ELSE NULL\n    END as pricechangepercentage\nFROM products p\nLEFT JOIN producthistory_cte ph ON p.productid = ph.productid\nWHERE p.productid = @ProductId",
+      "converted_statement": "WITH producthistory_cte AS (\n    SELECT \n        productid,\n        LAG(price) OVER (ORDER BY modifieddate) as previousprice,\n        LAG(stockquantity) OVER (ORDER BY modifieddate) as previousstock\n    FROM products\n    WHERE productid = @ProductId\n)\nSELECT \n    p.productid,\n    p.name,\n    p.description,\n    p.price,\n    p.stockquantity,\n    p.createddate,\n    p.modifieddate,\n    ph.previousprice,\n    ph.previousstock,\n    CASE \n        WHEN ph.previousprice IS NOT NULL THEN \n            ROUND(((p.price - ph.previousprice) / ph.previousprice) * 100, 2)\n        ELSE NULL\n    END as pricechangepercentage\nFROM products p\nLEFT JOIN producthistory_cte ph ON p.productid = ph.productid\nWHERE p.productid = @ProductId",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-02T03:07:52.944790\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "BEGIN;\n    INSERT INTO products (name, description, price, stockquantity)\n    VALUES (@Name, @Description, @Price, @StockQuantity);\n    \n    INSERT INTO producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate)\n    VALUES (lastval(), 'INSERT', NULL, @Price, NULL, @StockQuantity, NOW());\n    \n    UPDATE productstats\n    SET \n        totalproducts = totalproducts + 1,\n        averageprice = (averageprice * totalproducts + @Price) / (totalproducts + 1),\n        lastupdated = NOW()\n    WHERE statid = 1;\nCOMMIT;\n\nSELECT lastval();",
+      "converted_statement": "BEGIN;\n    INSERT INTO products (name, description, price, stockquantity)\n    VALUES (@Name, @Description, @Price, @StockQuantity);\n    \n    INSERT INTO producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate)\n    VALUES (lastval(), 'INSERT', NULL, @Price, NULL, @StockQuantity, NOW());\n    \n    UPDATE productstats\n    SET \n        totalproducts = totalproducts + 1,\n        averageprice = (averageprice * totalproducts + @Price) / (totalproducts + 1),\n        lastupdated = NOW()\n    WHERE statid = 1;\nCOMMIT;\n\nSELECT lastval();",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-02T03:08:12.699675\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "DO $$\nDECLARE\n    v_oldprice NUMERIC(18,2);\n    v_oldstock INTEGER;\nBEGIN\n    SELECT price, stockquantity INTO v_oldprice, v_oldstock\n    FROM products\n    WHERE productid = @ProductId;\n    \n    UPDATE products\n    SET \n        name = @Name,\n        description = @Description,\n        price = @Price,\n        stockquantity = @StockQuantity,\n        modifieddate = NOW()\n    WHERE productid = @ProductId;\n    \n    INSERT INTO producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate)\n    VALUES (@ProductId, 'UPDATE', v_oldprice, @Price, v_oldstock, @StockQuantity, NOW());\n    \n    UPDATE productstats\n    SET \n        averageprice = (averageprice * totalproducts - v_oldprice + @Price) / totalproducts,\n        lastupdated = NOW()\n    WHERE statid = 1;\nEND $$;",
+      "converted_statement": "DO $$\nDECLARE\n    v_oldprice NUMERIC(18,2);\n    v_oldstock INTEGER;\nBEGIN\n    SELECT price, stockquantity INTO v_oldprice, v_oldstock\n    FROM products\n    WHERE productid = @ProductId;\n    \n    UPDATE products\n    SET \n        name = @Name,\n        description = @Description,\n        price = @Price,\n        stockquantity = @StockQuantity,\n        modifieddate = NOW()\n    WHERE productid = @ProductId;\n    \n    INSERT INTO producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate)\n    VALUES (@ProductId, 'UPDATE', v_oldprice, @Price, v_oldstock, @StockQuantity, NOW());\n    \n    UPDATE productstats\n    SET \n        averageprice = (averageprice * totalproducts - v_oldprice + @Price) / totalproducts,\n        lastupdated = NOW()\n    WHERE statid = 1;\nEND $$;",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-02T03:08:29.501339\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "DO $$\nDECLARE\n    v_oldprice NUMERIC(18,2);\n    v_oldstock INTEGER;\nBEGIN\n    SELECT price, stockquantity INTO v_oldprice, v_oldstock\n    FROM products\n    WHERE productid = @ProductId;\n    \n    INSERT INTO producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate)\n    VALUES (@ProductId, 'DELETE', v_oldprice, NULL, v_oldstock, NULL, NOW());\n    \n    DELETE FROM products \n    WHERE productid = @ProductId;\n    \n    UPDATE productstats\n    SET \n        totalproducts = totalproducts - 1,\n        averageprice = CASE \n            WHEN totalproducts > 1 \n            THEN (averageprice * totalproducts - v_oldprice) / (totalproducts - 1)\n            ELSE 0\n        END,\n        lastupdated = NOW()\n    WHERE statid = 1;\nEND $$;",
+      "converted_statement": "DO $$\nDECLARE\n    v_oldprice NUMERIC(18,2);\n    v_oldstock INTEGER;\nBEGIN\n    SELECT price, stockquantity INTO v_oldprice, v_oldstock\n    FROM products\n    WHERE productid = @ProductId;\n    \n    INSERT INTO producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate)\n    VALUES (@ProductId, 'DELETE', v_oldprice, NULL, v_oldstock, NULL, NOW());\n    \n    DELETE FROM products \n    WHERE productid = @ProductId;\n    \n    UPDATE productstats\n    SET \n        totalproducts = totalproducts - 1,\n        averageprice = CASE \n            WHEN totalproducts > 1 \n            THEN (averageprice * totalproducts - v_oldprice) / (totalproducts - 1)\n            ELSE 0\n        END,\n        lastupdated = NOW()\n    WHERE statid = 1;\nEND $$;",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-02T03:08:45.896079\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "WITH rankedproducts AS (\n    SELECT \n        p.*,\n        RANK() OVER (ORDER BY p.price) as pricerank,\n        PERCENT_RANK() OVER (ORDER BY p.price) as pricepercentile\n    FROM products p\n    WHERE p.price BETWEEN @MinPrice AND @MaxPrice\n)\nSELECT \n    rp.*,\n    CASE \n        WHEN rp.pricepercentile <= 0.25 THEN 'Budget'\n        WHEN rp.pricepercentile <= 0.75 THEN 'Mid-Range'\n        ELSE 'Premium'\n    END as pricesegment\nFROM rankedproducts rp\nORDER BY rp.pricerank",
+      "converted_statement": "WITH rankedproducts AS (\n    SELECT \n        p.*,\n        RANK() OVER (ORDER BY p.price) as pricerank,\n        PERCENT_RANK() OVER (ORDER BY p.price) as pricepercentile\n    FROM products p\n    WHERE p.price BETWEEN @MinPrice AND @MaxPrice\n)\nSELECT \n    rp.*,\n    CASE \n        WHEN rp.pricepercentile <= 0.25 THEN 'Budget'\n        WHEN rp.pricepercentile <= 0.75 THEN 'Mid-Range'\n        ELSE 'Premium'\n    END as pricesegment\nFROM rankedproducts rp\nORDER BY rp.pricerank",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-02T03:08:59.144637\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "WITH stockanalysis AS (\n    SELECT \n        p.*,\n        AVG(stockquantity) OVER() as avgstock,\n        MIN(stockquantity) OVER() as minstock,\n        MAX(stockquantity) OVER() as maxstock\n    FROM products p\n)\nSELECT \n    sa.*,\n    CASE \n        WHEN stockquantity <= @Threshold THEN 'Critical'\n        WHEN stockquantity <= avgstock * 0.5 THEN 'Low'\n        ELSE 'Adequate'\n    END as stockstatus,\n    ROUND((stockquantity::numeric / avgstock) * 100, 2) as stockpercentageofaverage\nFROM stockanalysis sa\nWHERE stockquantity <= @Threshold\nORDER BY stockquantity",
+      "converted_statement": "WITH stockanalysis AS (\n    SELECT \n        p.*,\n        AVG(stockquantity) OVER() as avgstock,\n        MIN(stockquantity) OVER() as minstock,\n        MAX(stockquantity) OVER() as maxstock\n    FROM products p\n)\nSELECT \n    sa.*,\n    CASE \n        WHEN stockquantity <= @Threshold THEN 'Critical'\n        WHEN stockquantity <= avgstock * 0.5 THEN 'Low'\n        ELSE 'Adequate'\n    END as stockstatus,\n    ROUND((stockquantity::numeric / avgstock) * 100, 2) as stockpercentageofaverage\nFROM stockanalysis sa\nWHERE stockquantity <= @Threshold\nORDER BY stockquantity",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-02T03:09:12.624645\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    }
+  ]
+}
