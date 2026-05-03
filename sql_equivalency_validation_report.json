@@ -1,0 +1,376 @@
+{
+  "number_of_statements_processed": 46,
+  "number_of_statements_equivalent": 0,
+  "number_of_statements_non_equivalent": 0,
+  "number_of_statements_with_equivalency_error": 46,
+  "statement_details": [
+    {
+      "original_statement": "WITH productstats AS ( SELECT productid, AVG(price) OVER() as avgprice, COUNT(*) OVER() as totalproducts FROM products ) SELECT p.productid, p.name, p.description, p.price, p.stockquantity, p.createddate, p.modifieddate, CASE WHEN p.price > ps.avgprice THEN 'Above Average' WHEN p.price < ps.avgprice THEN 'Below Average' ELSE 'Average' END as pricecategory, ROUND((p.price / ps.avgprice) * 100, 2) as pricepercentageofaverage FROM products p INNER JOIN productstats ps ON p.productid = ps.productid ORDER BY CASE WHEN p.price > ps.avgprice THEN 1 ELSE 2 END, p.name",
+      "converted_statement": "WITH productstats AS ( SELECT productid, AVG(price) OVER() as avgprice, COUNT(*) OVER() as totalproducts FROM products ) SELECT p.productid, p.name, p.description, p.price, p.stockquantity, p.createddate, p.modifieddate, CASE WHEN p.price > ps.avgprice THEN 'Above Average' WHEN p.price < ps.avgprice THEN 'Below Average' ELSE 'Average' END as pricecategory, ROUND((p.price / ps.avgprice) * 100, 2) as pricepercentageofaverage FROM products p INNER JOIN productstats ps ON p.productid = ps.productid ORDER BY CASE WHEN p.price > ps.avgprice THEN 1 ELSE 2 END, p.name",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:05:30.342130\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "WITH producthistory AS ( SELECT productid, LAG(price) OVER (ORDER BY modifieddate) as previousprice, LAG(stockquantity) OVER (ORDER BY modifieddate) as previousstock FROM products WHERE productid = @ProductId ) SELECT p.productid, p.name, p.description, p.price, p.stockquantity, p.createddate, p.modifieddate, ph.previousprice, ph.previousstock, CASE WHEN ph.previousprice IS NOT NULL THEN ROUND(((p.price - ph.previousprice) / ph.previousprice) * 100, 2) ELSE NULL END as pricechangepercentage FROM products p LEFT JOIN producthistory ph ON p.productid = ph.productid WHERE p.productid = @ProductId",
+      "converted_statement": "WITH producthistory AS ( SELECT productid, LAG(price) OVER (ORDER BY modifieddate) as previousprice, LAG(stockquantity) OVER (ORDER BY modifieddate) as previousstock FROM products WHERE productid = @ProductId ) SELECT p.productid, p.name, p.description, p.price, p.stockquantity, p.createddate, p.modifieddate, ph.previousprice, ph.previousstock, CASE WHEN ph.previousprice IS NOT NULL THEN ROUND(((p.price - ph.previousprice) / ph.previousprice) * 100, 2) ELSE NULL END as pricechangepercentage FROM products p LEFT JOIN producthistory ph ON p.productid = ph.productid WHERE p.productid = @ProductId",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:05:44.449879\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "BEGIN; INSERT INTO products (name, description, price, stockquantity) VALUES (@Name, @Description, @Price, @StockQuantity); INSERT INTO producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate) VALUES (lastval(), 'INSERT', NULL, @Price, NULL, @StockQuantity, NOW()); UPDATE productstats SET totalproducts = totalproducts + 1, averageprice = (averageprice * totalproducts + @Price) / (totalproducts + 1), lastupdated = NOW() WHERE statid = 1; COMMIT; SELECT lastval();",
+      "converted_statement": "BEGIN; INSERT INTO products (name, description, price, stockquantity) VALUES (@Name, @Description, @Price, @StockQuantity); INSERT INTO producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate) VALUES (lastval(), 'INSERT', NULL, @Price, NULL, @StockQuantity, NOW()); UPDATE productstats SET totalproducts = totalproducts + 1, averageprice = (averageprice * totalproducts + @Price) / (totalproducts + 1), lastupdated = NOW() WHERE statid = 1; COMMIT; SELECT lastval();",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:06:05.266052\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "BEGIN; INSERT INTO producthistory (...) SELECT @ProductId, 'UPDATE', price, @Price, stockquantity, @StockQuantity, NOW() FROM products WHERE productid = @ProductId; UPDATE productstats SET averageprice = ... WHERE statid = 1; UPDATE products SET name = @Name, ... WHERE productid = @ProductId; COMMIT;",
+      "converted_statement": "BEGIN; INSERT INTO producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate) SELECT @ProductId, 'UPDATE', price, @Price, stockquantity, @StockQuantity, NOW() FROM products WHERE productid = @ProductId; UPDATE productstats SET averageprice = (averageprice * totalproducts - (SELECT price FROM products WHERE productid = @ProductId) + @Price) / totalproducts, lastupdated = NOW() WHERE statid = 1; UPDATE products SET name = @Name, description = @Description, price = @Price, stockquantity = @StockQuantity, modifieddate = NOW() WHERE productid = @ProductId; COMMIT;",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:06:23.907392\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "BEGIN; INSERT INTO producthistory (...) SELECT @ProductId, 'DELETE', price, NULL, stockquantity, NULL, NOW() FROM products WHERE productid = @ProductId; UPDATE productstats SET totalproducts = totalproducts - 1, averageprice = CASE ... END WHERE statid = 1; DELETE FROM products WHERE productid = @ProductId; COMMIT;",
+      "converted_statement": "BEGIN; INSERT INTO producthistory (productid, action, oldprice, newprice, oldstock, newstock, actiondate) SELECT @ProductId, 'DELETE', price, NULL, stockquantity, NULL, NOW() FROM products WHERE productid = @ProductId; UPDATE productstats SET totalproducts = totalproducts - 1, averageprice = CASE WHEN totalproducts > 1 THEN (averageprice * totalproducts - (SELECT price FROM products WHERE productid = @ProductId)) / (totalproducts - 1) ELSE 0 END, lastupdated = NOW() WHERE statid = 1; DELETE FROM products WHERE productid = @ProductId; COMMIT;",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:06:42.203007\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "WITH rankedproducts AS ( SELECT p.*, RANK() OVER (ORDER BY p.price) as pricerank, PERCENT_RANK() OVER (ORDER BY p.price) as pricepercentile FROM products p WHERE p.price BETWEEN @MinPrice AND @MaxPrice ) SELECT rp.*, CASE ... END as pricesegment FROM rankedproducts rp ORDER BY rp.pricerank",
+      "converted_statement": "WITH rankedproducts AS ( SELECT p.*, RANK() OVER (ORDER BY p.price) as pricerank, PERCENT_RANK() OVER (ORDER BY p.price) as pricepercentile FROM products p WHERE p.price BETWEEN @MinPrice AND @MaxPrice ) SELECT rp.*, CASE WHEN rp.pricepercentile <= 0.25 THEN 'Budget' WHEN rp.pricepercentile <= 0.75 THEN 'Mid-Range' ELSE 'Premium' END as pricesegment FROM rankedproducts rp ORDER BY rp.pricerank",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:06:55.657041\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "WITH stockanalysis AS ( SELECT p.*, AVG(stockquantity) OVER() as avgstock, MIN(stockquantity) OVER() as minstock, MAX(stockquantity) OVER() as maxstock FROM products p ) SELECT sa.*, CASE ... END as stockstatus, ROUND((stockquantity::numeric / avgstock) * 100, 2) as stockpercentageofaverage FROM stockanalysis sa WHERE stockquantity <= @Threshold ORDER BY stockquantity",
+      "converted_statement": "WITH stockanalysis AS ( SELECT p.*, AVG(stockquantity) OVER() as avgstock, MIN(stockquantity) OVER() as minstock, MAX(stockquantity) OVER() as maxstock FROM products p ) SELECT sa.*, CASE WHEN stockquantity <= @Threshold THEN 'Critical' WHEN stockquantity <= avgstock * 0.5 THEN 'Low' ELSE 'Adequate' END as stockstatus, ROUND((stockquantity::numeric / avgstock) * 100, 2) as stockpercentageofaverage FROM stockanalysis sa WHERE stockquantity <= @Threshold ORDER BY stockquantity",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:07:09.815733\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'ProductManagement') BEGIN CREATE DATABASE ProductManagement; END",
+      "converted_statement": "SELECT 'CREATE DATABASE productmanagement' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'productmanagement')",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:12:45.144519\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "USE ProductManagement;",
+      "converted_statement": "SET search_path TO public;",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:15:54.371081\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[trg_Products_History]') AND type = 'TR') BEGIN DROP TRIGGER [dbo].[trg_Products_History] END",
+      "converted_statement": "DROP TRIGGER IF EXISTS trg_products_history ON products; DROP FUNCTION IF EXISTS trg_products_history_func();",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:12:55.084196\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ProductHistory]') AND type in (N'U')) BEGIN DROP TABLE [dbo].[ProductHistory] END",
+      "converted_statement": "DROP TABLE IF EXISTS producthistory CASCADE;",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:13:06.643167\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Products]') AND type in (N'U')) BEGIN DROP TABLE [dbo].[Products] END",
+      "converted_statement": "DROP TABLE IF EXISTS products CASCADE;",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:13:15.289626\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Categories]') AND type in (N'U')) BEGIN DROP TABLE [dbo].[Categories] END",
+      "converted_statement": "DROP TABLE IF EXISTS categories CASCADE;",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:13:24.171189\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[Suppliers]') AND type in (N'U')) BEGIN DROP TABLE [dbo].[Suppliers] END",
+      "converted_statement": "DROP TABLE IF EXISTS suppliers CASCADE;",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:13:32.753752\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[ProductStats]') AND type in (N'U')) BEGIN DROP TABLE [dbo].[ProductStats] END",
+      "converted_statement": "DROP TABLE IF EXISTS productstats CASCADE;",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:13:41.662019\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "CREATE TABLE [dbo].[Categories]( [CategoryId] [int] IDENTITY(1,1) PRIMARY KEY, [Name] [nvarchar](50) NOT NULL, [Description] [nvarchar](200) NULL, [ParentCategoryId] [int] NULL, [CreatedDate] [datetime] NOT NULL DEFAULT GETDATE() )",
+      "converted_statement": "CREATE TABLE categories( categoryid INTEGER NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name VARCHAR(50) NOT NULL, description VARCHAR(200), parentcategoryid INTEGER, createddate TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT clock_timestamp() )",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:10:16.282266\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "ALTER TABLE [dbo].[Categories] ADD CONSTRAINT [FK_Categories_Categories] FOREIGN KEY ([ParentCategoryId]) REFERENCES [dbo].[Categories] ([CategoryId])",
+      "converted_statement": "ALTER TABLE categories ADD CONSTRAINT fk_categories_categories FOREIGN KEY (parentcategoryid) REFERENCES categories (categoryid)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:11:38.679677\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "CREATE TABLE [dbo].[Suppliers]( [SupplierId] [int] IDENTITY(1,1) PRIMARY KEY, ... [IsActive] [bit] NOT NULL DEFAULT 1, [CreatedDate] [datetime] NOT NULL DEFAULT GETDATE() )",
+      "converted_statement": "CREATE TABLE suppliers( supplierid INTEGER NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY, ... isactive BOOLEAN NOT NULL DEFAULT TRUE, createddate TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT clock_timestamp() )",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:10:42.973842\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "CREATE TABLE [dbo].[Products]( [ProductId] [int] IDENTITY(1,1) PRIMARY KEY, ... [IsDiscontinued] [bit] NOT NULL DEFAULT 0, ... CONSTRAINT [FK_Products_Categories] ... )",
+      "converted_statement": "CREATE TABLE products( productid INTEGER NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY, ... isdiscontinued BOOLEAN NOT NULL DEFAULT FALSE, ... CONSTRAINT fk_products_categories ... )",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:10:58.759526\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "CREATE TABLE [dbo].[ProductHistory]( [HistoryId] [int] IDENTITY(1,1) PRIMARY KEY, ... [ActionDate] [datetime] NOT NULL DEFAULT GETDATE(), ... )",
+      "converted_statement": "CREATE TABLE producthistory( historyid INTEGER NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY, ... actiondate TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT clock_timestamp(), ... )",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:11:15.232875\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "CREATE TABLE [dbo].[ProductStats]( [StatId] [int] PRIMARY KEY DEFAULT 1, ... [LastUpdated] [datetime] NOT NULL DEFAULT GETDATE() )",
+      "converted_statement": "CREATE TABLE productstats( statid INTEGER NOT NULL PRIMARY KEY DEFAULT 1, ... lastupdated TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT clock_timestamp() )",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:11:28.103752\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "CREATE INDEX [IX_Products_CategoryId] ON [dbo].[Products] ([CategoryId])",
+      "converted_statement": "CREATE INDEX ix_products_categoryid ON products (categoryid)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:11:47.908910\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "CREATE INDEX [IX_Products_SupplierId] ON [dbo].[Products] ([SupplierId])",
+      "converted_statement": "CREATE INDEX ix_products_supplierid ON products (supplierid)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:13:51.378047\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "CREATE UNIQUE INDEX [IX_Products_SKU] ON [dbo].[Products] ([SKU])",
+      "converted_statement": "CREATE UNIQUE INDEX ix_products_sku ON products (sku)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:14:00.327895\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "CREATE INDEX [IX_ProductHistory_ProductId] ON [dbo].[ProductHistory] ([ProductId])",
+      "converted_statement": "CREATE INDEX ix_producthistory_productid ON producthistory (productid)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:14:09.073732\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "CREATE INDEX [IX_ProductHistory_ActionDate] ON [dbo].[ProductHistory] ([ActionDate])",
+      "converted_statement": "CREATE INDEX ix_producthistory_actiondate ON producthistory (actiondate)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:14:18.302222\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "INSERT INTO Categories (Name, Description, ParentCategoryId) VALUES ('Electronics', ...), ('Computers', ...), ...",
+      "converted_statement": "INSERT INTO categories (name, description, parentcategoryid) VALUES ('Electronics', ...), ('Computers', ...), ...",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:14:29.784436\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "INSERT INTO Suppliers (Name, ContactName, Email, Phone, Address, Country) VALUES ('TechGlobal Inc.', ...), ...",
+      "converted_statement": "INSERT INTO suppliers (name, contactname, email, phone, address, country) VALUES ('TechGlobal Inc.', ...), ...",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:14:40.583348\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "INSERT INTO Products (Name, Description, Price, StockQuantity, CategoryId, SupplierId, SKU, Weight, Dimensions, ReorderLevel) VALUES ('ProBook X1', ...), ...",
+      "converted_statement": "INSERT INTO products (name, description, price, stockquantity, categoryid, supplierid, sku, weight, dimensions, reorderlevel) VALUES ('ProBook X1', ...), ...",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:14:53.952815\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "INSERT INTO ProductStats (StatId, TotalProducts, AveragePrice, TotalStockValue, LowStockCount, DiscontinuedCount, LastUpdated) VALUES (1, 0, 0, 0, 0, 0, GETDATE())",
+      "converted_statement": "INSERT INTO productstats (statid, totalproducts, averageprice, totalstockvalue, lowstockcount, discontinuedcount, lastupdated) VALUES (1, 0, 0, 0, 0, 0, NOW())",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:15:08.192342\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "UPDATE ProductStats SET TotalProducts = (SELECT COUNT(*) FROM Products), AveragePrice = (SELECT AVG(Price) FROM Products), ... WHERE StatId = 1",
+      "converted_statement": "UPDATE productstats SET totalproducts = (SELECT COUNT(*) FROM products), averageprice = (SELECT AVG(price) FROM products), ... WHERE statid = 1",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:12:00.560503\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "CREATE TRIGGER [dbo].[trg_Products_History] ON [dbo].[Products] AFTER INSERT, UPDATE, DELETE AS BEGIN ... END",
+      "converted_statement": "CREATE OR REPLACE FUNCTION trg_products_history_func() RETURNS TRIGGER AS $$ BEGIN ... END; $$ LANGUAGE plpgsql; CREATE TRIGGER trg_products_history AFTER INSERT OR UPDATE OR DELETE ON products FOR EACH ROW EXECUTE FUNCTION trg_products_history_func();",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:16:11.274976\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "CREATE OR ALTER PROCEDURE [dbo].[sp_GetAllProducts] AS BEGIN SET NOCOUNT ON; SELECT ... FROM Products ORDER BY Name; END",
+      "converted_statement": "CREATE OR REPLACE FUNCTION sp_getallproducts() RETURNS TABLE(...) AS $$ BEGIN RETURN QUERY SELECT ... FROM products ORDER BY name; END; $$ LANGUAGE plpgsql;",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:12:16.055885\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "CREATE OR ALTER PROCEDURE [dbo].[sp_GetProductById] @ProductId INT AS BEGIN SET NOCOUNT ON; SELECT ... FROM Products WHERE ProductId = @ProductId; END",
+      "converted_statement": "CREATE OR REPLACE FUNCTION sp_getproductbyid(p_productid INTEGER) RETURNS TABLE(...) AS $$ BEGIN RETURN QUERY SELECT ... FROM products WHERE productid = p_productid; END; $$ LANGUAGE plpgsql;",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:15:20.482694\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "CREATE OR ALTER PROCEDURE [dbo].[sp_InsertProduct] ... AS BEGIN ... INSERT INTO Products ... SELECT SCOPE_IDENTITY() AS ProductId; END",
+      "converted_statement": "CREATE OR REPLACE FUNCTION sp_insertproduct(...) RETURNS INTEGER AS $$ ... INSERT INTO products ... RETURNING productid INTO v_productid; RETURN v_productid; END; $$ LANGUAGE plpgsql;",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:12:27.949635\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "CREATE OR ALTER PROCEDURE [dbo].[sp_UpdateProduct] ... AS BEGIN ... UPDATE Products SET ... ModifiedDate = GETDATE() WHERE ProductId = @ProductId; END",
+      "converted_statement": "CREATE OR REPLACE FUNCTION sp_updateproduct(...) RETURNS VOID AS $$ BEGIN UPDATE products SET ... modifieddate = NOW() WHERE productid = p_productid; END; $$ LANGUAGE plpgsql;",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:15:31.669938\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "CREATE OR ALTER PROCEDURE [dbo].[sp_DeleteProduct] @ProductId INT AS BEGIN ... DELETE FROM Products WHERE ProductId = @ProductId; END",
+      "converted_statement": "CREATE OR REPLACE FUNCTION sp_deleteproduct(p_productid INTEGER) RETURNS VOID AS $$ BEGIN DELETE FROM products WHERE productid = p_productid; END; $$ LANGUAGE plpgsql;",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:15:41.177829\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'ProductManagement') BEGIN CREATE DATABASE ProductManagement; END (Scripts version)",
+      "converted_statement": "SELECT 'CREATE DATABASE productmanagement' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'productmanagement') (Scripts version)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "USE ProductManagement; (Scripts version)",
+      "converted_statement": "SET search_path TO public; (Scripts version)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "IF NOT EXISTS (...) BEGIN CREATE TABLE [dbo].[Products]( ... IDENTITY(1,1) ... GETDATE() ... ) END (Scripts version)",
+      "converted_statement": "CREATE TABLE IF NOT EXISTS products( ... GENERATED ALWAYS AS IDENTITY ... clock_timestamp() ... ) (Scripts version)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:16:23.603254\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "CREATE OR ALTER PROCEDURE [dbo].[sp_GetAllProducts] AS BEGIN ... END (Scripts version)",
+      "converted_statement": "CREATE OR REPLACE FUNCTION sp_getallproducts() RETURNS TABLE(...) AS $$ ... $$ LANGUAGE plpgsql; (Scripts version)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "CREATE OR ALTER PROCEDURE [dbo].[sp_GetProductById] @ProductId INT AS BEGIN ... END (Scripts version)",
+      "converted_statement": "CREATE OR REPLACE FUNCTION sp_getproductbyid(p_productid INTEGER) RETURNS TABLE(...) AS $$ ... $$ LANGUAGE plpgsql; (Scripts version)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "CREATE OR ALTER PROCEDURE [dbo].[sp_InsertProduct] ... AS BEGIN ... SELECT SCOPE_IDENTITY() AS ProductId; END (Scripts version)",
+      "converted_statement": "CREATE OR REPLACE FUNCTION sp_insertproduct(...) RETURNS INTEGER AS $$ ... RETURNING productid ... $$ LANGUAGE plpgsql; (Scripts version)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "CREATE OR ALTER PROCEDURE [dbo].[sp_UpdateProduct] ... AS BEGIN ... ModifiedDate = GETDATE() ... END (Scripts version)",
+      "converted_statement": "CREATE OR REPLACE FUNCTION sp_updateproduct(...) RETURNS VOID AS $$ ... modifieddate = NOW() ... $$ LANGUAGE plpgsql; (Scripts version)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "CREATE OR ALTER PROCEDURE [dbo].[sp_DeleteProduct] @ProductId INT AS BEGIN ... END (Scripts version)",
+      "converted_statement": "CREATE OR REPLACE FUNCTION sp_deleteproduct(p_productid INTEGER) RETURNS VOID AS $$ ... $$ LANGUAGE plpgsql; (Scripts version)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    },
+    {
+      "original_statement": "IF NOT EXISTS (SELECT TOP 1 1 FROM Products) BEGIN EXEC sp_InsertProduct 'Laptop', ... END (Scripts version)",
+      "converted_statement": "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM products LIMIT 1) THEN PERFORM sp_insertproduct('Laptop', ...); ... END IF; END $$; (Scripts version)",
+      "conversion_method": "DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA",
+      "equivalency_status": "ERROR",
+      "equivalency_tool_output": "{\"equivalence_status\": \"ERROR\", \"error\": \"'uniqueID'\", \"timestamp\": \"2026-05-03T19:16:35.668719\"}",
+      "dms_failure_reason": "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+    }
+  ]
+}
