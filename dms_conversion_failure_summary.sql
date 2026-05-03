@@ -1,0 +1,34 @@
+-- ============================================================
+-- DMS Conversion Failure Summary
+-- Date: 2026-05-03
+-- ============================================================
+-- 
+-- DMS Tool: dms-mcp___statement_conversion_tool
+-- Migration Project: arn:aws:dms:us-east-1:789616364195:migration-project:7Y3LT3YQEBH6LC5D7Z5XJNQ3VU
+-- 
+-- ERROR for ALL 7 statements:
+--   Status: error
+--   Error: "Metadata model creation failed: {'error': 'Unknown metadata model creation status: RECEIVED'}"
+--   Timestamp: 2026-05-03T02:41:17 through 2026-05-03T02:42:26
+--
+-- Multiple retry attempts were made with different poll configurations:
+--   Attempt 1: max_poll_attempts=15, poll_interval_seconds=10 -> FAILED
+--   Attempt 2: max_poll_attempts=30, poll_interval_seconds=15 -> FAILED  
+--   Attempt 3: max_poll_attempts=30, poll_interval_seconds=20 -> FAILED (simple SELECT test)
+--
+-- DMS Schema Mapping Tool was successfully used to obtain target schema information:
+--   dbo.Products -> productmanagement_dbo.products (all columns lowercase)
+--   dbo.ProductHistory -> productmanagement_dbo.producthistory (all columns lowercase)
+--   dbo.ProductStats -> productmanagement_dbo.productstats (all columns lowercase)
+--   dbo.Categories -> productmanagement_dbo.categories (all columns lowercase)
+--   dbo.Suppliers -> productmanagement_dbo.suppliers (all columns lowercase)
+--
+-- Conversion Method Applied: DMS_FAILURE_MANUAL_CONVERSION_WITH_LOWERCASE_SCHEMA
+-- All schema object names converted to lowercase per DMS schema mapping output.
+-- SQL Server specific functions converted:
+--   SCOPE_IDENTITY() -> RETURNING clause / lastval()
+--   GETDATE() -> NOW()
+--   DECLARE @var -> PostgreSQL DO blocks or subquery restructuring
+--   BEGIN TRANSACTION / COMMIT -> BEGIN / COMMIT
+--   ROUND with integer division -> CAST to NUMERIC for proper division
+-- ============================================================
