@@ -1,13 +1,13 @@
-# ADO.NET Core SQL Server Data Management Application
+# ADO.NET Core PostgreSQL Data Management Application
 
-This is a .NET Core application demonstrating modern ADO.NET integration with SQL Server, following best practices for data access and application architecture.
+This is a .NET Core application demonstrating modern ADO.NET integration with PostgreSQL using Npgsql, following best practices for data access and application architecture.
 
 ## Prerequisites
 
 - Visual Studio 2022 or later
 - .NET 9.0 SDK or later
-- SQL Server 2019 or later (Developer Edition is free and recommended for development)
-- SQL Server Management Studio (SSMS) or Azure Data Studio
+- PostgreSQL 14 or later
+- pgAdmin or any PostgreSQL client tool
 
 ## Project Structure
 
@@ -41,9 +41,10 @@ AdoCore/
    - Select "Restore NuGet Packages"
 
 3. **Database Setup**:
-   - Open SQL Server Management Studio (SSMS) or Azure Data Studio
-   - Connect to your local SQL Server instance
-   - Open and run the script: `Database/Scripts/01_InitialSetup.sql`
+   - Ensure PostgreSQL is running on your machine
+   - Connect to your PostgreSQL instance using pgAdmin or psql
+   - Create the required database and tables (see Database Setup section below)
+   - Note: The SQL scripts in `Database/Scripts/` contain MS SQL Server syntax and need manual conversion for PostgreSQL
 
 4. **Update Connection String**:
    - In Solution Explorer, open `appsettings.json`
@@ -51,8 +52,8 @@ AdoCore/
    ```json
    {
      "ConnectionStrings": {
-       "DevConnection": "Server=localhost;Database=ProductManagement;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True",
-       "ProdConnection": "your-production-connection-string"
+       "DevConnection": "Host=localhost;Port=5432;Database=ProductManagement;Username=postgres;Password=postgres",
+       "ProdConnection": "Host=your-production-host;Port=5432;Database=ProductManagement;Username=your-user;Password=your-password"
      },
      "Environment": "Development"
    }
@@ -70,26 +71,34 @@ AdoCore/
    # Verify .NET 9.0 SDK is installed
    dotnet --version
    # Should show 9.0.x
+
+   # Verify PostgreSQL is running
+   psql --version
    ```
 
 2. **Database Setup**:
    ```bash
-   # Open SQL Server Management Studio (SSMS) or Azure Data Studio
-   # Connect to your local SQL Server instance
-   # Open and run the script: Database/Scripts/01_InitialSetup.sql
+   # Connect to PostgreSQL
+   psql -U postgres
+
+   # Create the database
+   CREATE DATABASE "ProductManagement";
+
+   # Connect to the database and create the required tables
+   # (See Database Setup section below)
    ```
 
 3. **Project Setup**:
    ```bash
    # Navigate to project directory
-   cd D:\ado_core
+   cd AdoCore
 
    # Restore NuGet packages
    dotnet restore
 
    # Update connection string in appsettings.json if needed
    # Current connection string is:
-   # "Server=localhost;Database=ProductManagement;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True"
+   # "Host=localhost;Port=5432;Database=ProductManagement;Username=postgres;Password=postgres"
    ```
 
 4. **Build and Run**:
@@ -103,6 +112,49 @@ AdoCore/
    # Or run with CLI commands
    dotnet run -- list
    ```
+
+## Database Setup
+
+The application requires the following PostgreSQL tables:
+
+```sql
+-- Create Products Table
+CREATE TABLE products (
+    productid SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(500) NULL,
+    price DECIMAL(18, 2) NOT NULL,
+    stockquantity INT NOT NULL,
+    createddate TIMESTAMP NOT NULL DEFAULT NOW(),
+    modifieddate TIMESTAMP NULL
+);
+
+-- Create ProductHistory Table
+CREATE TABLE producthistory (
+    historyid SERIAL PRIMARY KEY,
+    productid INT NOT NULL,
+    action VARCHAR(10) NOT NULL,
+    oldprice DECIMAL(18, 2) NULL,
+    newprice DECIMAL(18, 2) NULL,
+    oldstock INT NULL,
+    newstock INT NULL,
+    actiondate TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- Create ProductStats Table
+CREATE TABLE productstats (
+    statid INT PRIMARY KEY DEFAULT 1,
+    totalproducts INT NOT NULL DEFAULT 0,
+    averageprice DECIMAL(18, 2) NOT NULL DEFAULT 0,
+    lastupdated TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- Insert initial stats record
+INSERT INTO productstats (statid, totalproducts, averageprice, lastupdated)
+VALUES (1, 0, 0, NOW());
+```
+
+**Note:** The SQL scripts in `Scripts/` and `Database/Scripts/` contain the original MS SQL Server syntax and need to be manually converted for PostgreSQL deployment. The above PostgreSQL-compatible DDL can be used instead.
 
 ## Running the Application
 
@@ -184,8 +236,8 @@ dotnet run -- stock 1 20
 ## Troubleshooting
 
 If you encounter errors:
-1. Verify SQL Server is running (check Services)
-2. Confirm your connection string matches your SQL Server instance name
+1. Verify PostgreSQL is running
+2. Confirm your connection string matches your PostgreSQL instance settings
 3. Ensure the `ProductManagement` database was created successfully
 4. Check you have appropriate permissions to access the database
 5. Make sure all required NuGet packages are restored:
@@ -195,7 +247,7 @@ If you encounter errors:
 
 ## Required NuGet Packages
 
-- Microsoft.Data.SqlClient
+- Npgsql
 - Microsoft.Extensions.Configuration
 - Microsoft.Extensions.Configuration.Json
 - Microsoft.Extensions.DependencyInjection
@@ -206,7 +258,6 @@ If you encounter errors:
 - Connection strings are stored securely in configuration
 - Proper error handling and logging is implemented
 - All database resources are properly disposed using async patterns
-- TrustServerCertificate option for development environments
 
 ## Best Practices Implemented
 
@@ -221,6 +272,6 @@ If you encounter errors:
 
 ## Deployment to AWS EC2
 
-1. Ensure SQL Server is installed and configured on the EC2 instance
+1. Ensure PostgreSQL is installed and configured on the EC2 instance (or use Amazon RDS for PostgreSQL)
 2. Update the production connection string in appsettings.json
-3. Deploy the application using Visual Studio's Publish feature 
+3. Deploy the application using Visual Studio's Publish feature
